@@ -50,7 +50,7 @@ test('customer, supplier and address exports leave out Indian GST fields', () =>
 
   for (const schemaName of ['Customer', 'Supplier']) {
     assert.ok(exported(schemaName).includes('tax_id'));
-    assert.ok(!exported(schemaName).includes('gst_type'));
+    assert.ok(!exported(schemaName).includes('gst_category'));
     assert.ok(!exported(schemaName).includes('gstin'));
   }
   assert.ok(!exported('Address').includes('pos'));

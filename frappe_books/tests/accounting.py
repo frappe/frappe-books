@@ -56,6 +56,9 @@ def root_group(root_type):
 	return name
 
 
+PARTY_NAME_FIELDS = {"Books Customer": "customer_name", "Books Supplier": "supplier_name"}
+
+
 def make_customer(default_account, **values):
 	return _make_party("Books Customer", default_account, **values)
 
@@ -68,7 +71,7 @@ def _make_party(party_type, default_account, **values):
 	return frappe.get_doc(
 		{
 			"doctype": party_type,
-			"name": unique_name("Test Party"),
+			PARTY_NAME_FIELDS[party_type]: unique_name("Test Party"),
 			"default_account": default_account,
 			**values,
 		}

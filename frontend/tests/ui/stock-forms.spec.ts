@@ -163,7 +163,7 @@ async function insertItem(page: Page, label: string, rate: number) {
 /** A submitted receipt of two of the item from a new supplier. */
 async function insertReceipt(page: Page, item: string) {
   const supplier = `Stock Supplier ${Date.now()}`;
-  await api(page, 'POST', 'Books Supplier', { name: supplier });
+  await api(page, 'POST', 'Books Supplier', { supplier_name: supplier });
   const receipt = await api(page, 'POST', 'Books Purchase Receipt', {
     supplier,
     items: [{ item, quantity: 2, location: 'Stores' }],

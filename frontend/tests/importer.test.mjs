@@ -67,8 +67,8 @@ test('a customer template holds a tax ID, not Indian GST fields', () => {
   ].map(({ label }) => label);
 
   assert.ok(labels.includes('Tax ID'));
-  assert.ok(!labels.includes('GST Registration'));
-  assert.ok(!labels.includes('GSTIN No.'));
+  assert.ok(!labels.includes('GST Category'));
+  assert.ok(!labels.includes('GSTIN / UIN'));
 });
 
 test('an invoice template keeps Books’ column order, without the quantity the server sets', () => {
@@ -216,15 +216,12 @@ test('the import file puts each document’s rows together, its values on the fi
 });
 
 test('named documents import their name under the DocType’s fieldname', async () => {
-  const customer = new Importer('Customer', fyo);
-  customer.assignedTemplateFields = [
-    'Customer.name',
-    'Customer.default_account',
-  ];
-  customer.valueMatrix = [[{ value: 'Ann' }, { value: 'Debtors' }]];
-  assert.deepEqual(importRows(customer), [
-    ['docstatus', 'name', 'default_account'],
-    ['0', 'Ann', 'Debtors'],
+  const lead = new Importer('Lead', fyo);
+  lead.assignedTemplateFields = ['Lead.name', 'Lead.email'];
+  lead.valueMatrix = [[{ value: 'Ann' }, { value: 'ann@example.com' }]];
+  assert.deepEqual(importRows(lead), [
+    ['docstatus', 'name', 'email'],
+    ['0', 'Ann', 'ann@example.com'],
   ]);
 
   const account = new Importer('Account', fyo);

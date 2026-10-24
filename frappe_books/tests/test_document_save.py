@@ -15,8 +15,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		party = frappe.get_doc(
 			{
 				"doctype": "Books Customer",
-				"name": unique_name("Customer"),
-				"from_lead": lead.name,
+				"customer_name": unique_name("Customer"),
+				"lead_name": lead.name,
 			}
 		).insert()
 		self.assertNotEqual(lead.name, party.name)
@@ -27,8 +27,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 		party = frappe.get_doc(
 			{
 				"doctype": "Books Customer",
-				"name": unique_name("Customer"),
-				"from_lead": lead.name,
+				"customer_name": unique_name("Customer"),
+				"lead_name": lead.name,
 			}
 		).insert()
 
@@ -43,8 +43,8 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 				frappe.get_doc(
 					{
 						"doctype": "Books Customer",
-						"name": unique_name("Rejected Party"),
-						"from_lead": lead.name,
+						"customer_name": unique_name("Rejected Party"),
+						"lead_name": lead.name,
 					}
 				).insert()
 

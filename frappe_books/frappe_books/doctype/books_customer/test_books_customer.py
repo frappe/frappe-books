@@ -27,8 +27,8 @@ def registered_customer(gstin):
 	return frappe.get_doc(
 		{
 			"doctype": "Books Customer",
-			"name": unique_name("GST Customer"),
-			"gst_type": "Registered Regular",
+			"customer_name": unique_name("GST Customer"),
+			"gst_category": "Registered Regular",
 			"gstin": gstin,
 		}
 	).insert()
@@ -47,7 +47,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		self.assertEqual(customer.db_get("gstin"), "27AAAAA0000A1Z5")
 
 	def test_unregistered_customer_clears_gstin(self):
-		customer = make_customer(None, gst_type="Unregistered", gstin="27AAAAA0000A1Z5")
+		customer = make_customer(None, gst_category="Unregistered", gstin="27AAAAA0000A1Z5")
 		self.assertFalse(customer.gstin)
 
 	def test_default_account_must_be_receivable(self):
@@ -58,9 +58,13 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 	def test_customer_defaults_to_debtors_and_company_currency(self):
 		if not frappe.db.exists("Books Account", "Debtors"):
 			make_account("Debtors", account_type="Receivable", account_name="Debtors")
-		customer = frappe.get_doc({"doctype": "Books Customer", "name": unique_name("Customer")}).insert()
+		customer = frappe.get_doc(
+			{"doctype": "Books Customer", "customer_name": unique_name("Customer")}
+		).insert()
 
-		self.assertEqual((customer.default_account, customer.currency), ("Debtors", company_currency()))
+		self.assertEqual(
+			(customer.default_account, customer.default_currency), ("Debtors", company_currency())
+		)
 
 	def test_stale_customer_save_cannot_reset_outstanding(self):
 		receivable = make_account("Stale Receivable", account_type="Receivable")
@@ -89,7 +93,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		quotation = books_lead.make_quotation(lead.name)
 
 		self.assertEqual(
-			(customer.doctype, customer.name, customer.email, customer.phone, customer.from_lead),
+			(customer.doctype, customer.name, customer.email, customer.phone, customer.lead_name),
 			("Books Customer", lead.name, lead.email, lead.mobile, lead.name),
 		)
 		self.assertEqual((quotation.party_name, quotation.quotation_to), (lead.name, "Books Lead"))

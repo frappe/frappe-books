@@ -172,7 +172,7 @@ async function pickLink(page: Page, label: string, value: string) {
 async function insertCustomerAndItem(page: Page) {
   const stamp = Date.now();
   const customer = await insertDocument(page, 'Books Customer', {
-    name: `Invoice Customer ${stamp}`,
+    customer_name: `Invoice Customer ${stamp}`,
     default_account: 'Debtors',
   });
   const item = await insertDocument(page, 'Books Item', {

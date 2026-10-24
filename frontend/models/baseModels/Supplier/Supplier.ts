@@ -11,7 +11,7 @@ export class Supplier extends Party {
     'phone',
     'address',
     'default_account',
-    'currency',
+    'default_currency',
     'tax_id',
   ]);
   static override accountType = 'Payable' as const;

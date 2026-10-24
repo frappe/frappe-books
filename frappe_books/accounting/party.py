@@ -18,11 +18,11 @@ class PartyController(Document):
 
 	def before_validate(self):
 		self.default_account = self.default_account or _chart_account(self.doctype)
-		self.currency = self.currency or company_currency()
+		self.default_currency = self.default_currency or company_currency()
 
 	def validate(self):
 		validate_party_account(self, "default_account", self.doctype)
-		if self.gst_type != "Registered Regular":
+		if self.gst_category != "Registered Regular":
 			self.gstin = None
 		elif not self.gstin:
 			frappe.throw(_("GSTIN is required for a registered party."))

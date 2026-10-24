@@ -406,7 +406,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 				self._pricing_rule(**values)
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					make_customer(self.receivable.name, currency=foreign_currency()).name,
+					make_customer(self.receivable.name, default_currency=foreign_currency()).name,
 					self.receivable.name,
 					self.item.name,
 					self.income.name,
@@ -433,7 +433,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			with self.subTest(price_list=price_list_name):
 				invoice = make_invoice(
 					"Books Sales Invoice",
-					make_customer(self.receivable.name, currency=foreign_currency()).name,
+					make_customer(self.receivable.name, default_currency=foreign_currency()).name,
 					self.receivable.name,
 					item.name,
 					self.income.name,

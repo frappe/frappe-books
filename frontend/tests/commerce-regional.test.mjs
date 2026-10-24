@@ -36,9 +36,9 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
   for (const schemaName of ['Customer', 'Supplier']) {
     const party = newFrappeDoc(schemaName);
     assert.equal(party.fieldMap.tax_id, undefined);
-    assert.equal(hidden(party, 'gst_type'), false);
+    assert.equal(hidden(party, 'gst_category'), false);
     assert.equal(hidden(party, 'gstin'), true);
-    await party.set('gst_type', 'Registered Regular');
+    await party.set('gst_category', 'Registered Regular');
     assert.equal(hidden(party, 'gstin'), false);
   }
 
@@ -48,8 +48,8 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
     'address',
     'default_account',
     'loyalty_program',
-    'currency',
-    'gst_type',
+    'default_currency',
+    'gst_category',
     'gstin',
   ]);
   assert.deepEqual(getSchema('Supplier').quickEditFields, [
@@ -57,8 +57,8 @@ test('an Indian customer or supplier asks for its GST registration instead of a 
     'phone',
     'address',
     'default_account',
-    'currency',
-    'gst_type',
+    'default_currency',
+    'gst_category',
     'gstin',
   ]);
 });
@@ -95,10 +95,10 @@ test('Indian customer, supplier and address files hold GST fields, not a tax ID'
     ];
     const labels = headers.map(({ label }) => label);
 
-    assert.ok(labels.includes('GST Registration'));
-    assert.ok(labels.includes('GSTIN No.'));
+    assert.ok(labels.includes('GST Category'));
+    assert.ok(labels.includes('GSTIN / UIN'));
     assert.ok(!labels.includes('Tax ID'));
-    assert.deepEqual(exported(schemaName).slice(-6, -4), ['gst_type', 'gstin']);
+    assert.deepEqual(exported(schemaName).slice(-6, -4), ['gst_category', 'gstin']);
     assert.ok(!exported(schemaName).includes('tax_id'));
   }
 

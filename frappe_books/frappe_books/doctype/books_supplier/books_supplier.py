@@ -16,14 +16,15 @@ class BooksSupplier(PartyController):
 		from frappe.types import DF
 
 		address: DF.Link | None
-		currency: DF.Link | None
 		default_account: DF.Link | None
+		default_currency: DF.Link | None
 		email: DF.Data | None
-		gst_type: DF.Literal["Unregistered", "Registered Regular", "Consumer"]
+		gst_category: DF.Literal["Registered Regular", "Unregistered"]
 		gstin: DF.Data | None
 		image: DF.AttachImage | None
 		outstanding_amount: DF.Currency
 		phone: DF.Data | None
+		supplier_name: DF.Data
 		tax_id: DF.Data | None
 	# end: auto-generated types
 

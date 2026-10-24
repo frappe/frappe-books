@@ -17,13 +17,14 @@ class BooksCustomer(PartyController):
 		from frappe.types import DF
 
 		address: DF.Link | None
-		currency: DF.Link | None
+		customer_name: DF.Data
 		default_account: DF.Link | None
+		default_currency: DF.Link | None
 		email: DF.Data | None
-		from_lead: DF.Link | None
-		gst_type: DF.Literal["Unregistered", "Registered Regular", "Consumer"]
+		gst_category: DF.Literal["Registered Regular", "Unregistered"]
 		gstin: DF.Data | None
 		image: DF.AttachImage | None
+		lead_name: DF.Link | None
 		loyalty_points: DF.Int
 		loyalty_program: DF.Link | None
 		outstanding_amount: DF.Currency
@@ -38,17 +39,17 @@ class BooksCustomer(PartyController):
 		super().validate()
 
 	def on_update(self):
-		if not self.from_lead:
+		if not self.lead_name:
 			return
-		lead = frappe.get_doc("Books Lead", self.from_lead)
+		lead = frappe.get_doc("Books Lead", self.lead_name)
 		if lead.status != "Converted":
 			lead.status = "Converted"
 			lead.save()
 
 	def on_trash(self):
-		if not self.from_lead:
+		if not self.lead_name:
 			return
-		lead = frappe.get_doc("Books Lead", self.from_lead)
+		lead = frappe.get_doc("Books Lead", self.lead_name)
 		lead.status = "Interested"
 		lead.save()
 

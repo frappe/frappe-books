@@ -269,7 +269,9 @@ test('lead contacts are checked as Frappe checks them, with the Books messages',
 
 test('a lead makes its customer with the server mapper, as an unsaved customer', async () => {
   const mapped = { doctype: 'Books Customer', name: 'Asha' };
-  respond = () => ({ message: { ...mapped, from_lead: 'Asha', __islocal: 1 } });
+  respond = () => ({
+    message: { ...mapped, customer_name: 'Asha', lead_name: 'Asha', __islocal: 1 },
+  });
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
   await loadSaved(lead);
   const { action } = getModel('Lead')
@@ -286,14 +288,14 @@ test('a lead makes its customer with the server mapper, as an unsaved customer',
   assert.equal(route, '/edit/Customer/Asha');
   const customer = await getFrappeDoc('Customer', 'Asha');
   assert.deepEqual(
-    [customer.from_lead, customer.notInserted],
+    [customer.lead_name, customer.notInserted],
     ['Asha', true]
   );
 });
 
 test('saving or deleting a converted customer refreshes its open lead only', async () => {
   let leadStatus = 'Open';
-  const saved = { name: 'Ravi', from_lead: 'Ravi' };
+  const saved = { name: 'Ravi', lead_name: 'Ravi' };
   respond = ({ method, path }) => {
     if (path === '/api/v2/document/Books Lead/Ravi') {
       return { data: { name: 'Ravi', status: leadStatus, modified: 'x' } };
@@ -323,25 +325,25 @@ test('saving or deleting a converted customer refreshes its open lead only', asy
 test('customer and supplier forms and lists show what they showed, without GST fields', () => {
   const supplierFields = [
     'image | Image |  | Default',
-    'name | Name | Full Name | Default',
+    'supplier_name | Supplier Name | Full Name | Default',
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
     'address | Address |  | Contacts',
     'default_account | Default Account |  | Billing',
-    'currency | Currency | INR | Billing',
+    'default_currency | Billing Currency | INR | Billing',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
   ];
   assert.deepEqual(getLayout('Supplier'), supplierFields);
   assert.deepEqual(getLayout('Customer'), [
     'image | Image |  | Default',
-    'name | Name | Full Name | Default',
+    'customer_name | Customer Name | Full Name | Default',
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
     'address | Address |  | Contacts',
     'default_account | Default Account |  | Billing',
-    'currency | Currency | INR | Billing',
-    'from_lead | From Lead |  | References',
+    'default_currency | Billing Currency | INR | Billing',
+    'lead_name | Lead |  | References',
     'loyalty_program | Loyalty Program |  | Loyalty Program',
     'loyalty_points | Loyalty Points |  | Loyalty Program',
     'tax_id | Tax ID |  | Billing',

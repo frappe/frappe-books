@@ -37,7 +37,7 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
   await selectImportFile(
     page,
     'Customer',
-    `Name,Default Account\n${names[0]},Debtors\n${names[1]},Debtors\n`
+    `Customer Name,Default Account\n${names[0]},Debtors\n${names[1]},Debtors\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });
@@ -54,7 +54,7 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
   await selectImportFile(
     page,
     'Customer',
-    `Name,Default Account\nImport Cid ${run},Missing ${run}\n`
+    `Customer Name,Default Account\nImport Cid ${run},Missing ${run}\n`
   );
 
   const error = page.getByRole('dialog', { name: 'Cannot import' });
@@ -71,7 +71,9 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
     income_account: 'Sales',
     expense_account: 'Cost of Goods Sold',
   });
-  await insertDocument(page, 'Books Customer', { name: `Import Dan ${run}` });
+  await insertDocument(page, 'Books Customer', {
+    customer_name: `Import Dan ${run}`,
+  });
   await selectImportFile(
     page,
     'Sales Invoice',
@@ -97,11 +99,11 @@ test('Fix Failed keeps only the rows Frappe could not save', async ({
   page,
 }) => {
   const existing = `Import Eve ${run}`;
-  await insertDocument(page, 'Books Customer', { name: existing });
+  await insertDocument(page, 'Books Customer', { customer_name: existing });
   await selectImportFile(
     page,
     'Customer',
-    `Name,Email\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
+    `Customer Name,Email\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });

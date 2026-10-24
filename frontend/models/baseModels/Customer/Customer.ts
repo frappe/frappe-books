@@ -15,14 +15,14 @@ export class Customer extends Party {
       'address',
       'default_account',
       'loyalty_program',
-      'currency',
+      'default_currency',
       'tax_id',
     ]),
-    fields: { from_lead: { create: false } },
+    fields: { lead_name: { create: false } },
   };
   static override accountType = 'Receivable' as const;
 
-  from_lead?: string;
+  lead_name?: string;
   declare loyalty_program?: string;
 
   // Loyalty shows while the program is on.
@@ -43,8 +43,8 @@ export class Customer extends Party {
 
   /** Shows the lead status the server set when this customer was saved or deleted. */
   async reloadLead() {
-    if (this.from_lead) {
-      await getFrappeDoc(ModelNameEnum.Lead, this.from_lead, { refresh: true });
+    if (this.lead_name) {
+      await getFrappeDoc(ModelNameEnum.Lead, this.lead_name, { refresh: true });
     }
   }
 

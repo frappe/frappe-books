@@ -40,7 +40,7 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	# The item field that holds a row's income or expense account.
 	item_account_field: str
 	# The party fields that fill an invoice's defaults.
-	party_default_fields = ("currency", "default_account")
+	party_default_fields = ("default_currency", "default_account")
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -65,7 +65,7 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	def populate_party_defaults(self):
 		"""Bill in the party's currency to its ledger, and return the party's defaults."""
 		party = _party_defaults(self)
-		_populate_currency(self, party.currency)
+		_populate_currency(self, party.default_currency)
 		if party and self.party_account_type:
 			self.account = self.get("account") or _party_account(self, party.default_account)
 		return party

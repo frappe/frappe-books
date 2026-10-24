@@ -38,13 +38,13 @@ def make_customer(source_name: str):
 	return get_mapped_doc(
 		"Books Lead",
 		source_name,
-		{"Books Lead": {"doctype": "Books Customer", "field_map": {"name": "from_lead", "mobile": "phone"}}},
+		{"Books Lead": {"doctype": "Books Customer", "field_map": {"name": "lead_name", "mobile": "phone"}}},
 		postprocess=_set_customer,
 	)
 
 
 def _set_customer(lead, customer):
-	customer.name = lead.name
+	customer.name = customer.customer_name = lead.name
 
 
 @frappe.whitelist()

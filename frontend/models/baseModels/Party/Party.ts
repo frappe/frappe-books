@@ -50,9 +50,8 @@ export function getPartyPresentation(
 ): Presentation {
   return {
     label,
-    nameField: { label: 'Name', placeholder: 'Full Name' },
     quickEditFields,
-    omitFields: ['gst_type', 'gstin'],
+    omitFields: ['gst_category', 'gstin'],
   };
 }
 

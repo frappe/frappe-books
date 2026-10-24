@@ -167,7 +167,7 @@ async function routeTo(page: Page, path: string) {
 /** A submitted payment from a new customer. */
 async function insertPayment(page: Page) {
   const customer = `Template Customer ${Date.now()}`;
-  await insertDocument(page, 'Books Customer', { name: customer });
+  await insertDocument(page, 'Books Customer', { customer_name: customer });
   await insertDocument(page, 'Books Payment', {
     party_type: 'Books Customer',
     party: customer,

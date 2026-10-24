@@ -17,11 +17,13 @@ let hasCustomers = false;
 test.beforeEach(async ({ page }) => {
   if (hasCustomers) return;
   await insertDocument(page, 'Books Customer', {
-    name: customer,
+    customer_name: customer,
     phone: '98765 43210',
     email: `${run}@example.com`,
   });
-  await insertDocument(page, 'Books Customer', { name: otherCustomer });
+  await insertDocument(page, 'Books Customer', {
+    customer_name: otherCustomer,
+  });
   hasCustomers = true;
 });
 

@@ -20,7 +20,7 @@ let hasCustomer = false;
 
 test.beforeEach(async ({ page }) => {
   if (hasCustomer || !bench || !site) return;
-  await insertDocument(page, 'Books Customer', { name: customer });
+  await insertDocument(page, 'Books Customer', { customer_name: customer });
   await indexForSearch('Books Customer', [customer]);
   hasCustomer = true;
 });

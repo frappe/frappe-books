@@ -24,7 +24,9 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 	def test_supplier_defaults_to_creditors(self):
 		if not frappe.db.exists("Books Account", "Creditors"):
 			make_account("Creditors", root_type="Liability", account_type="Payable", account_name="Creditors")
-		supplier = frappe.get_doc({"doctype": "Books Supplier", "name": unique_name("Supplier")}).insert()
+		supplier = frappe.get_doc(
+			{"doctype": "Books Supplier", "supplier_name": unique_name("Supplier")}
+		).insert()
 
 		self.assertEqual(supplier.default_account, "Creditors")
 

@@ -324,6 +324,7 @@ async function installFixture(page: Page) {
 
   await upsert(page, 'Books Customer', {
     name: customerName,
+    customer_name: customerName,
     address: addressName,
   });
 }

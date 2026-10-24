@@ -138,7 +138,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		round_off = make_account("Round Off", root_type="Expense", account_type="Round Off")
 		set_company_value("round_off_account", round_off.name)
 		item = make_item(self.income.name, self.expense.name)
-		party = make_customer(self.receivable.name, currency=foreign_currency())
+		party = make_customer(self.receivable.name, default_currency=foreign_currency())
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			party.name,
@@ -182,7 +182,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 	def test_rounds_invoice_amounts_to_invoice_currency(self):
 		item = make_item(self.income.name, self.expense.name)
 		with self.change_settings("System Settings", currency="JPY"):
-			party = make_customer(self.receivable.name, currency=foreign_currency())
+			party = make_customer(self.receivable.name, default_currency=foreign_currency())
 			invoice = make_invoice(
 				"Books Sales Invoice",
 				party.name,
@@ -347,7 +347,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_invoice_bills_in_the_party_currency(self):
 		currency = foreign_currency()
-		party = make_customer(self.receivable.name, currency=currency)
+		party = make_customer(self.receivable.name, default_currency=currency)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			party.name,
@@ -361,7 +361,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual((invoice.currency, invoice.exchange_rate), (currency, 80))
 
 	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
-		party = make_customer(self.receivable.name, currency=foreign_currency())
+		party = make_customer(self.receivable.name, default_currency=foreign_currency())
 		with (
 			patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=None),
 			self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"),

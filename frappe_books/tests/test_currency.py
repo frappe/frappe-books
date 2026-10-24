@@ -68,7 +68,7 @@ class IntegrationTestCurrencyMetadata(IntegrationTestCase):
 
 	def test_parties_link_to_frappe_currencies(self):
 		receivable = make_account("Currency Debtors", account_type="Receivable")
-		party = make_customer(receivable.name, currency="EUR")
+		party = make_customer(receivable.name, default_currency="EUR")
 
-		self.assertEqual(frappe.db.get_value("Books Customer", party.name, "currency"), "EUR")
-		self.assertRaises(frappe.LinkValidationError, make_customer, receivable.name, currency="XXX")
+		self.assertEqual(frappe.db.get_value("Books Customer", party.name, "default_currency"), "EUR")
+		self.assertRaises(frappe.LinkValidationError, make_customer, receivable.name, default_currency="XXX")

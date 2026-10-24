@@ -295,7 +295,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		).submit()
 		invoice = make_invoice(
 			"Books Sales Invoice",
-			make_customer(receivable.name, currency=currency).name,
+			make_customer(receivable.name, default_currency=currency).name,
 			receivable.name,
 			item.name,
 			income.name,
@@ -313,7 +313,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
-			make_supplier(payable.name, currency=foreign_currency()).name,
+			make_supplier(payable.name, default_currency=foreign_currency()).name,
 			payable.name,
 			item.name,
 			received.name,

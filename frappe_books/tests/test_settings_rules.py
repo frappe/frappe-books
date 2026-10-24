@@ -90,8 +90,16 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 
 	def test_email_and_phone_values_must_be_valid(self):
 		invalid_values = [
-			("Books Customer", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
-			("Books Customer", {"phone": "call me"}, frappe.InvalidPhoneNumberError),
+			(
+				"Books Customer",
+				{"customer_name": unique_name("Format Test"), "email": "not-an-email"},
+				frappe.InvalidEmailAddressError,
+			),
+			(
+				"Books Customer",
+				{"customer_name": unique_name("Format Test"), "phone": "call me"},
+				frappe.InvalidPhoneNumberError,
+			),
 			("Books Lead", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
 			("Books Lead", {"mobile": "call me"}, frappe.InvalidPhoneNumberError),
 		]

@@ -607,8 +607,8 @@ class IntegrationTestGSTR(IntegrationTestCase):
 				"country": "India",
 			}
 		).insert()
-		gst_type = "Registered Regular" if values.get("gstin") else "Unregistered"
-		return make_customer(self.receivable.name, address=address.name, gst_type=gst_type, **values)
+		gst_category = "Registered Regular" if values.get("gstin") else "Unregistered"
+		return make_customer(self.receivable.name, address=address.name, gst_category=gst_category, **values)
 
 	def _invoice(self, *rows, date=None):
 		return (

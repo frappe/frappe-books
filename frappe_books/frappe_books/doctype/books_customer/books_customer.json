@@ -3,7 +3,7 @@
  "allow_bulk_edit": 1,
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:customer_name",
  "creation": "2026-10-11 12:00:00.000000",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -11,22 +11,23 @@
  "field_order": [
   "default_section_break_1",
   "image",
+  "customer_name",
   "contacts_section_break_4",
   "email",
   "phone",
   "address",
   "billing_section_break_8",
   "default_account",
-  "currency",
+  "default_currency",
   "references_section_break_11",
-  "from_lead",
+  "lead_name",
   "loyalty_program_section_break_13",
   "loyalty_program",
   "loyalty_points",
   "billing_section_break_16",
   "tax_id",
   "outstanding_amount",
-  "gst_type",
+  "gst_category",
   "gstin"
  ],
  "fields": [
@@ -39,6 +40,15 @@
    "fieldname": "image",
    "fieldtype": "Attach Image",
    "label": "Image"
+  },
+  {
+   "bold": 1,
+   "fieldname": "customer_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Customer Name",
+   "placeholder": "Full Name",
+   "reqd": 1
   },
   {
    "fieldname": "contacts_section_break_4",
@@ -78,9 +88,9 @@
    "permlevel": 1
   },
   {
-   "fieldname": "currency",
+   "fieldname": "default_currency",
    "fieldtype": "Link",
-   "label": "Currency",
+   "label": "Billing Currency",
    "options": "Currency",
    "placeholder": "INR"
   },
@@ -90,9 +100,9 @@
    "label": "References"
   },
   {
-   "fieldname": "from_lead",
+   "fieldname": "lead_name",
    "fieldtype": "Link",
-   "label": "From Lead",
+   "label": "Lead",
    "options": "Books Lead",
    "read_only": 1
   },
@@ -132,26 +142,27 @@
   },
   {
    "default": "Unregistered",
-   "fieldname": "gst_type",
+   "fieldname": "gst_category",
    "fieldtype": "Select",
-   "label": "GST Registration",
-   "options": "Unregistered\nRegistered Regular\nConsumer",
-   "placeholder": "GST Registration"
+   "label": "GST Category",
+   "options": "Registered Regular\nUnregistered",
+   "placeholder": "GST Category"
   },
   {
-   "depends_on": "eval:doc.gst_type == 'Registered Regular'",
+   "depends_on": "eval:doc.gst_category == 'Registered Regular'",
    "fieldname": "gstin",
    "fieldtype": "Data",
-   "label": "GSTIN No."
+   "label": "GSTIN / UIN"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:00:00.000000",
+ "modified": "2026-10-24 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Customer",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -210,5 +221,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "customer_name",
  "track_changes": 1
 }

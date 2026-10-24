@@ -14,7 +14,7 @@ test('a new customer saves with an address made from its link', async ({
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Customer\//);
   await page
-    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .getByRole('textbox', { name: 'Customer Name (required)', exact: true })
     .fill(name);
 
   const address = page.getByRole('combobox', { name: 'Address', exact: true });
@@ -124,7 +124,7 @@ test.describe('on a phone', () => {
 
   test('a customer saves a new phone number', async ({ page }) => {
     const name = `Phone Customer ${Date.now()}`;
-    await insert(page, 'Books Customer', { name });
+    await insert(page, 'Books Customer', { customer_name: name });
     await page.goto(`/books/edit/Customer/${encodeURIComponent(name)}`);
     await waitForBooks(page);
 

@@ -143,6 +143,31 @@ test('item links filter and create items by Frappe fieldnames', async () => {
   ]);
 });
 
+test('item default accounts filter by the item tracking, as the server checks them', async () => {
+  fyo.singles.AccountingSettings = {};
+  const item = newFrappeDoc('Item', { item_code: 'Kettle' });
+  await item.append('item_defaults', {});
+  const [row] = item.item_defaults;
+  const { filters } = frappeModels.Item.rowModels.item_defaults;
+
+  assert.deepEqual(filters.income_account(row), [
+    ['is_group', '=', 0],
+    ['root_type', '=', 'Income'],
+  ]);
+  assert.deepEqual(filters.expense_account(row)[1], [
+    'root_type',
+    '=',
+    'Expense',
+  ]);
+  await item.set('is_stock_item', true);
+  assert.deepEqual(filters.expense_account(row)[1], [
+    'root_type',
+    '=',
+    'Liability',
+  ]);
+  assert.equal(hidden(row, 'default_warehouse'), true);
+});
+
 test('a saved item makes both sales and purchase invoices', () => {
   const labels = (notInserted) =>
     frappeModels.Item.getActions(fyo)

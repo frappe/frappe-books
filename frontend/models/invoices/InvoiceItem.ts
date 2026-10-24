@@ -111,6 +111,7 @@ export class InvoiceItem extends FrappeDoc {
 
   parentdoc?: Invoice;
   item_code?: string;
+  item_name?: string;
   price_list_rate?: Money;
   rate?: Money;
   amount?: Money;

@@ -38,7 +38,7 @@
             ? 'border-outline-gray-4'
             : 'border-outline-gray-1'
         "
-        :aria-label="t`Add ${item.name}`"
+        :aria-label="t`Add ${item.itemName}`"
         @click="$emit('addItem', item)"
       >
         <span
@@ -51,12 +51,12 @@
             class="size-full object-cover"
             @error="brokenImages.add(item.image)"
           />
-          <template v-else>{{ getItemInitials(item.name) }}</template>
+          <template v-else>{{ getItemInitials(item.itemName) }}</template>
         </span>
         <span
           class="line-clamp-2 min-h-[2lh] px-1 text-p-base-medium text-ink-gray-8"
         >
-          {{ item.name }}
+          {{ item.itemName }}
         </span>
         <span
           class="flex justify-between gap-1 px-1 pb-0.5 text-sm tabular-nums"

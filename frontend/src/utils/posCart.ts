@@ -42,7 +42,7 @@ export async function addToCart(
   }
 
   // A new row sells in the item's stock unit.
-  await validateStock(item.name, batch, [
+  await validateStock(sale, item.name, batch, [
     { item_code: item.name, batch_no: batch, stock_qty: quantity },
   ]);
   return await appendRow(sale, item.name, quantity, batch);
@@ -62,12 +62,9 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   const previous = { stock_qty: row.stock_qty, qty: row.qty };
   try {
     await writeQuantity(row, field, quantity);
-    const rows = getItemRows(
-      row.parentdoc as SalesInvoice,
-      row.item_code,
-      row.batch_no
-    );
-    await validateStock(row.item_code as string, row.batch_no, rows);
+    const sale = row.parentdoc as SalesInvoice;
+    const rows = getItemRows(sale, row.item_code, row.batch_no);
+    await validateStock(sale, row.item_code as string, row.batch_no, rows);
   } catch (error) {
     await row.set(field, previous[field]);
     Object.assign(row, previous);
@@ -225,8 +222,9 @@ async function writeQuantity(
   }
 }
 
-/** Checks the POS location has the stock that `rows` of the item, from `batch`, need. */
+/** Checks the sale's POS location has the stock that `rows` of the item, from `batch`, need. */
 async function validateStock(
+  sale: SalesInvoice,
   item: string,
   batch: string | undefined,
   rows: ItemQuantity[]
@@ -237,7 +235,7 @@ async function validateStock(
   }
 
   if (doc.is_stock_item) {
-    await validatePOSStock(rows);
+    await validatePOSStock(rows, sale);
   }
 }
 

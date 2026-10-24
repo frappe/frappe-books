@@ -33,13 +33,13 @@
             <button
               type="button"
               class="absolute inset-0"
-              :aria-label="row.item_code"
+              :aria-label="row.item_name || row.item_code"
               :disabled="!!row.is_free_item || sinvDoc.isSubmitted"
               @click="$emit('edit', row)"
             />
             <div class="min-w-0">
               <div class="truncate text-lg text-ink-gray-8">
-                {{ row.item_code }}
+                {{ row.item_name || row.item_code }}
               </div>
               <div class="mt-0.5 truncate text-md tabular-nums text-ink-gray-5">
                 {{ getRowMeta(row) }}
@@ -56,7 +56,7 @@
               :df="{
                 fieldname: 'qty',
                 fieldtype: 'Float',
-                label: t`Quantity of ${row.item_code ?? ''}`,
+                label: t`Quantity of ${row.item_name || row.item_code || ''}`,
               }"
               @change="(quantity: number) => setQuantity(row, quantity)"
               @remove="row.parentdoc?.remove('items', row.idx as number)"

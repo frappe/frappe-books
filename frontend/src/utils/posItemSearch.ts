@@ -2,12 +2,14 @@ import { uniqBy } from 'lodash';
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
-import { fyo } from 'src/initFyo';
+import { toActiveDoctype } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
+import { getPOSPreference } from 'src/utils/posSetup';
 
-type POSItemSearchRecord = Pick<POSItem, 'name' | 'barcodes'>;
+type POSItemSearchRecord = Pick<POSItem, 'name' | 'barcodes'> &
+  Partial<Pick<POSItem, 'itemName'>>;
 export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
 
 type BarcodeSettings = Pick<
@@ -28,8 +30,10 @@ type POSItemSearchMatch = {
   isMatch: boolean;
 };
 
-// The item's name, then its barcode rows.
-const SCANNED_FIELDS = [['name'], ['Books Item Barcode', 'barcode']];
+/** The item's name, then its barcode rows. */
+function getScannedFields(): string[][] {
+  return [['name'], [toActiveDoctype('Books Item Barcode'), 'barcode']];
+}
 
 /** The item ERPNext's scan_barcode finds by a barcode, batch, serial number or item code, one at a time. */
 export async function getERPNextScannedItem(
@@ -52,7 +56,7 @@ export async function getScannedItem(
     return;
   }
 
-  const settings = fyo.singles.POSSettings;
+  const settings = getBarcodeSettings();
   const items = await getScannableItems(scannedCode, settings, itemQtyMap);
   return findScannedPOSItem(items, scannedCode, settings);
 }
@@ -71,9 +75,9 @@ async function getScannableItems(
   const orFilters = codes
     .filter((value): value is string => !!value)
     .flatMap((value) =>
-      SCANNED_FIELDS.map((field) => [...field, 'like', value] as Filter)
+      getScannedFields().map((field) => [...field, 'like', value] as Filter)
     );
-  const items = await getList('Books Item', {
+  const items = await getList(toActiveDoctype('Books Item'), {
     fields: POS_ITEM_FIELDS,
     orFilters,
     orderBy: 'creation desc',
@@ -81,6 +85,18 @@ async function getScannableItems(
   });
   // A barcode row joins its item once per barcode.
   return uniqBy(items, 'name').map((item) => toPOSItem(item, itemQtyMap));
+}
+
+/** How POS preferences read scale barcodes. */
+function getBarcodeSettings(): BarcodeSettings {
+  return {
+    weight_enabled_barcode: !!getPOSPreference('weight_enabled_barcode'),
+    check_digits: getPOSPreference('check_digits') as number | undefined,
+    item_code_digits: getPOSPreference('item_code_digits') as
+      number | undefined,
+    item_weight_digits: getPOSPreference('item_weight_digits') as
+      number | undefined,
+  };
 }
 
 export function filterPOSItems<T extends POSItemSearchRecord>(
@@ -196,7 +212,7 @@ function getBestMatch(
 }
 
 function getSearchValues(item: POSItemSearchRecord): string[] {
-  return [item.name, ...item.barcodes].filter(
+  return [item.name, item.itemName, ...item.barcodes].filter(
     (value): value is string => typeof value === 'string' && !!value
   );
 }

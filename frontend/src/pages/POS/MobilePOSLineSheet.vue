@@ -1,7 +1,7 @@
 <template>
   <FrappeBottomSheet
     :open="!!row"
-    :title="row?.item_code ?? ''"
+    :title="row?.item_name || row?.item_code || ''"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div
@@ -115,7 +115,7 @@ const permissions = ref<POSPermissions>({
 });
 
 onMounted(async () => {
-  permissions.value = await getPOSPermissions();
+  permissions.value = await getPOSPermissions(props.row?.parentdoc);
 });
 
 async function setValue(field: POSRowField, value: number | Money) {

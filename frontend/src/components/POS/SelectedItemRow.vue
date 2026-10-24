@@ -8,9 +8,9 @@
     >
       <span
         class="truncate text-base-medium text-ink-gray-8"
-        :title="row.item_code"
+        :title="row.item_name || row.item_code"
       >
-        {{ row.item_code }}
+        {{ row.item_name || row.item_code }}
       </span>
       <span
         v-if="row.is_free_item"
@@ -393,7 +393,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.permissions = await getPOSPermissions();
+    this.permissions = await getPOSPermissions(this.row.parentdoc);
   },
   methods: {
     toggleExpand() {

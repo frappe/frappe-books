@@ -1,5 +1,6 @@
 import { FiltersMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { toActiveDoctype } from 'src/frappe/mode';
 import { FieldPresentation, withoutCreate } from 'src/frappe/schema';
 
 const BUTTON_COLOURS = [
@@ -57,8 +58,14 @@ export class POSProfile extends FrappeDoc {
   declare hide_unavailable_items?: boolean;
   declare allow_discount_change?: boolean;
   declare ignore_pricing_rule?: boolean;
+  // ERPNext POS Profile only
+  declare selling_price_list?: string;
+  declare item_groups?: (FrappeDoc & { item_group?: string })[];
+  declare payments?: (FrappeDoc & { mode_of_payment?: string })[];
 
   static filters: FiltersMap = {
-    print_format: () => [['doc_type', '=', 'Books Sales Invoice']],
+    print_format: () => [
+      ['doc_type', '=', toActiveDoctype('Books Sales Invoice')],
+    ],
   };
 }

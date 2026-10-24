@@ -504,6 +504,57 @@ class IntegrationTestPricing(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Item Price appears multiple times"):
 			make_item_price(price_list.name, self.item.name, price_list_rate=80)
 
+	def test_invoice_takes_the_latest_item_price_valid_on_its_date(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
+		price_list = make_price_list((self.item.name, None, 90))
+		starts = add_days(nowdate(), 10)
+		make_item_price(price_list.name, self.item.name, price_list_rate=70, valid_from=starts)
+		make_item_price(
+			price_list.name,
+			self.item.name,
+			price_list_rate=50,
+			valid_from=add_days(nowdate(), -30),
+			valid_upto=add_days(nowdate(), -1),
+		)
+		for date, rate in ((nowdate(), 90), (starts, 70)):
+			with self.subTest(date=date):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					self.party.name,
+					self.receivable.name,
+					self.item.name,
+					self.income.name,
+					date=date,
+					price_list=price_list.name,
+				)
+				invoice.items[0].rate = None
+				invoice.save()
+				self.assertEqual(invoice.items[0].rate, rate)
+
+	def test_item_price_dates_and_list_are_checked(self):
+		price_list = make_price_list()
+		with self.assertRaisesRegex(frappe.ValidationError, "must be after"):
+			make_item_price(
+				price_list.name, self.item.name, valid_from=nowdate(), valid_upto=add_days(nowdate(), -1)
+			)
+		price_list.db_set("enabled", 0)
+		with self.assertRaisesRegex(frappe.ValidationError, "does not exist or is disabled"):
+			make_item_price(price_list.name, self.item.name)
+
+	def test_item_prices_follow_their_price_list(self):
+		price_list = make_price_list((self.item.name, None, 90))
+		price_list.buying = 1
+		price_list.save()
+
+		price = frappe.get_all(
+			"Books Item Price", {"price_list": price_list.name}, ["selling", "buying", "currency"]
+		)
+		self.assertEqual([tuple(row.values()) for row in price], [(1, 1, company_currency())])
+
+	def test_price_list_is_in_the_company_currency(self):
+		with self.assertRaisesRegex(frappe.ValidationError, "company currency"):
+			make_price_list(currency=foreign_currency())
+
 	def test_item_price_without_unit_gets_the_item_unit(self):
 		price_list = make_price_list()
 

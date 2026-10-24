@@ -161,7 +161,7 @@
    "fieldname": "free_item_unit",
    "fieldtype": "Link",
    "label": "UOM",
-   "options": "Books Uom"
+   "options": "Books UOM"
   },
   {
    "default": "0",
@@ -243,7 +243,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",

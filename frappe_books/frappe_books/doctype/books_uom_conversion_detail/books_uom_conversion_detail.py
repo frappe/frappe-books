@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksUomConversionItem(Document):
+class BooksUOMConversionDetail(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -21,4 +21,4 @@ class BooksUomConversionItem(Document):
 		uom: DF.Link
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Uom Conversion Item"
+	_DOCTYPE_NAME = "Books UOM Conversion Detail"

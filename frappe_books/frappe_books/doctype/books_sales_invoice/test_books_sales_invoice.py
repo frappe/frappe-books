@@ -109,7 +109,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.assertRaisesRegex(frappe.ValidationError, message, invoice.save)
 
 	def test_transfer_quantity_counts_transfer_units(self):
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		self.item.append("uom_conversions", {"uom": box.name, "conversion_factor": 12})
 		self.item.save()
 		invoice = self._make_invoice()

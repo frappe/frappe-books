@@ -10,7 +10,7 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
 }) => {
   let writes = 0;
   // Frappe serves units; the insert is answered here so no record is stored.
-  await page.route('**/api/v2/document/Books%20Uom', async (route) => {
+  await page.route('**/api/v2/document/Books%20UOM', async (route) => {
     if (route.request().method() !== 'POST') {
       return route.fallback();
     }
@@ -18,7 +18,13 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
     writes++;
     const values = route.request().postDataJSON();
     await route.fulfill({
-      json: { data: { ...values, modified: '2026-01-01 00:00:00.000000' } },
+      json: {
+        data: {
+          ...values,
+          name: values.uom_name,
+          modified: '2026-01-01 00:00:00.000000',
+        },
+      },
     });
   });
   // A new unit, opened in a quick edit by the name it is kept under.
@@ -50,7 +56,7 @@ test('a Frappe-served quick edit reports post-save warnings without leaving an u
     doc.once('afterSync', () => {
       fixture.notifications++;
     });
-    await doc.set('name', 'Warning Unit');
+    await doc.set('uom_name', 'Warning Unit');
   });
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();

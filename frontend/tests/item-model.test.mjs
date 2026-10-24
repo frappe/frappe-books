@@ -21,7 +21,8 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('the Item form shows the fields, labels, placeholders and sections it showed', () => {
   const layout = getSchema('Item')
@@ -50,7 +51,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     'serial_number_series | Serial Number Series |  | Inventory',
     'uom_conversions | UOM Conversions |  | Inventory',
   ]);
-  assert.deepEqual(getSchema('UomConversionItem').tableFields, [
+  assert.deepEqual(getSchema('UOMConversionDetail').tableFields, [
     'uom',
     'conversion_factor',
   ]);

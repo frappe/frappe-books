@@ -120,7 +120,7 @@ test('option values come from the server and labels from the model', () => {
 test('a field set only once says so', () => {
   const unit = getField({
     fieldtype: 'Link',
-    options: 'Books Uom',
+    options: 'Books UOM',
     set_only_once: 1,
   });
   assert.equal(unit.setOnlyOnce, true);

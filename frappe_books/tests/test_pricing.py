@@ -148,7 +148,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_free_item_comes_in_the_rule_unit(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		free_item = make_item(
 			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
 		)
@@ -176,7 +176,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_recursive_rule_gives_its_quantity_for_every_stock_units(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
 			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
 		)
@@ -202,7 +202,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_rule_applies_to_rows_in_its_unit_at_its_unit_rate(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
 			self.income.name,
 			self.expense.name,
@@ -231,7 +231,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual((unit_row.pricing_rule, unit_row.rate), (None, 15))
 
 	def test_rule_takes_only_units_its_items_have(self):
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
 			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
 		)
@@ -241,7 +241,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_rule_counts_only_the_rows_in_its_units(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		for units, free_quantity in (((box.name,), 2), ((box.name, "Unit"), 3)):
 			with self.subTest(units=units):
 				item = make_item(
@@ -473,7 +473,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_price_list_rate_is_charged_per_stock_unit(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
-		box = frappe.get_doc({"doctype": "Books Uom", "name": unique_name("Box")}).insert()
+		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
 			self.income.name,
 			self.expense.name,

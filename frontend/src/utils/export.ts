@@ -54,9 +54,6 @@ const AUDIT_KEYS: Record<string, string> = {
 };
 // The number series of a numbered document, keyed as Books wrote it.
 const SERIES_KEYS: Record<string, string> = { naming_series: 'numberSeries' };
-const RENAMED_SCHEMAS: Record<string, string> = {
-  UomConversionItem: 'UOMConversionItem',
-};
 
 /** What an export reads: a page at a time, newest first. */
 interface ExportQuery {
@@ -133,8 +130,7 @@ export async function getCsvExportData(query: ExportQuery): Promise<string> {
 
 /** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
 export function getCsvKey(schemaName: string, fieldname: string): string {
-  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
-  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
+  return `${schemaName}.${getExportKey(schemaName, fieldname)}`;
 }
 
 /** A picked field as a file holds it: its label, keys and value. */

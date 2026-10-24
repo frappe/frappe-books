@@ -1,11 +1,10 @@
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Uom, served by Frappe. */
+/** Books UOM, served by Frappe and named by its UOM Name. */
 export class UOM extends FrappeDoc {
-  static override doctype = 'Books Uom';
+  static override doctype = 'Books UOM';
   static override presentation = {
     label: 'UOM',
-    nameField: { label: 'UOM', placeholder: 'Item Name' },
-    quickEditFields: ['is_whole'],
+    quickEditFields: ['must_be_whole_number'],
   };
 }

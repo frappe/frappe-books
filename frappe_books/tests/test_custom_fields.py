@@ -48,47 +48,47 @@ SYSTEM_MANAGER = "books-customizer@example.com"
 class IntegrationTestCustomFields(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
-		self.assertFalse(frappe.db.exists("Books Custom Form", "Books Uom"))
+		self.assertFalse(frappe.db.exists("Books Custom Form", "Books UOM"))
 		self.addCleanup(self._cleanup_custom_field_test)
 
 	def test_custom_fields_are_materialized_and_round_trip(self):
 		unit_name = unique_name("Bridge Custom Unit")
-		_custom_form("Books Uom", [FIELD]).insert()
-		self.assertTrue(frappe.db.exists("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN}))
+		_custom_form("Books UOM", [FIELD]).insert()
+		self.assertTrue(frappe.db.exists("Custom Field", {"dt": "Books UOM", "fieldname": COLUMN}))
 
-		frappe.get_doc({"doctype": "Books Uom", "name": unit_name, COLUMN: "persisted"}).insert()
+		frappe.get_doc({"doctype": "Books UOM", "uom_name": unit_name, COLUMN: "persisted"}).insert()
 
-		self.assertEqual(frappe.db.get_value("Books Uom", unit_name, COLUMN), "persisted")
+		self.assertEqual(frappe.db.get_value("Books UOM", unit_name, COLUMN), "persisted")
 
 	def test_books_meta_places_custom_fields_as_their_form_says(self):
-		_custom_form("Books Uom", [FIELD]).insert()
+		_custom_form("Books UOM", [FIELD]).insert()
 
-		books_meta = get_books_meta(["Books Uom"])
+		books_meta = get_books_meta(["Books UOM"])
 
 		placement = {"section": "Default", "tab": "Custom", "books_fieldname": FIELD["fieldname"]}
-		self.assertEqual(books_meta["placements"], {"Books Uom": {COLUMN: placement}})
+		self.assertEqual(books_meta["placements"], {"Books UOM": {COLUMN: placement}})
 		(unit,) = books_meta["metas"]
 		self.assertIn(COLUMN, [field["fieldname"] for field in unit["fields"]])
 		with self.set_user(ensure_user("books-meta-outsider@example.com", "Translator")):
-			self.assertEqual(get_books_meta(["Books Uom"])["placements"], {})
+			self.assertEqual(get_books_meta(["Books UOM"])["placements"], {})
 
 	def test_system_manager_removes_fields_without_switching_user(self):
 		_make_system_manager()
 		with self.set_user(SYSTEM_MANAGER):
 			frappe.local.session.data.csrf_token = "books-token"
-			_custom_form("Books Uom", [FIELD]).insert()
+			_custom_form("Books UOM", [FIELD]).insert()
 			self.assertEqual(_field_owner(), SYSTEM_MANAGER)
 
-			frappe.delete_doc("Books Custom Form", "Books Uom")
+			frappe.delete_doc("Books Custom Form", "Books UOM")
 
 			self.assertEqual(frappe.local.session.data.csrf_token, "books-token")
 		self.assertIsNone(_field_owner())
 
 	def test_rest_creates_edits_and_deletes_custom_fields(self):
-		client.insert(_form_values("Books Uom", [FIELD, SIZE_FIELD]))
+		client.insert(_form_values("Books UOM", [FIELD, SIZE_FIELD]))
 		self.assertEqual(_custom_field(SIZE_FIELD).fieldtype, "Select")
 
-		form = client.get("Books Custom Form", "Books Uom")
+		form = client.get("Books Custom Form", "Books UOM")
 		row = _row(form["custom_fields"], FIELD)
 		form["custom_fields"] = [{**row, "label": "Renamed", "is_required": 1, "default": "North"}]
 		client.save(form)
@@ -99,49 +99,49 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		)
 		self.assertIsNone(_custom_field(SIZE_FIELD))
 
-		client.delete("Books Custom Form", "Books Uom")
+		client.delete("Books Custom Form", "Books UOM")
 		self.assertIsNone(_custom_field(FIELD))
 
 	def test_forms_show_the_definition_their_custom_field_holds(self):
-		_custom_form("Books Uom", [FIELD]).insert()
+		_custom_form("Books UOM", [FIELD]).insert()
 
-		client.set_value("Custom Field", f"Books Uom-{COLUMN}", "label", "Edited In Frappe")
+		client.set_value("Custom Field", f"Books UOM-{COLUMN}", "label", "Edited In Frappe")
 
-		row = client.get("Books Custom Form", "Books Uom")["custom_fields"][0]
+		row = client.get("Books Custom Form", "Books UOM")["custom_fields"][0]
 		self.assertEqual(row["label"], "Edited In Frappe")
 
 	def test_link_options_round_trip_in_frappe_names(self):
 		fields = [SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
-		_custom_form("Books Uom", fields).insert()
+		_custom_form("Books UOM", fields).insert()
 
 		self.assertEqual(_custom_field(PARTY_FIELD).options, "Books Customer")
 		self.assertEqual(_custom_field(REFERENCE_FIELD).options, "custom_books_hostedbridgetestsize")
-		rows = client.get("Books Custom Form", "Books Uom")["custom_fields"]
+		rows = client.get("Books Custom Form", "Books UOM")["custom_fields"]
 		self.assertEqual(_row(rows, PARTY_FIELD)["target"], "Books Customer")
 		self.assertEqual(_row(rows, REFERENCE_FIELD)["references"], "custom_books_hostedbridgetestsize")
 
 	def test_a_loaded_form_saves_unchanged(self):
 		fields = [{**FIELD, "is_required": 1, "default": "North"}, SIZE_FIELD, PARTY_FIELD, REFERENCE_FIELD]
-		_custom_form("Books Uom", fields).insert()
+		_custom_form("Books UOM", fields).insert()
 		definitions = _definitions(fields)
 
-		frappe.get_doc("Books Custom Form", "Books Uom").save()
-		_rest_put("Books Uom", {})
+		frappe.get_doc("Books Custom Form", "Books UOM").save()
+		_rest_put("Books UOM", {})
 
 		self.assertEqual(_definitions(fields), definitions)
 
 	def test_rest_put_of_stored_row_columns_changes_only_them(self):
-		_custom_form("Books Uom", [FIELD, SIZE_FIELD]).insert()
+		_custom_form("Books UOM", [FIELD, SIZE_FIELD]).insert()
 		definitions = _definitions([FIELD, SIZE_FIELD])
 		rows = frappe.get_all(
 			"Books Custom Field",
-			filters={"parent": "Books Uom"},
+			filters={"parent": "Books UOM"},
 			fields=["name", "parent", "parenttype", "parentfield", "fieldname", "section", "tab"],
 			order_by="idx",
 		)
 		rows[0].tab = "Details"
 
-		_rest_put("Books Uom", {"custom_fields": rows})
+		_rest_put("Books UOM", {"custom_fields": rows})
 
 		self.assertEqual(_definitions([FIELD, SIZE_FIELD]), definitions)
 		self.assertEqual(frappe.db.get_value("Books Custom Field", rows[0].name, "tab"), "Details")
@@ -151,14 +151,14 @@ class IntegrationTestCustomFields(IntegrationTestCase):
 		# the drop, not after, so commit the drop too.
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		for unit in frappe.get_all(
-			"Books Uom", filters={"name": ["like", "Bridge Custom Unit%"]}, pluck="name"
+			"Books UOM", filters={"name": ["like", "Bridge Custom Unit%"]}, pluck="name"
 		):
-			frappe.delete_doc("Books Uom", unit)
-		if frappe.db.exists("Books Custom Form", "Books Uom"):
-			frappe.delete_doc("Books Custom Form", "Books Uom")
-		for column in frappe.db.get_table_columns("Books Uom"):
+			frappe.delete_doc("Books UOM", unit)
+		if frappe.db.exists("Books Custom Form", "Books UOM"):
+			frappe.delete_doc("Books Custom Form", "Books UOM")
+		for column in frappe.db.get_table_columns("Books UOM"):
 			if column.startswith("custom_books_hostedbridgetest"):
-				frappe.db.sql_ddl(f"alter table `tabBooks Uom` drop column `{column}`")
+				frappe.db.sql_ddl(f"alter table `tabBooks UOM` drop column `{column}`")
 		frappe.db.commit()  # nosemgrep
 
 
@@ -166,7 +166,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 	def test_customization_must_be_enabled(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 0)
 		self.assertRaisesRegex(
-			frappe.ValidationError, "Enable form customization", _custom_form("Books Uom", [FIELD]).insert
+			frappe.ValidationError, "Enable form customization", _custom_form("Books UOM", [FIELD]).insert
 		)
 
 	def test_ledgers_singles_and_unknown_doctypes_cannot_be_customized(self):
@@ -197,7 +197,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		cases = {
 			"needs a default": [{**FIELD, "is_required": 1}],
 			"already used for Custom Field 1": [FIELD, {**FIELD, "label": "Duplicate"}],
-			"already exists for Books Uom": [{**FIELD, "fieldname": "is_whole"}],
+			"already exists for Books UOM": [{**FIELD, "fieldname": "must_be_whole_number"}],
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
 			"needs a Target": [{**PARTY_FIELD, "target": None}],
 			"needs a References": [{**REFERENCE_FIELD, "references": None}],
@@ -205,7 +205,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		for message, fields in cases.items():
 			with self.subTest(message=message):
 				self.assertRaisesRegex(
-					frappe.ValidationError, message, _custom_form("Books Uom", fields).insert
+					frappe.ValidationError, message, _custom_form("Books UOM", fields).insert
 				)
 
 
@@ -243,7 +243,7 @@ class IntegrationTestCustomFieldnames(IntegrationTestCase):
 
 def _new_custom_form(fields):
 	"""An unsaved form, as /books sends one to preview."""
-	return frappe.get_doc({**_form_values("Books Uom", fields), "__islocal": 1})
+	return frappe.get_doc({**_form_values("Books UOM", fields), "__islocal": 1})
 
 
 def _custom_form(doctype, fields):
@@ -257,7 +257,7 @@ def _form_values(doctype, fields):
 
 
 def _custom_field(field):
-	filters = {"dt": "Books Uom", "fieldname": f"custom_books_{field['fieldname'].lower()}"}
+	filters = {"dt": "Books UOM", "fieldname": f"custom_books_{field['fieldname'].lower()}"}
 	name = frappe.db.exists("Custom Field", filters)
 	return name and frappe.get_doc("Custom Field", name)
 
@@ -277,7 +277,7 @@ def _row(rows, field):
 
 
 def _field_owner():
-	return frappe.db.get_value("Custom Field", {"dt": "Books Uom", "fieldname": COLUMN}, "owner")
+	return frappe.db.get_value("Custom Field", {"dt": "Books UOM", "fieldname": COLUMN}, "owner")
 
 
 def _make_system_manager():

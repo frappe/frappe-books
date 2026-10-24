@@ -15,7 +15,7 @@ export enum ModelNameEnum {
   ItemGroup = 'ItemGroup',
   ItemEnquiry = 'ItemEnquiry',
   UOM = 'UOM',
-  UOMConversionItem = 'UOMConversionItem',
+  UOMConversionDetail = 'UOMConversionDetail',
   JournalEntry = 'JournalEntry',
   JournalEntryAccount = 'JournalEntryAccount',
   Misc = 'Misc',
@@ -65,7 +65,6 @@ export enum ModelNameEnum {
   POSProfile = 'POSProfile',
   POSOpeningShift = 'POSOpeningShift',
   POSClosingShift = 'POSClosingShift',
-
 }
 
 export type ModelName = keyof typeof ModelNameEnum;

@@ -58,8 +58,8 @@ def bootstrap():
 	for prefix, reference_type, _field in NUMBER_SERIES.values():
 		values = {"start": DEFAULT_SERIES_START, "pad_zeros": 4, "reference_type": reference_type}
 		_insert_if_missing("Books Number Series", prefix, values)
-	for name, is_whole in DEFAULT_UOMS.items():
-		_insert_if_missing("Books Uom", name, {"is_whole": is_whole})
+	for name, whole in DEFAULT_UOMS.items():
+		_insert_if_missing("Books UOM", name, {"uom_name": name, "must_be_whole_number": whole})
 	_insert_if_missing("Books Location", "Stores", {})
 	for method_type in ("Cash", "Bank"):
 		_insert_if_missing("Books Payment Method", method_type, {"type": method_type})

@@ -76,7 +76,7 @@
    "fieldname": "unit",
    "fieldtype": "Link",
    "label": "Unit Type",
-   "options": "Books Uom",
+   "options": "Books UOM",
    "placeholder": "Unit Type",
    "set_only_once": 1
   },
@@ -183,7 +183,7 @@
    "fieldname": "uom_conversions",
    "fieldtype": "Table",
    "label": "UOM Conversions",
-   "options": "Books Uom Conversion Item"
+   "options": "Books UOM Conversion Detail"
   },
   {
    "fieldname": "default_section_break_24",
@@ -194,7 +194,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",

@@ -290,7 +290,7 @@ test('files keep the keys Books renamed', async () => {
   );
   assert.deepEqual(await keys('Item', ['item_type', 'uom_conversions']), [
     'Item.itemType',
-    'UOMConversionItem.uom',
+    'UOMConversionDetail.uom',
   ]);
   assert.deepEqual(
     await keys('AccountingLedgerEntry', ['posting_date', 'voucher_type']),
@@ -310,7 +310,7 @@ test('every exported table is headed by the label of its rows, not their doctype
 
   assert.deepEqual(doctypeLabels, []);
   assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
-  assert.equal(getSchema('UomConversionItem').label, 'UOM Conversion Item');
+  assert.equal(getSchema('UOMConversionDetail').label, 'UOM Conversion Detail');
 });
 
 test('a list exports from the framework a page at a time, in list order', async () => {

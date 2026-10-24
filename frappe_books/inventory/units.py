@@ -59,7 +59,7 @@ def item_units(names):
 		return {}
 	factors = defaultdict(dict)
 	for row in frappe.get_all(
-		"Books Uom Conversion Item",
+		"Books UOM Conversion Detail",
 		filters={"parenttype": "Books Item", "parent": ["in", sorted(names)]},
 		fields=["parent", "uom", "conversion_factor"],
 	):
@@ -72,5 +72,7 @@ def _whole_units(units):
 	if not units:
 		return set()
 	return set(
-		frappe.get_all("Books Uom", filters={"name": ["in", sorted(units)], "is_whole": 1}, pluck="name")
+		frappe.get_all(
+			"Books UOM", filters={"name": ["in", sorted(units)], "must_be_whole_number": 1}, pluck="name"
+		)
 	)

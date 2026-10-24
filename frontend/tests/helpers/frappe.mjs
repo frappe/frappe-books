@@ -315,7 +315,7 @@ export const itemMeta = {
       fieldname: 'unit',
       fieldtype: 'Link',
       label: 'Unit',
-      options: 'Books Uom',
+      options: 'Books UOM',
     },
     { fieldname: 'inventory_tab', fieldtype: 'Tab Break', label: 'Inventory' },
     {
@@ -381,7 +381,7 @@ export const conversionMeta = {
       fieldname: 'uom',
       fieldtype: 'Link',
       label: 'UOM',
-      options: 'Books Uom',
+      options: 'Books UOM',
       reqd: 1,
       in_list_view: 1,
     },

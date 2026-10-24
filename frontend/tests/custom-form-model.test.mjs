@@ -15,7 +15,7 @@ await loadFrappeModels();
 const field = (doc, fieldname) => doc.fieldMap[fieldname];
 
 async function newForm() {
-  const form = newFrappeDoc('CustomForm', { name: 'Books Uom' });
+  const form = newFrappeDoc('CustomForm', { name: 'Books UOM' });
   await form.append('custom_fields', {
     label: 'My Note',
     fieldname: 'myNote',
@@ -35,7 +35,7 @@ test('the Custom Form asks for a form type among the forms Books can customize',
       .name(newFrappeDoc('CustomForm'))
       .map(({ value, label }) => [value, label])
   );
-  assert.equal(types['Books Uom'], 'UOM');
+  assert.equal(types['Books UOM'], 'UOM');
   assert.equal(types['Books Sales Invoice'], 'Sales Invoice');
   assert.equal(types['Books Sales Invoice Item'], 'Sales Invoice Item');
   for (const doctype of [
@@ -89,7 +89,8 @@ test('a row asks for options, a target or references as its field type needs', a
   const [row] = form.custom_fields;
   assert.ok(row instanceof CustomField);
   const shown = (fieldname) => !row.getFieldState(field(row, fieldname)).hidden;
-  const required = (fieldname) => row.getFieldState(field(row, fieldname)).required;
+  const required = (fieldname) =>
+    row.getFieldState(field(row, fieldname)).required;
   assert.deepEqual(['options', 'target', 'references'].map(shown), [
     false,
     false,
@@ -112,8 +113,8 @@ test('a row asks for options, a target or references as its field type needs', a
 test('custom field names still reject another row and built-in fields', async () => {
   const form = await newForm();
   await assert.rejects(
-    form.custom_fields[0].set('fieldname', 'is_whole'),
-    /Fieldname is_whole already exists for UOM/
+    form.custom_fields[0].set('fieldname', 'must_be_whole_number'),
+    /Fieldname must_be_whole_number already exists for UOM/
   );
   await form.append('custom_fields', { label: 'Other', fieldname: 'other' });
   await assert.rejects(
@@ -172,7 +173,7 @@ test('editing a row previews its name from the server', async () => {
       },
     ],
   }));
-  const form = newFrappeDoc('CustomForm', { name: 'Books Uom' });
+  const form = newFrappeDoc('CustomForm', { name: 'Books UOM' });
   await form.append('custom_fields', { label: 'Delivery Date' });
   await form.preview();
 

@@ -37,8 +37,8 @@ test('item group, unit, location, batch and serial number forms show what they s
     'hsn_code | HSN/SAC | HSN/SAC Code | Default',
   ]);
   assert.deepEqual(getLayout('UOM'), [
-    'name | UOM | Item Name | Default',
-    'is_whole | Is Whole |  | Default',
+    'uom_name | UOM Name |  | Default',
+    'must_be_whole_number | Must be Whole Number |  | Default',
   ]);
   assert.deepEqual(getLayout('Location'), [
     'name | Location Name |  | Default',

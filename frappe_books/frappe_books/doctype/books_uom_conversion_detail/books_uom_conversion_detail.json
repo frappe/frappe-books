@@ -15,7 +15,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "UOM",
-   "options": "Books Uom",
+   "options": "Books UOM",
    "reqd": 1
   },
   {
@@ -31,10 +31,10 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:16.801980",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Uom Conversion Item",
+ "name": "Books UOM Conversion Detail",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

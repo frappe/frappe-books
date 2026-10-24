@@ -170,8 +170,8 @@ class IntegrationTestUnits(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, message, movement.insert)
 
 	def test_whole_number_units_take_whole_quantities(self):
-		piece = make_uom("Piece", is_whole=1)
-		box = make_uom("Whole Box", is_whole=1)
+		piece = make_uom("Piece", must_be_whole_number=1)
+		box = make_uom("Whole Box", must_be_whole_number=1)
 		item = make_item(
 			self.income.name,
 			self.received,
@@ -193,7 +193,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 
 	def test_invoice_rows_in_whole_number_units_take_whole_quantities(self):
 		receivable = make_account("Unit Receivable", account_type="Receivable")
-		piece = make_uom("Piece", is_whole=1)
+		piece = make_uom("Piece", must_be_whole_number=1)
 		item = make_item(self.income.name, self.expense.name, unit=piece)
 		invoice = frappe.get_doc(
 			{
@@ -233,9 +233,15 @@ class IntegrationTestUnits(IntegrationTestCase):
 		return frappe.get_doc(movement_values("MaterialReceipt", [row]))
 
 
-def make_uom(label, is_whole=0):
+def make_uom(label, must_be_whole_number=0):
 	return (
-		frappe.get_doc({"doctype": "Books Uom", "name": unique_name(label), "is_whole": is_whole})
+		frappe.get_doc(
+			{
+				"doctype": "Books UOM",
+				"uom_name": unique_name(label),
+				"must_be_whole_number": must_be_whole_number,
+			}
+		)
 		.insert()
 		.name
 	)

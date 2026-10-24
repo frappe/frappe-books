@@ -35,8 +35,8 @@ class BooksItem(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_uom_conversion_item.books_uom_conversion_item import (
-			BooksUomConversionItem,
+		from frappe_books.frappe_books.doctype.books_uom_conversion_detail.books_uom_conversion_detail import (
+			BooksUOMConversionDetail,
 		)
 
 		barcode: DF.Data | None
@@ -56,7 +56,7 @@ class BooksItem(Document):
 		tax: DF.Link | None
 		track_item: DF.Check
 		unit: DF.Link | None
-		uom_conversions: DF.Table[BooksUomConversionItem]
+		uom_conversions: DF.Table[BooksUOMConversionDetail]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item"

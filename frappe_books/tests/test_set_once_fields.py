@@ -10,7 +10,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 		income = make_account("Set Once Income", root_type="Income").name
 		expense = make_account("Set Once Expense", root_type="Expense").name
 		received = make_account("Set Once Received", root_type="Liability").name
-		unit = frappe.get_doc({"doctype": "Books Uom", "name": frappe.generate_hash()}).insert().name
+		unit = frappe.get_doc({"doctype": "Books UOM", "uom_name": frappe.generate_hash()}).insert().name
 		for fieldname, changes, is_tracked in (
 			("unit", {"unit": unit}, False),
 			("item_type", {"item_type": "Service"}, False),

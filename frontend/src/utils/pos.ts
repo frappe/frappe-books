@@ -8,12 +8,7 @@ import { Money } from 'pesa';
 import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
 import type { Field } from 'schemas/types';
-import {
-  getCount,
-  getList,
-  type DocValues,
-  type Filter,
-} from 'src/frappe/api';
+import { getCount, getList, type DocValues, type Filter } from 'src/frappe/api';
 import { getField, getSchema } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
 import { toDocValues } from 'src/frappe/values';
@@ -25,8 +20,7 @@ export { getTotalQuantity } from './posCart';
 /** The item fields the POS lists, searches and adds items by. */
 export const POS_ITEM_FIELDS = [
   'name',
-  'item_code',
-  'barcode',
+  { barcodes: ['barcode'] },
   'image',
   'rate',
   'unit',
@@ -174,8 +168,9 @@ export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
     availableQty: itemQtyMap[name]?.availableQty ?? 0,
     trackItem: !!item.track_item,
     name,
-    itemCode: item.item_code as string,
-    barcode: item.barcode as string,
+    barcodes: ((item.barcodes ?? []) as { barcode: string }[]).map(
+      ({ barcode }) => barcode
+    ),
     image: item.image as string,
     rate: fyo.pesa((item.rate as number) ?? 0),
     unit: item.unit as string,

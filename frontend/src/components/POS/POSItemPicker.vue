@@ -4,8 +4,7 @@
       <MultiLabelLink
         class="min-w-0 flex-1"
         secondary-link="barcode"
-        third-link="itemCode"
-        :option-records="searchItems"
+        :option-records="searchRecords"
         :df="{
           label: t`Search by item name, code or barcode`,
           fieldtype: 'Link',
@@ -61,7 +60,10 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton, TabButtons as FrappeTabButtons } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  TabButtons as FrappeTabButtons,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import EmptyState from 'src/components/EmptyState.vue';
@@ -95,6 +97,13 @@ export default defineComponent({
     return { itemGroups: [] as string[] };
   },
   computed: {
+    // The search lists an item's barcodes beside its name.
+    searchRecords() {
+      return this.searchItems.map((item) => ({
+        ...item,
+        barcode: item.barcodes.join(', '),
+      }));
+    },
     viewOptions() {
       return [
         { value: 'grid', label: t`Grid view`, icon: 'lucide-layout-grid' },

@@ -1,8 +1,6 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import re
-
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -35,11 +33,12 @@ class BooksItem(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from frappe_books.frappe_books.doctype.books_item_barcode.books_item_barcode import BooksItemBarcode
 		from frappe_books.frappe_books.doctype.books_uom_conversion_detail.books_uom_conversion_detail import (
 			BooksUOMConversionDetail,
 		)
 
-		barcode: DF.Data | None
+		barcodes: DF.Table[BooksItemBarcode]
 		batch_series: DF.Data | None
 		description: DF.Text | None
 		expense_account: DF.Link
@@ -48,7 +47,6 @@ class BooksItem(Document):
 		hsn_code: DF.Data | None
 		image: DF.AttachImage | None
 		income_account: DF.Link
-		item_code: DF.Data | None
 		item_group: DF.Link | None
 		item_type: DF.Literal["Product", "Service"]
 		rate: DF.Currency
@@ -86,8 +84,6 @@ class BooksItem(Document):
 		self.validate_stock_settings()
 		self.validate_accounts()
 		validate_hsn_codes([self])
-		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
-			frappe.throw(_("Barcode must contain exactly 12 digits."))
 		self.validate_unit_conversions()
 		self.validate_series()
 

@@ -10,9 +10,7 @@ export type ItemGroupMap = Record<string, string>;
 export type DiscountType = 'percent' | 'amount';
 
 export type ItemVisibility =
-  | 'Inventory Items'
-  | 'Non-Inventory Items'
-  | 'All Items';
+  'Inventory Items' | 'Non-Inventory Items' | 'All Items';
 
 export type POSLayout = 'Classic' | 'Modern';
 
@@ -29,7 +27,7 @@ export const modalNames = [
   'BatchSelection',
 ] as const;
 
-export type ModalName = typeof modalNames[number];
+export type ModalName = (typeof modalNames)[number];
 
 /** Cart item errors share one toast, so repeated taps do not stack them. */
 export const POS_ITEM_TOAST_ID = 'pos-item-error';
@@ -38,8 +36,8 @@ export interface POSItem {
   id?: number;
   image?: string;
   name: string;
-  itemCode?: string;
-  barcode?: string;
+  /** The item's barcodes, which a scan matches. */
+  barcodes: string[];
   rate: Money;
   item?: string;
   batch?: string;

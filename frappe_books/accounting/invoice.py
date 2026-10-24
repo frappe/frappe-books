@@ -419,7 +419,7 @@ def _populate_currency(invoice, party_currency):
 
 
 def _populate_row(invoice, row, item, rates):
-	for fieldname in ("item_code", "description", "unit", "hsn_code"):
+	for fieldname in ("description", "unit", "hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
 	# A tax left out follows the item; an empty one sent, as a cleared tax, stays empty.
@@ -452,7 +452,6 @@ def _item_details(names):
 		filters={"name": ["in", sorted(names)]},
 		fields=[
 			"name",
-			"item_code",
 			"description",
 			"unit",
 			"tax",

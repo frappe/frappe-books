@@ -14,6 +14,7 @@ import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { AccountRootTypeEnum } from '../Account/types';
+import { ItemBarcode } from './ItemBarcode';
 import { UOMConversionDetail } from './UOMConversionDetail';
 
 /**
@@ -33,23 +34,19 @@ export class Item extends FrappeDoc {
       'description',
       'income_account',
       'expense_account',
-      'barcode',
+      'barcodes',
       'hsn_code',
       'track_item',
     ],
   };
-  static override rowModels = { uom_conversions: UOMConversionDetail };
+  static override rowModels = {
+    barcodes: ItemBarcode,
+    uom_conversions: UOMConversionDetail,
+  };
   static override previewMethod = 'preview';
 
   // The server checks these too; mirrored to show the message at the field.
   validations: ValidationMap = {
-    barcode: (value: DocValue) => {
-      if (value && !(value as string).match(/^\d{12}$/)) {
-        throw new ValidationError(
-          this.fyo.t`Barcode must be exactly 12 digits.`
-        );
-      }
-    },
     rate: (value: DocValue) => {
       if ((value as Money).isNegative()) {
         throw new ValidationError(this.fyo.t`Rate can't be negative.`);
@@ -70,7 +67,7 @@ export class Item extends FrappeDoc {
   hidden: HiddenMap = {
     hsn_code: () => isHsnCodeHidden(this.fyo),
     track_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
-    barcode: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
+    barcodes: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
     has_batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
     has_serial_number: () =>
       !this.fyo.singles.InventorySettings?.enable_serial_number,

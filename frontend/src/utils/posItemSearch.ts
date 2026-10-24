@@ -1,3 +1,4 @@
+import { uniqBy } from 'lodash';
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
@@ -5,7 +6,7 @@ import { fyo } from 'src/initFyo';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
 
-type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
+type POSItemSearchRecord = Pick<POSItem, 'name' | 'barcodes'>;
 export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
 
 type BarcodeSettings = Pick<
@@ -26,7 +27,8 @@ type POSItemSearchMatch = {
   isMatch: boolean;
 };
 
-const SCANNED_FIELDS = ['name', 'item_code', 'barcode'];
+// The item's name, then its barcode rows.
+const SCANNED_FIELDS = [['name'], ['Books Item Barcode', 'barcode']];
 
 /** The item a scanned or typed code names among all items, whatever a list shows. */
 export async function getScannedItem(
@@ -45,7 +47,7 @@ export async function getScannedItem(
 
 /**
  * The items a scanned code, or the item code in a scale barcode, may name:
- * those whose name, item code or barcode is the code in any case.
+ * those whose name or a barcode is the code in any case.
  * `findScannedPOSItem` picks the item among them.
  */
 async function getScannableItems(
@@ -57,7 +59,7 @@ async function getScannableItems(
   const orFilters = codes
     .filter((value): value is string => !!value)
     .flatMap((value) =>
-      SCANNED_FIELDS.map((field): Filter => [field, 'like', value])
+      SCANNED_FIELDS.map((field) => [...field, 'like', value] as Filter)
     );
   const items = await getList('Books Item', {
     fields: POS_ITEM_FIELDS,
@@ -65,7 +67,8 @@ async function getScannableItems(
     orderBy: 'creation desc',
     limit: 0,
   });
-  return items.map((item) => toPOSItem(item, itemQtyMap));
+  // A barcode row joins its item once per barcode.
+  return uniqBy(items, 'name').map((item) => toPOSItem(item, itemQtyMap));
 }
 
 export function filterPOSItems<T extends POSItemSearchRecord>(
@@ -130,13 +133,11 @@ function findByBarcode<T extends ScannableItem>(
 ): T | undefined {
   if (weighed) {
     const { itemCode } = weighed;
-    return items.find((item) =>
-      [item.itemCode, item.barcode].includes(itemCode)
-    );
+    return items.find((item) => item.barcodes.includes(itemCode));
   }
 
   if (code.length === 12) {
-    return items.find((item) => item.barcode === code);
+    return items.find((item) => item.barcodes.includes(code));
   }
 }
 
@@ -183,7 +184,7 @@ function getBestMatch(
 }
 
 function getSearchValues(item: POSItemSearchRecord): string[] {
-  return [item.name, item.itemCode, item.barcode].filter(
+  return [item.name, ...item.barcodes].filter(
     (value): value is string => typeof value === 'string' && !!value
   );
 }

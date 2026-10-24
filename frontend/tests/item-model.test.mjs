@@ -33,7 +33,6 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
   assert.deepEqual(layout, [
     'image | Image |  | Default',
     'name | Item Name | Item Name | Default',
-    'item_code | Item Code | Item Code | Default',
     'item_group | Item Group | Item Group | Default',
     'item_type | Type | Type | Default',
     'unit | Unit Type | Unit Type | Details',
@@ -43,7 +42,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     'expense_account | Purchase Acc. | Expense | Accounts',
     'tax | Tax | Tax | Accounts',
     'hsn_code | HSN/SAC | HSN/SAC Code | Inventory',
-    'barcode | Barcode | Barcode | Inventory',
+    'barcodes | Barcodes |  | Inventory',
     'track_item | Track Inventory |  | Inventory',
     'has_batch | Has Batch |  | Inventory',
     'batch_series | Batch Series |  | Inventory',
@@ -64,7 +63,7 @@ test('item fields hide by the item and by the features turned on', async () => {
 
   assert.equal(hidden(item, 'track_item'), false);
   assert.equal(hidden(item, 'has_serial_number'), true);
-  assert.equal(hidden(item, 'barcode'), true);
+  assert.equal(hidden(item, 'barcodes'), true);
   assert.equal(hidden(item, 'has_batch'), true);
   assert.equal(hidden(item, 'item_group'), true);
   await item.set('track_item', true);
@@ -104,7 +103,6 @@ test('a saved item keeps its set-once fields and hides tracking it did not use',
 test('the item form shows bad values at their fields, as the server refuses them', async () => {
   fyo.singles.AccountingSettings = { country: 'India' };
   const item = newFrappeDoc('Item', { name: 'Mug' });
-  await assert.rejects(item.set('barcode', '123'), errors.ValidationError);
   await assert.rejects(item.set('hsn_code', '12A'), errors.ValidationError);
   await assert.rejects(item.set('rate', fyo.pesa(-1)), errors.ValidationError);
 });

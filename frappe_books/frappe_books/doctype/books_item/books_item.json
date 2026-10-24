@@ -11,7 +11,6 @@
  "field_order": [
   "default_section_break_1",
   "image",
-  "item_code",
   "item_group",
   "item_type",
   "details_section_break_7",
@@ -24,7 +23,7 @@
   "tax",
   "inventory_section_break_15",
   "hsn_code",
-  "barcode",
+  "barcodes",
   "track_item",
   "has_batch",
   "batch_series",
@@ -43,12 +42,6 @@
    "fieldname": "image",
    "fieldtype": "Attach Image",
    "label": "Image"
-  },
-  {
-   "fieldname": "item_code",
-   "fieldtype": "Data",
-   "label": "Item Code",
-   "placeholder": "Item Code"
   },
   {
    "fieldname": "item_group",
@@ -138,10 +131,10 @@
    "placeholder": "HSN/SAC Code"
   },
   {
-   "fieldname": "barcode",
-   "fieldtype": "Data",
-   "label": "Barcode",
-   "placeholder": "Barcode"
+   "fieldname": "barcodes",
+   "fieldtype": "Table",
+   "label": "Barcodes",
+   "options": "Books Item Barcode"
   },
   {
    "default": "0",

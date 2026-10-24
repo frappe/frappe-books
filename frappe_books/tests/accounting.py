@@ -96,7 +96,6 @@ def make_item(income_account, expense_account, tax=None, **values):
 		{
 			"doctype": "Books Item",
 			"name": unique_name("Test Item"),
-			"item_code": unique_name("ITEM"),
 			"unit": "Unit",
 			"income_account": income_account,
 			"expense_account": expense_account,

@@ -90,8 +90,31 @@ test('a tax row summary names its account, type and rate, and its running total'
     meta: 'On Net Total · 5%',
     amount: '40.00',
     detail: 'Total 1,090.00',
+    amountLabel: undefined,
     failed: false,
   });
   // An Actual charge has no rate.
   assert.equal(getRowSummary(freight, fields, detail).meta, 'Actual');
+});
+
+test('a payment reference summary labels its outstanding and allocation', () => {
+  const payment = newFrappeDoc('PaymentEntry', {
+    references: [
+      {
+        reference_doctype: 'Books Sales Invoice',
+        reference_name: 'SINV-1',
+        outstanding_amount: fyo.pesa(600),
+        allocated_amount: fyo.pesa(385),
+      },
+    ],
+  });
+  const [row] = payment.references;
+  const { mobileTableFields, mobileLabelledFields } = row.schema;
+  const fields = mobileTableFields.map((name) => row.fieldMap[name]);
+
+  const summary = getRowSummary(row, fields, undefined, mobileLabelledFields);
+  assert.deepEqual(
+    [summary.title, summary.meta, summary.amount, summary.amountLabel],
+    ['SINV-1', 'Sales Invoice · Outstanding 600.00', '385.00', 'Allocated']
+  );
 });

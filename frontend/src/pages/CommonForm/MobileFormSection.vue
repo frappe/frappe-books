@@ -215,17 +215,12 @@ const tableTitle = computed(() =>
   props.title === 'Default' ? tableField.value?.label : props.title
 );
 
-/** Consecutive date fields sit two to a row. */
+/** Consecutive date fields, and the schema's field pairs, sit two to a row. */
 function groupFields(fields: Field[]): Field[][] {
   const groups: Field[][] = [];
   for (const field of fields) {
     const previous = groups.at(-1);
-    const isDate = dateTypes.includes(field.fieldtype);
-    if (
-      isDate &&
-      previous?.length === 1 &&
-      dateTypes.includes(previous[0].fieldtype)
-    ) {
+    if (previous?.length === 1 && isPaired(previous[0], field)) {
       previous.push(field);
     } else {
       groups.push([field]);
@@ -233,6 +228,19 @@ function groupFields(fields: Field[]): Field[][] {
   }
 
   return groups;
+}
+
+function isPaired(first: Field, second: Field): boolean {
+  const pairs = props.doc.schema.mobileFieldPairs ?? [];
+  if (
+    pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)
+  ) {
+    return true;
+  }
+
+  return (
+    dateTypes.includes(first.fieldtype) && dateTypes.includes(second.fieldtype)
+  );
 }
 
 function getListClass(block: FieldBlock) {

@@ -36,6 +36,10 @@ export class PaymentEntry extends FrappeDoc {
     label: 'Payment Entry',
     nameField: { label: 'Payment No', hidden: true },
     formColumns: 3 as const,
+    mobileFieldPairs: [
+      ['party_type', 'party'],
+      ['reference_no', 'reference_date'],
+    ] as [string, string][],
     fields: {
       party_type: { options: PARTY_TYPE_OPTIONS },
       references: {

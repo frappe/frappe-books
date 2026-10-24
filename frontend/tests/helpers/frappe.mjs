@@ -19,6 +19,7 @@ await build({
       export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition } from './src/frappe/dependsOn';
+      export { getActiveDoctype, isAccessoryMode, toActiveDoctype } from './src/frappe/mode';
       export { getCalculatedState } from './src/frappe/calculated';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
       export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
@@ -151,6 +152,9 @@ export const {
   newFrappeDoc,
   useBooksDoc,
   evaluateCondition,
+  getActiveDoctype,
+  isAccessoryMode,
+  toActiveDoctype,
   getCalculatedState,
   getFrappeListPage,
   getFrappeRows,

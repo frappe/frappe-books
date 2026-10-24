@@ -121,8 +121,8 @@ function isConditionOn(
   }
 
   let evalDoc = getEvalDoc(doc);
-  if (rule === 'readOnly') {
-    // A field locks on its saved value, so an unsaved edit never locks it.
+  // A field locks on its saved value, so an unsaved edit never locks it; a table's rows are not a value.
+  if (rule === 'readOnly' && doc.fieldMap[fieldname]?.fieldtype !== 'Table') {
     evalDoc = { ...evalDoc, [fieldname]: doc._getSavedFrappeValue(fieldname) };
   }
 

@@ -14,7 +14,7 @@ NO_ROLE_USER = "books-series-no-role@example.com"
 class IntegrationTestItemSeries(IntegrationTestCase):
 	def setUp(self):
 		self.prefix = f"SN{frappe.generate_hash(length=6)}-"
-		self.item = make_series_item(has_serial_number=1, serial_number_series=self.prefix)
+		self.item = make_series_item(has_serial_no=1, serial_no_series=self.prefix)
 
 	def test_names_count_in_frappe_series_from_1001(self):
 		first = new_item_names("Books Serial Number", self.item, 2)
@@ -38,30 +38,28 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 
 	def test_batch_names_follow_the_item_series(self):
 		prefix = f"B{frappe.generate_hash(length=6)}-"
-		item = make_series_item(has_batch=1, batch_series=f" {prefix} ")
+		item = make_series_item(has_batch_no=1, batch_number_series=f" {prefix} ")
 
 		self.assertEqual(new_item_names("Books Batch", item, 1), [f"{prefix}1001"])
 		self.assertEqual(new_item_names("Books Batch", item, 1), [f"{prefix}1002"])
 
 	def test_item_without_a_series_gets_no_names(self):
-		frappe.db.set_value("Books Item", self.item, "has_serial_number", 0)
+		frappe.db.set_value("Books Item", self.item, "has_serial_no", 0)
 
 		self.assertEqual(new_item_names("Books Serial Number", self.item, 1), [])
-		self.assertEqual(new_item_names("Books Batch", make_series_item(has_batch=1), 1), [])
+		self.assertEqual(new_item_names("Books Batch", make_series_item(has_batch_no=1), 1), [])
 
 	def test_series_prefix_cannot_hold_url_characters(self):
 		self.assertRaisesRegex(
 			frappe.ValidationError,
-			"Batch Series cannot contain the following characters: /, \\?, &, =, %",
+			"Batch Number Series cannot contain the following characters: /, \\?, &, =, %",
 			make_series_item,
-			has_batch=1,
-			batch_series="BAD/",
+			has_batch_no=1,
+			batch_number_series="BAD/",
 		)
 
 	def test_series_prefix_must_suit_frappe_naming(self):
-		self.assertRaises(
-			frappe.ValidationError, make_series_item, has_serial_number=1, serial_number_series="BAD@"
-		)
+		self.assertRaises(frappe.ValidationError, make_series_item, has_serial_no=1, serial_no_series="BAD@")
 
 	def test_books_user_takes_names_from_the_series(self):
 		with self.set_user(ensure_user(BOOKS_USER, "Books User")):
@@ -77,7 +75,7 @@ class IntegrationTestItemSeries(IntegrationTestCase):
 class IntegrationTestSeriesBatches(IntegrationTestCase):
 	def setUp(self):
 		self.prefix = f"B{frappe.generate_hash(length=6)}-"
-		self.item = make_series_item(has_batch=1, batch_series=self.prefix)
+		self.item = make_series_item(has_batch_no=1, batch_number_series=self.prefix)
 		payable = make_account("Series Payable", root_type="Liability", account_type="Payable")
 		self.supplier = make_supplier(payable.name).name
 
@@ -112,7 +110,7 @@ class IntegrationTestSeriesBatches(IntegrationTestCase):
 		self.assertFalse(frappe.db.exists("Books Batch", {"item": self.item}))
 
 	def test_item_without_a_batch_series_still_requires_a_batch(self):
-		item = make_series_item(has_batch=1)
+		item = make_series_item(has_batch_no=1)
 		receipt = frappe.get_doc(
 			movement_values("MaterialReceipt", {"item": item, "quantity": 1, "rate": 10})
 		)
@@ -136,4 +134,4 @@ def movement_values(movement_type, row):
 def make_series_item(**values):
 	income = make_account("Series Income", root_type="Income")
 	received = make_account("Series Received", root_type="Liability")
-	return make_item(income.name, received.name, track_item=1, **values).name
+	return make_item(income.name, received.name, is_stock_item=1, **values).name

@@ -289,10 +289,10 @@ async function dismissFilters(page: Page) {
 }
 
 for (const [field, value, expected] of [
-  ['Rate', '0', [['rate', '=', 0]]],
-  ['Rate', '-12.5', [['rate', '=', -12.5]]],
-  ['Track Inventory', 'No', [['track_item', '=', 0]]],
-  ['Track Inventory', 'Yes', [['track_item', '=', 1]]],
+  ['Rate', '0', [['standard_rate', '=', 0]]],
+  ['Rate', '-12.5', [['standard_rate', '=', -12.5]]],
+  ['Maintain Stock', 'No', [['is_stock_item', '=', 0]]],
+  ['Maintain Stock', 'Yes', [['is_stock_item', '=', 1]]],
 ] as const) {
   test(`${field} accepts ${value} and counts the applied filter`, async ({
     page,
@@ -306,7 +306,7 @@ for (const [field, value, expected] of [
       .click();
     await choose(page, 'Field', field);
     await choose(page, 'Condition', 'Is');
-    if (field === 'Track Inventory') await choose(page, 'Value', value);
+    if (field === 'Maintain Stock') await choose(page, 'Value', value);
     else await setValue(page, value);
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
     expect(await appliedFilters(page)).toEqual(expected);

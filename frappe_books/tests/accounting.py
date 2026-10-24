@@ -95,8 +95,8 @@ def make_item(income_account, expense_account, tax=None, **values):
 	return frappe.get_doc(
 		{
 			"doctype": "Books Item",
-			"name": unique_name("Test Item"),
-			"unit": "Unit",
+			"item_code": unique_name("Test Item"),
+			"stock_uom": "Unit",
 			"income_account": income_account,
 			"expense_account": expense_account,
 			"tax": tax,

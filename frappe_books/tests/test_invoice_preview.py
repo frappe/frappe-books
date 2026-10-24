@@ -43,7 +43,9 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 			"Books Accounting Settings", {"enable_pricing_rule": 1, "enable_price_list": 1}
 		)
 		self.party = make_customer(self.receivable.name)
-		self.item = make_item(self.income.name, self.expense.name, make_tax(tax_account.name).name, rate=100)
+		self.item = make_item(
+			self.income.name, self.expense.name, make_tax(tax_account.name).name, standard_rate=100
+		)
 		self.values = self._invoice_values()
 
 	def test_preview_matches_the_saved_calculation(self):
@@ -152,7 +154,7 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def _invoice_values(self):
 		free_item = make_item(self.income.name, self.expense.name)
-		bundle_item = make_item(self.income.name, self.expense.name, rate=50)
+		bundle_item = make_item(self.income.name, self.expense.name, standard_rate=50)
 		price_list = frappe.get_doc(
 			{
 				"doctype": "Books Price List",

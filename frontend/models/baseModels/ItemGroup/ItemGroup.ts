@@ -8,17 +8,20 @@ export class ItemGroup extends FrappeDoc {
   static override doctype = 'Books Item Group';
   static override presentation = {
     label: 'Item Group',
-    nameField: { label: 'Name', placeholder: 'Name' },
-    quickEditFields: ['tax', 'hsn_code'],
+    quickEditFields: ['tax', 'gst_hsn_code'],
   };
 
   hidden: HiddenMap = {
-    hsn_code: () => isHsnCodeHidden(this.fyo),
+    gst_hsn_code: () => isHsnCodeHidden(this.fyo),
   };
 
   static getListViewSettings(fyo: Fyo): ListViewSettings {
     return {
-      columns: ['name', 'tax', ...(isHsnCodeHidden(fyo) ? [] : ['hsn_code'])],
+      columns: [
+        'name',
+        'tax',
+        ...(isHsnCodeHidden(fyo) ? [] : ['gst_hsn_code']),
+      ],
     };
   }
 }

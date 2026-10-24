@@ -28,7 +28,7 @@ class IntegrationTestStockPosting(IntegrationTestCase):
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		received = make_account("Received", root_type="Liability")
 		set_inventory_accounts(make_account("Stock", account_type="Stock").name, received.name, cogs.name)
-		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1).name
+		item = make_item(make_account("Income", root_type="Income").name, received.name, is_stock_item=1).name
 		shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
 		now = now_datetime()
 		seed_stock(item, quantity=5, rate=10, date=add_to_date(now, hours=-4))

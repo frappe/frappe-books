@@ -38,7 +38,7 @@ def create_series_batches(rows):
 	Runs in validate: Frappe checks links before any hook, and an empty batch passes.
 	"""
 	rows = [row for row in rows if row.item and not row.batch]
-	batch_items = _items_with("has_batch", {row.item for row in rows})
+	batch_items = _items_with("has_batch_no", {row.item for row in rows})
 	for row in rows:
 		names = new_item_names("Books Batch", row.item, 1) if row.item in batch_items else []
 		if names:
@@ -51,7 +51,7 @@ def create_series_serial_numbers(rows):
 
 	The serial numbers themselves are created when the stock arrives, on submit.
 	"""
-	serialised = _items_with("has_serial_number", {row.item for row in rows if row.item})
+	serialised = _items_with("has_serial_no", {row.item for row in rows if row.item})
 	for row in rows:
 		serial_numbers = parse_serial_numbers(row.serial_number)
 		missing = int(abs(as_decimal(row.quantity))) - len(serial_numbers)
@@ -111,7 +111,7 @@ def start_row_quantities(rows):
 
 def fill_serial_numbers(rows, location=None):
 	"""Give serialised rows without serial numbers the earliest received ones in stock at their location, else at `location`."""
-	serialised = _items_with("has_serial_number", {row.item for row in rows if not row.serial_number})
+	serialised = _items_with("has_serial_no", {row.item for row in rows if not row.serial_number})
 	taken = set(_all_serial_numbers(rows))
 	for row in rows:
 		row_location = row.get("location") or location
@@ -172,16 +172,16 @@ def _validate_row(transfer):
 
 def _validate_tracked_items(transfers):
 	items = _item_settings(transfers)
-	untracked = sorted({row["item"] for row in transfers if not items[row["item"]].track_item})
+	untracked = sorted({row["item"] for row in transfers if not items[row["item"]].is_stock_item})
 	if untracked:
 		frappe.throw(_("Item {0} does not track stock.").format(", ".join(untracked)))
 
 
 def _validate_batch(transfer, item, batch_items):
 	batch = transfer.get("batch")
-	if item.has_batch and not batch:
+	if item.has_batch_no and not batch:
 		frappe.throw(_("Please select a batch first"))
-	if batch and not item.has_batch:
+	if batch and not item.has_batch_no:
 		frappe.throw(_("Item {0} does not use batches.").format(transfer["item"]))
 	if batch_items.get(batch) and batch_items[batch] != transfer["item"]:
 		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
@@ -197,10 +197,10 @@ def _validate_serial_numbers(transfers):
 
 def _validate_row_serial_numbers(transfer, item, serial_items):
 	serial_numbers = parse_serial_numbers(transfer.get("serial_number"))
-	if serial_numbers and not item.has_serial_number:
+	if serial_numbers and not item.has_serial_no:
 		frappe.throw(_("Item {0} does not use serial numbers.").format(transfer["item"]))
 	quantity = abs(as_decimal(transfer["quantity"]))
-	if item.has_serial_number and len(serial_numbers) != quantity:
+	if item.has_serial_no and len(serial_numbers) != quantity:
 		frappe.throw(
 			_("Need {0} Serial Numbers for Item {1}. You have provided {2}").format(
 				format_quantity(quantity), transfer["item"], len(serial_numbers)
@@ -316,7 +316,7 @@ def _item_settings(transfers):
 	rows = frappe.get_all(
 		"Books Item",
 		filters={"name": ["in", sorted({transfer["item"] for transfer in transfers})]},
-		fields=["name", "track_item", "has_batch", "has_serial_number"],
+		fields=["name", "is_stock_item", "has_batch_no", "has_serial_no"],
 	)
 	return {row.name: row for row in rows}
 
@@ -326,13 +326,15 @@ def _item_defaults(rows):
 	if not names:
 		return {}
 	items = frappe.get_all(
-		"Books Item", filters={"name": ["in", names]}, fields=["name", "description", "rate", "hsn_code"]
+		"Books Item",
+		filters={"name": ["in", names]},
+		fields=["name", "description", "standard_rate as rate", "gst_hsn_code as hsn_code"],
 	)
 	return {item.name: item for item in items}
 
 
 def _items_with(flag, names):
-	"""Return the named items that have the flag, such as has_batch, set."""
+	"""Return the named items that have the flag, such as has_batch_no, set."""
 	if not names:
 		return set()
 	return set(frappe.get_all("Books Item", filters={"name": ["in", sorted(names)], flag: 1}, pluck="name"))

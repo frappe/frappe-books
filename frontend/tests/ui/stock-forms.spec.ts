@@ -152,10 +152,10 @@ async function pickLink(page: Page, label: string, value: string) {
 async function insertItem(page: Page, label: string, rate: number) {
   const name = `${label} ${Date.now()}`;
   await api(page, 'POST', 'Books Item', {
-    name,
-    rate,
+    item_code: name,
+    standard_rate: rate,
     item_type: 'Product',
-    track_item: 1,
+    is_stock_item: 1,
   });
   return name;
 }

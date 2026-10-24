@@ -19,17 +19,17 @@ type Filter = [string, string, unknown];
 
 const items = products.map((name, index) => ({
   name,
-  rate: 240 + index * 135,
-  unit: 'Unit',
+  standard_rate: 240 + index * 135,
+  stock_uom: 'Unit',
   availableQty: 24 + index,
-  has_batch: 0,
-  has_serial_number: 0,
+  has_batch_no: 0,
+  has_serial_no: 0,
 }));
 
 /** Where POS sales ship from; the coffee batch has more stock elsewhere. */
 const inventory = 'POS Counter';
 const coffee = items[1];
-Object.assign(coffee, { has_batch: 1, track_item: 1 });
+Object.assign(coffee, { has_batch_no: 1, is_stock_item: 1 });
 const coffeeBatch = { name: 'COFFEE-2026-09', item: coffee.name };
 
 const openingShift = {
@@ -93,8 +93,8 @@ const records: Record<string, Row[]> = {
       name: 'SINV-2026-HELD',
       customer: 'Aarav Shah',
       date: '2026-09-06 11:00:00',
-      grand_total: items[0].rate,
-      outstanding_amount: items[0].rate,
+      grand_total: items[0].standard_rate,
+      outstanding_amount: items[0].standard_rate,
       docstatus: 0,
       is_pos: 1,
       items: [
@@ -103,8 +103,8 @@ const records: Record<string, Row[]> = {
           item: items[0].name,
           quantity: 1,
           transfer_quantity: 1,
-          rate: items[0].rate,
-          amount: items[0].rate,
+          rate: items[0].standard_rate,
+          amount: items[0].standard_rate,
           unit: 'Unit',
         },
       ],
@@ -148,7 +148,7 @@ export async function preparePOSData() {
     return_button_colour: '',
     pay_button_colour: '',
   });
-  return items.map((item) => ({ ...item, rate: fyo.pesa(item.rate) }));
+  return items.map((item) => ({ ...item, rate: fyo.pesa(item.standard_rate) }));
 }
 
 /** What the server answers each request the POS makes. */
@@ -292,7 +292,7 @@ function getRecord(doctype: string, name: string): Row | undefined {
 
 /**
  * The doctype's records that match each `[field, operator, value]` filter on
- * a field they have; the items have no `track_item`, so every item lists.
+ * a field they have; the items have no `is_stock_item`, so every item lists.
  */
 function getList(doctype: string, filters: Filter[] = []): Row[] {
   return (records[doctype] ?? []).filter((row) =>

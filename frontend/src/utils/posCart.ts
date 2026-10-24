@@ -232,11 +232,11 @@ async function validateStock(
   rows: ItemQuantity[]
 ) {
   const doc = (await getFrappeDoc(ModelNameEnum.Item, item)) as Item;
-  if (doc.has_batch && !batch) {
+  if (doc.has_batch_no && !batch) {
     throw new ValidationError(t`Please select a batch first`);
   }
 
-  if (doc.track_item) {
+  if (doc.is_stock_item) {
     await validatePOSStock(rows);
   }
 }

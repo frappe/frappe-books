@@ -20,7 +20,7 @@
    "search_index": 1
   },
   {
-   "fetch_from": "item.unit",
+   "fetch_from": "item.stock_uom",
    "fetch_if_empty": 1,
    "fieldname": "unit",
    "fieldtype": "Link",

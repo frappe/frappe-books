@@ -73,7 +73,11 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_row_tax_defaults_to_the_item_group_tax(self):
 		group = frappe.get_doc(
-			{"doctype": "Books Item Group", "name": unique_name("Taxed Group"), "tax": self.tax.name}
+			{
+				"doctype": "Books Item Group",
+				"item_group_name": unique_name("Taxed Group"),
+				"tax": self.tax.name,
+			}
 		).insert()
 		item = make_item(self.income.name, self.expense.name, item_group=group.name)
 		invoice = make_invoice(
@@ -84,7 +88,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		self.assertEqual(Decimal(str(invoice.taxes[0].amount)), Decimal("18"))
 
 	def test_row_hsn_code_comes_from_the_item_with_its_leading_zero(self):
-		item = make_item(self.income.name, self.expense.name, hsn_code="0902")
+		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
 		)
@@ -110,7 +114,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_transfer_quantity_counts_transfer_units(self):
 		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
-		self.item.append("uom_conversions", {"uom": box.name, "conversion_factor": 12})
+		self.item.append("uoms", {"uom": box.name, "conversion_factor": 12})
 		self.item.save()
 		invoice = self._make_invoice()
 		invoice.items[0].update(
@@ -290,7 +294,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		frappe.db.set_single_value(
 			"Books Pos Settings", {"pos_profile": None, "can_change_rate": 0, "can_edit_discount": 0}
 		)
-		item = make_item(self.income.name, self.expense.name, rate=100)
+		item = make_item(self.income.name, self.expense.name, standard_rate=100)
 		for values, message in (
 			({"rate": 90, "item_discount_percent": 0}, "changing the rate"),
 			({"rate": 100, "item_discount_percent": 10}, "editing the discount"),

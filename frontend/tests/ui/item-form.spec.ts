@@ -11,7 +11,9 @@ test('a new item takes its accounts from the server and saves', async ({
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Item\//);
 
-  await page.getByRole('textbox', { name: 'Item Name' }).fill(name);
+  await page
+    .getByRole('textbox', { name: 'Item Code (required)', exact: true })
+    .fill(name);
   await page.keyboard.press('Tab');
   // The server's preview fills the accounts a save would.
   await expect(
@@ -60,7 +62,7 @@ async function insertItem(page: Page, name: string) {
         'Content-Type': 'application/json',
         'X-Frappe-CSRF-Token': (window as any).csrf_token,
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ item_code: name }),
     });
     return response.status;
   }, name);

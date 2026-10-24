@@ -30,7 +30,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
 
 	def test_sales_lack_what_tracked_items_and_batches_miss_where_they_ship_from(self):
-		pen, ink = self.make_item(track_item=1), self.make_item(track_item=1, has_batch=1)
+		pen, ink = self.make_item(is_stock_item=1), self.make_item(is_stock_item=1, has_batch_no=1)
 		service = make_item(self.income, make_account("Expense", root_type="Expense").name).name
 		batch = make_batch(ink)
 		seed_stock(pen, quantity=5, rate=10)
@@ -47,7 +47,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self.assertEqual(shortfalls, [{"item": pen, "batch": None, "quantity": 1}])
 
 	def test_stock_that_arrives_after_the_sale_does_not_count(self):
-		pen = self.make_item(track_item=1)
+		pen = self.make_item(is_stock_item=1)
 		seed_stock(pen, quantity=5, rate=10, date=add_days(now_datetime(), 2))
 
 		shortfalls = get_sale_shortfalls([{"item": pen, "quantity": 1}], str(now_datetime()))
@@ -55,7 +55,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self.assertEqual(shortfalls, [{"item": pen, "batch": None, "quantity": 1}])
 
 	def test_without_a_date_all_stock_counts(self):
-		pen = self.make_item(track_item=1)
+		pen = self.make_item(is_stock_item=1)
 		seed_stock(pen, quantity=5, rate=10, date=add_days(now_datetime(), 2))
 
 		self.assertEqual(get_sale_shortfalls([{"item": pen, "quantity": 5}]), [])
@@ -71,7 +71,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self.assertEqual(get_stock_location("Books Sales Invoice"), "Stores")
 
 	def test_stock_is_given_per_item_and_batch_at_a_location(self):
-		ink = self.make_item(track_item=1, has_batch=1)
+		ink = self.make_item(is_stock_item=1, has_batch_no=1)
 		batch = make_batch(ink)
 		seed_stock(ink, quantity=4, rate=10, batch=batch)
 
@@ -85,7 +85,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 			get_stock_location("Books Sales Invoice")
 
 	def test_a_sale_row_takes_no_more_of_its_batch_than_is_in_stock(self):
-		ink = self.make_item(track_item=1, has_batch=1)
+		ink = self.make_item(is_stock_item=1, has_batch_no=1)
 		batch = make_batch(ink)
 		seed_stock(ink, quantity=2, rate=10, batch=batch)
 
@@ -98,7 +98,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self._sale(ink, batch, quantity=2).insert()
 
 	def test_a_quote_row_takes_no_more_of_its_batch_than_is_in_stock(self):
-		ink = self.make_item(track_item=1, has_batch=1)
+		ink = self.make_item(is_stock_item=1, has_batch_no=1)
 		batch = make_batch(ink)
 		seed_stock(ink, quantity=2, rate=10, batch=batch)
 
@@ -107,7 +107,7 @@ class IntegrationTestStockAvailability(IntegrationTestCase):
 		self._sale(ink, batch, quantity=2, doctype="Books Quotation").insert()
 
 	def test_a_saved_sale_row_is_checked_again_only_when_edited(self):
-		ink = self.make_item(track_item=1, has_batch=1)
+		ink = self.make_item(is_stock_item=1, has_batch_no=1)
 		batch = make_batch(ink)
 		seed_stock(ink, quantity=3, rate=10, batch=batch)
 		sale = self._sale(ink, batch, quantity=3).insert()

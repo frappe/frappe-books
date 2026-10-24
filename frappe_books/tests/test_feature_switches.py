@@ -111,12 +111,16 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 
 	def test_item_fields_need_their_features(self):
 		received = make_account("Received", root_type="Liability").name
-		group = frappe.get_doc({"doctype": "Books Item Group", "name": unique_name("Group")}).insert().name
+		group = (
+			frappe.get_doc({"doctype": "Books Item Group", "item_group_name": unique_name("Group")})
+			.insert()
+			.name
+		)
 		for feature, values in (
-			("enable_inventory", {"track_item": 1}),
-			("enable_batches", {"has_batch": 1}),
-			("enable_serial_number", {"track_item": 1, "has_serial_number": 1}),
-			("enable_uom_conversions", {"uom_conversions": [{"uom": "Kg", "conversion_factor": 2}]}),
+			("enable_inventory", {"is_stock_item": 1}),
+			("enable_batches", {"has_batch_no": 1}),
+			("enable_serial_number", {"is_stock_item": 1, "has_serial_no": 1}),
+			("enable_uom_conversions", {"uoms": [{"uom": "Kg", "conversion_factor": 2}]}),
 			("enableitem_group", {"item_group": group}),
 		):
 			with self.subTest(feature=feature):
@@ -128,11 +132,11 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 	def test_only_tracked_products_have_stock_settings(self):
 		received = make_account("Received", root_type="Liability").name
 		with self.assertRaisesRegex(frappe.ValidationError, "Only products can track inventory"):
-			make_item(self.income.name, received, item_type="Service", track_item=1)
+			make_item(self.income.name, received, item_type="Service", is_stock_item=1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Only items that track inventory"):
-			make_item(self.income.name, self.expense.name, has_serial_number=1)
+			make_item(self.income.name, self.expense.name, has_serial_no=1)
 		with self.assertRaisesRegex(frappe.ValidationError, "Only items that track inventory"):
-			make_item(self.income.name, self.expense.name, has_batch=1)
+			make_item(self.income.name, self.expense.name, has_batch_no=1)
 
 	def coupon(self):
 		rule = frappe.get_doc(

@@ -64,8 +64,10 @@ def item_units(names):
 		fields=["parent", "uom", "conversion_factor"],
 	):
 		factors[row.parent][row.uom] = row.conversion_factor
-	items = frappe.get_all("Books Item", filters={"name": ["in", sorted(names)]}, fields=["name", "unit"])
-	return {item.name: (item.unit, factors[item.name]) for item in items}
+	items = frappe.get_all(
+		"Books Item", filters={"name": ["in", sorted(names)]}, fields=["name", "stock_uom"]
+	)
+	return {item.name: (item.stock_uom, factors[item.name]) for item in items}
 
 
 def _whole_units(units):

@@ -17,7 +17,7 @@ class IntegrationTestInvoiceReturns(IntegrationTestCase):
 		self.party = make_customer(self.receivable.name)
 
 	def test_a_credit_note_returns_only_the_batches_the_invoice_sold(self):
-		item = make_item(self.income.name, self.received, track_item=1, has_batch=1).name
+		item = make_item(self.income.name, self.received, is_stock_item=1, has_batch_no=1).name
 		sold, unsold = make_batch(item), make_batch(item)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
 		seed_stock(item, quantity=2, rate=10, batch=sold)
@@ -29,7 +29,7 @@ class IntegrationTestInvoiceReturns(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 0", credit_note.insert)
 
 	def test_a_credit_note_returns_only_serial_numbers_sold_and_not_yet_returned(self):
-		item = make_item(self.income.name, self.received, track_item=1, has_serial_number=1).name
+		item = make_item(self.income.name, self.received, is_stock_item=1, has_serial_no=1).name
 		invoice = self._submitted_invoice(item, serial_number="S-1\nS-2")
 		partial = map_return(invoice.doctype, invoice.name)
 		partial.items[0].update({"quantity": -1, "serial_number": "S-1"})
@@ -42,7 +42,7 @@ class IntegrationTestInvoiceReturns(IntegrationTestCase):
 				self.assertRaisesRegex(frappe.ValidationError, message, credit_note.insert)
 
 	def test_a_return_saved_with_an_empty_batch_counts_as_returned(self):
-		item = make_item(self.income.name, self.received, track_item=1).name
+		item = make_item(self.income.name, self.received, is_stock_item=1).name
 		invoice = self._submitted_invoice(item)
 		partial = map_return(invoice.doctype, invoice.name)
 		partial.items[0].update({"quantity": -1, "batch": ""})

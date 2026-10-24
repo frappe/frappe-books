@@ -69,7 +69,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		set_inventory_accounts(
 			make_account("Mapped Stock", account_type="Stock").name, received.name, self.expense.name
 		)
-		item = make_item(self.income.name, received.name, track_item=1)
+		item = make_item(self.income.name, received.name, is_stock_item=1)
 		seed_stock(item.name, quantity=1, rate=10)
 		row = {"item": item.name, "location": "Stores", "quantity": 1, "rate": 25}
 		shipment = frappe.get_doc(
@@ -84,7 +84,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		set_inventory_accounts(
 			make_account("Mapped Stock", account_type="Stock").name, received.name, self.expense.name
 		)
-		item = make_item(self.income.name, received.name, track_item=1)
+		item = make_item(self.income.name, received.name, is_stock_item=1)
 		seed_stock(item.name, quantity=2, rate=10)
 		row = {"item": item.name, "location": "Stores", "quantity": 2, "rate": 25}
 		shipment = frappe.get_doc(
@@ -227,7 +227,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			"Books Defaults",
 			{"purchase_receipt_location": "Stores", "purchase_payment_account": self.cash.name},
 		)
-		item = make_item(self.income.name, received.name, track_item=1)
+		item = make_item(self.income.name, received.name, is_stock_item=1)
 		supplier = make_supplier(payable.name)
 		invoice = make_invoice(
 			"Books Purchase Invoice",

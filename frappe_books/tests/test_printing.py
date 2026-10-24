@@ -93,9 +93,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 	def test_invoice_formats_print_the_rate_per_unit_of_the_quantity(self):
 		box = make_uom("Box")
-		item = make_item(
-			self.income.name, self.expense.name, uom_conversions=[{"uom": box, "conversion_factor": 50}]
-		)
+		item = make_item(self.income.name, self.expense.name, uoms=[{"uom": box, "conversion_factor": 50}])
 		customer = make_customer(self.receivable.name).name
 		payable = make_account("Print Payable", root_type="Liability", account_type="Payable").name
 		supplier = make_supplier(payable).name
@@ -120,7 +118,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertNotIn(books_format(62, "Currency", doc.currency), html)
 
 	def test_invoice_prints_the_hsn_code_with_its_leading_zero(self):
-		item = make_item(self.income.name, self.expense.name, hsn_code="0902")
+		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
 		invoice = make_invoice(
 			"Books Sales Invoice", self.party.name, self.receivable.name, item.name, self.income.name
 		)

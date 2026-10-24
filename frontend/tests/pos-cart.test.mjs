@@ -10,11 +10,11 @@ const rice = 'Demo - Rice';
 const service = 'Demo - Gift Wrapping';
 const batch = 'DEMO-COFFEE-2026';
 const items = {
-  [tea]: { track_item: 1, unit: 'Unit' },
-  [flour]: { track_item: 1, has_serial_number: 1, unit: 'Kg' },
-  [coffee]: { track_item: 1, has_batch: 1, unit: 'Unit' },
-  [rice]: { track_item: 1, unit: 'Kg' },
-  [service]: { track_item: 0, unit: 'Unit' },
+  [tea]: { is_stock_item: 1, stock_uom: 'Unit' },
+  [flour]: { is_stock_item: 1, has_serial_no: 1, stock_uom: 'Kg' },
+  [coffee]: { is_stock_item: 1, has_batch_no: 1, stock_uom: 'Unit' },
+  [rice]: { is_stock_item: 1, stock_uom: 'Kg' },
+  [service]: { is_stock_item: 0, stock_uom: 'Unit' },
 };
 
 /** What the POS location has, by item or by `item|batch`. */
@@ -297,7 +297,7 @@ function getSentRow(sale) {
 function getShortfalls(rows) {
   const required = {};
   for (const { item, batch, quantity } of rows) {
-    if (items[item].track_item) {
+    if (items[item].is_stock_item) {
       const key = batch ? `${item}|${batch}` : item;
       required[key] = (required[key] ?? 0) + quantity;
     }

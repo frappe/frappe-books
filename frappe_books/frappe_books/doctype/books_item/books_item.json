@@ -3,7 +3,7 @@
  "allow_bulk_edit": 1,
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:item_code",
  "creation": "2026-08-27 22:09:39.771410",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -11,25 +11,28 @@
  "field_order": [
   "default_section_break_1",
   "image",
+  "item_code",
+  "item_name",
   "item_group",
   "item_type",
   "details_section_break_7",
-  "unit",
-  "rate",
+  "stock_uom",
+  "standard_rate",
   "description",
   "accounts_section_break_11",
   "income_account",
   "expense_account",
   "tax",
   "inventory_section_break_15",
-  "hsn_code",
+  "gst_hsn_code",
   "barcodes",
-  "track_item",
-  "has_batch",
-  "batch_series",
-  "has_serial_number",
-  "serial_number_series",
-  "uom_conversions",
+  "is_stock_item",
+  "has_batch_no",
+  "create_new_batch",
+  "batch_number_series",
+  "has_serial_no",
+  "serial_no_series",
+  "uoms",
   "default_section_break_24"
  ],
  "fields": [
@@ -42,6 +45,22 @@
    "fieldname": "image",
    "fieldtype": "Attach Image",
    "label": "Image"
+  },
+  {
+   "bold": 1,
+   "fieldname": "item_code",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Item Code",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "bold": 1,
+   "fieldname": "item_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Item Name"
   },
   {
    "fieldname": "item_group",
@@ -66,15 +85,15 @@
   },
   {
    "default": "Unit",
-   "fieldname": "unit",
+   "fieldname": "stock_uom",
    "fieldtype": "Link",
-   "label": "Unit Type",
+   "label": "Default Unit of Measure",
    "options": "Books UOM",
-   "placeholder": "Unit Type",
+   "placeholder": "Default Unit of Measure",
    "set_only_once": 1
   },
   {
-   "fieldname": "rate",
+   "fieldname": "standard_rate",
    "fieldtype": "Currency",
    "label": "Rate",
    "non_negative": 1
@@ -123,9 +142,9 @@
    "label": "Inventory"
   },
   {
-   "fetch_from": "item_group.hsn_code",
+   "fetch_from": "item_group.gst_hsn_code",
    "fetch_if_empty": 1,
-   "fieldname": "hsn_code",
+   "fieldname": "gst_hsn_code",
    "fieldtype": "Data",
    "label": "HSN/SAC",
    "placeholder": "HSN/SAC Code"
@@ -138,42 +157,50 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.item_type == 'Product' && (doc.__islocal || doc.track_item)",
-   "fieldname": "track_item",
+   "depends_on": "eval:doc.item_type == 'Product' && (doc.__islocal || doc.is_stock_item)",
+   "fieldname": "is_stock_item",
    "fieldtype": "Check",
-   "label": "Track Inventory",
+   "label": "Maintain Stock",
    "set_only_once": 1
   },
   {
    "default": "0",
-   "depends_on": "track_item",
-   "fieldname": "has_batch",
+   "depends_on": "is_stock_item",
+   "fieldname": "has_batch_no",
    "fieldtype": "Check",
-   "label": "Has Batch",
+   "label": "Has Batch No",
    "set_only_once": 1
   },
   {
-   "depends_on": "has_batch",
-   "fieldname": "batch_series",
+   "default": "0",
+   "fieldname": "create_new_batch",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Automatically Create New Batch",
+   "read_only": 1
+  },
+  {
+   "depends_on": "has_batch_no",
+   "fieldname": "batch_number_series",
    "fieldtype": "Data",
-   "label": "Batch Series"
+   "label": "Batch Number Series"
   },
   {
    "default": "0",
-   "depends_on": "track_item",
-   "fieldname": "has_serial_number",
+   "depends_on": "is_stock_item",
+   "fieldname": "has_serial_no",
    "fieldtype": "Check",
-   "label": "Has Serial Number",
+   "label": "Has Serial No",
    "set_only_once": 1
   },
   {
-   "depends_on": "has_serial_number",
-   "fieldname": "serial_number_series",
+   "depends_on": "has_serial_no",
+   "fieldname": "serial_no_series",
    "fieldtype": "Data",
    "label": "Serial Number Series"
   },
   {
-   "fieldname": "uom_conversions",
+   "fieldname": "uoms",
    "fieldtype": "Table",
    "label": "UOM Conversions",
    "options": "Books UOM Conversion Detail"
@@ -191,6 +218,7 @@
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -249,5 +277,6 @@
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "item_name",
  "track_changes": 1
 }

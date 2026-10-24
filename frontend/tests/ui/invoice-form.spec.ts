@@ -10,11 +10,13 @@ test('a new sales invoice takes its account, rows and totals from the server', a
 }) => {
   const { customer, item } = await insertCustomerAndItem(page);
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\/New%20Sales%20Invoice/);
-  // The server fills the number series of a new invoice.
-  await expect(page.getByRole('combobox', { name: 'Number Series' })).toHaveValue(
-    'SINV-'
+  await expect(page).toHaveURL(
+    /\/books\/edit\/SalesInvoice\/New%20Sales%20Invoice/
   );
+  // The server fills the number series of a new invoice.
+  await expect(
+    page.getByRole('combobox', { name: 'Number Series' })
+  ).toHaveValue('SINV-');
 
   await pickLink(page, 'Customer', customer);
   await expect(page.getByRole('combobox', { name: 'Account' })).toHaveValue(
@@ -45,9 +47,9 @@ test('a return takes back what its invoice sold', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Create' }).click();
   await page.getByRole('menuitem', { name: 'Return' }).click();
-  await expect(page.getByRole('combobox', { name: 'Return Against' })).toHaveValue(
-    name
-  );
+  await expect(
+    page.getByRole('combobox', { name: 'Return Against' })
+  ).toHaveValue(name);
 
   const qty = page.getByRole('row').nth(1).getByRole('textbox').first();
   await expect(qty).toHaveValue('-2.000');
@@ -176,8 +178,8 @@ async function insertCustomerAndItem(page: Page) {
     accounts: [{ account: 'Debtors' }],
   });
   const item = await insertDocument(page, 'Books Item', {
-    name: `Invoice Item ${stamp}`,
-    rate: 50,
+    item_code: `Invoice Item ${stamp}`,
+    standard_rate: 50,
   });
   return { customer, item };
 }

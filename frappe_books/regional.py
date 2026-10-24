@@ -98,9 +98,9 @@ def validate_gstin(gstin):
 	return gstin
 
 
-def validate_hsn_codes(docs):
+def validate_hsn_codes(docs, fieldname="hsn_code"):
 	"""HSN/SAC is India's GST code, so only an Indian company's codes are checked."""
-	codes = [str(doc.hsn_code) for doc in docs if doc.get("hsn_code")]
+	codes = [str(doc.get(fieldname)) for doc in docs if doc.get(fieldname)]
 	invalid = [code for code in codes if not HSN_CODE_PATTERN.fullmatch(code)]
 	if invalid and company_country() == "India":
 		frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))

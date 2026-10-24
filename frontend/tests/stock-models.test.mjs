@@ -110,8 +110,8 @@ test('stock rows hide the fields of inventory features turned off', () => {
   for (const name of stockSchemas) {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
     const hidden = () =>
-      ['batch', 'serial_number', 'transfer_unit'].map((fieldname) =>
-        row.getFieldState(row.fieldMap[fieldname]).hidden
+      ['batch', 'serial_number', 'transfer_unit'].map(
+        (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden
       );
     fyo.singles.InventorySettings = {};
     assert.deepEqual(hidden(), [true, true, true], name);
@@ -141,7 +141,8 @@ test('a submitted transfer hides the references and notes it does not have', () 
   const shipment = newFrappeDoc('DeliveryNote');
   const shown = () =>
     fields.filter(
-      (fieldname) => !shipment.getFieldState(shipment.fieldMap[fieldname]).hidden
+      (fieldname) =>
+        !shipment.getFieldState(shipment.fieldMap[fieldname]).hidden
     );
   assert.deepEqual(shown(), fields);
 
@@ -151,8 +152,12 @@ test('a submitted transfer hides the references and notes it does not have', () 
 });
 
 test('a transfer row shows the item discounts of its invoice only when it has them', () => {
-  const row = newFrappeDoc('DeliveryNote')._getChildDoc({ item: 'Pen' }, 'items');
-  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
+  const row = newFrappeDoc('DeliveryNote')._getChildDoc(
+    { item: 'Pen' },
+    'items'
+  );
+  const hidden = (fieldname) =>
+    row.getFieldState(row.fieldMap[fieldname]).hidden;
   assert.deepEqual(
     [hidden('item_discount_amount'), hidden('item_discount_percent')],
     [true, true]
@@ -209,14 +214,14 @@ test('picking an invoice fills a shipment with the rows its mapper gives', async
 
 test('links of stock documents filter by the vocabulary of their targets', async () => {
   const requests = stubFrappe(() => ({
-    data: [{ unit: 'Unit', uom_conversions: [{ uom: 'Box' }] }],
+    data: [{ stock_uom: 'Unit', uoms: [{ uom: 'Box' }] }],
   }));
   const movementRow = newFrappeDoc('StockEntry')._getChildDoc(
     { item: 'Pen' },
     'items'
   );
   assert.deepEqual(getModel('DeliveryNoteItem').filters.item(), [
-    ['track_item', '=', 1],
+    ['is_stock_item', '=', 1],
   ]);
   assert.deepEqual(
     await getModel('StockEntryItem').filters.transfer_unit(movementRow),
@@ -227,7 +232,7 @@ test('links of stock documents filter by the vocabulary of their targets', async
 
 test('transfer rows offer only the batches and units of their item', async () => {
   stubFrappe(() => ({
-    data: [{ unit: 'Unit', uom_conversions: [{ uom: 'Box' }] }],
+    data: [{ stock_uom: 'Unit', uoms: [{ uom: 'Box' }] }],
   }));
   for (const name of ['DeliveryNote', 'PurchaseReceipt']) {
     const row = newFrappeDoc(name)._getChildDoc({ item: 'Pen' }, 'items');
@@ -282,7 +287,10 @@ test('a submitted movement links to its accounting and stock entries', () => {
 
 test('a submitted shipment offers an invoice and a return by Frappe fieldnames', () => {
   fyo.singles.AccountingSettings = { enable_invoice_returns: true };
-  const [invoice, , , makeReturn] = getStockTransferActions(fyo, 'DeliveryNote');
+  const [invoice, , , makeReturn] = getStockTransferActions(
+    fyo,
+    'DeliveryNote'
+  );
   const shipment = newFrappeDoc('DeliveryNote', { docstatus: 1 });
 
   assert.deepEqual(

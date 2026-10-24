@@ -56,8 +56,8 @@ test('selected items start a new sales invoice', async ({ page }) => {
   const items = [`Phone Item A ${run}`, `Phone Item B ${run}`];
   for (const name of items) {
     await insertDocument(page, 'Books Item', {
-      name,
-      rate: 100,
+      item_code: name,
+      standard_rate: 100,
       income_account: 'Sales',
       expense_account: 'Cost of Goods Sold',
     });

@@ -13,9 +13,9 @@ const items = [rice, eggs];
 const riceRow = {
   name: 'Basmati Rice',
   barcodes: [{ barcode: '12345' }, { barcode: '890000000001' }],
-  unit: 'Kg',
-  rate: 80,
-  track_item: 1,
+  stock_uom: 'Kg',
+  standard_rate: 80,
+  is_stock_item: 1,
 };
 const scale = {
   weight_enabled_barcode: true,

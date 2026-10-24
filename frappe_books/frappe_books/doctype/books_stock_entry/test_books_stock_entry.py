@@ -26,7 +26,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Income", root_type="Income")
 		received = make_account("Received", root_type="Liability")
-		self.item = make_item(income.name, received.name, track_item=1)
+		self.item = make_item(income.name, received.name, is_stock_item=1)
 		self.warehouse = frappe.get_doc(
 			{"doctype": "Books Location", "name": unique_name("Warehouse")}
 		).insert()
@@ -205,17 +205,17 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		return make_item(
 			self.item.income_account,
 			self.item.expense_account,
-			track_item=1,
-			has_serial_number=1,
+			is_stock_item=1,
+			has_serial_no=1,
 		).name
 
 	def test_batch_and_serial_numbers_follow_stock(self):
 		tracked_item = make_item(
 			self.item.income_account,
 			self.item.expense_account,
-			track_item=1,
-			has_batch=1,
-			has_serial_number=1,
+			is_stock_item=1,
+			has_batch_no=1,
+			has_serial_no=1,
 		)
 		batch = unique_name("BATCH")
 		frappe.get_doc({"doctype": "Books Batch", "name": batch, "item": tracked_item.name}).insert()
@@ -243,8 +243,8 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		tracked_item = make_item(
 			self.item.income_account,
 			self.item.expense_account,
-			track_item=1,
-			has_batch=1,
+			is_stock_item=1,
+			has_batch_no=1,
 		)
 		receipt = frappe.get_doc(
 			movement_values(
@@ -268,9 +268,9 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		item = make_item(
 			self.item.income_account,
 			self.item.expense_account,
-			track_item=1,
-			has_batch=1,
-			batch_series=prefix,
+			is_stock_item=1,
+			has_batch_no=1,
+			batch_number_series=prefix,
 		).name
 		row = {"item": item, "to_location": "Stores", "quantity": 2, "rate": 12}
 
@@ -312,7 +312,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		set_company_value("default_warehouse", self.warehouse.name)
-		self.item.db_set("rate", 15)
+		self.item.db_set("standard_rate", 15)
 		movement = frappe.get_doc(
 			movement_values("MaterialReceipt", [{"item": self.item.name, "quantity": 2}])
 		)
@@ -337,9 +337,9 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		item = make_item(
 			self.item.income_account,
 			self.item.expense_account,
-			track_item=1,
-			has_serial_number=1,
-			serial_number_series=prefix,
+			is_stock_item=1,
+			has_serial_no=1,
+			serial_no_series=prefix,
 		).name
 
 		receipt = make_movement("MaterialReceipt", [{"item": item, "to_location": "Stores", "quantity": 2}])
@@ -367,8 +367,8 @@ class IntegrationTestStockEntryPostings(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Income", root_type="Income")
 		received = make_account("Received", root_type="Liability")
-		self.item = make_item(income.name, received.name, track_item=1).name
-		self.product = make_item(income.name, received.name, track_item=1).name
+		self.item = make_item(income.name, received.name, is_stock_item=1).name
+		self.product = make_item(income.name, received.name, is_stock_item=1).name
 		self.stock = make_account("Stock", account_type="Stock").name
 		self.adjustment = make_account(
 			"Adjustment", root_type="Expense", account_type="Stock Adjustment"

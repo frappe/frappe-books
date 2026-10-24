@@ -72,7 +72,10 @@ test('features and totals show the fields that go with them', () => {
       enable_price_list: true,
       enable_coupon_code: true,
     },
-    defaults: { sales_payment_account: 'Cash', delivery_note_location: 'Stores' },
+    defaults: {
+      sales_payment_account: 'Cash',
+      delivery_note_location: 'Stores',
+    },
   });
   const invoice = newInvoice('SalesInvoice', {
     total_discount: fyo.pesa(5),
@@ -100,7 +103,10 @@ test('features and totals show the fields that go with them', () => {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ]);
-  assert.equal(invoice.getFieldState(invoice.fieldMap.exchange_rate).required, true);
+  assert.equal(
+    invoice.getFieldState(invoice.fieldMap.exchange_rate).required,
+    true
+  );
 });
 
 test('a submitted invoice hides what only a draft offers', () => {
@@ -173,9 +179,13 @@ test('item tables keep their columns, row editor and Invoice No', () => {
     getSchema(schemaName).fields.find((field) => field.fieldname === fieldname)
       .create;
   assert.deepEqual(
-    ['naming_series', 'customer', 'account', 'price_list', 'return_against'].map(
-      (fieldname) => create('SalesInvoice', fieldname)
-    ),
+    [
+      'naming_series',
+      'customer',
+      'account',
+      'price_list',
+      'return_against',
+    ].map((fieldname) => create('SalesInvoice', fieldname)),
     [true, true, true, false, false]
   );
   assert.deepEqual(
@@ -204,7 +214,8 @@ test('row fields show by the features and discounts turned on', () => {
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen' });
   const row = invoice.items[0];
-  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
+  const hidden = (fieldname) =>
+    row.getFieldState(row.fieldMap[fieldname]).hidden;
 
   assert.equal(hidden('item_discount_percent'), false);
   assert.equal(hidden('item_discount_amount'), true);
@@ -231,7 +242,10 @@ test('a new invoice leaves its payment and stock follow-ups to the server', () =
   assert.equal('make_auto_payment' in sent, false);
   assert.equal('make_auto_stock_transfer' in sent, false);
   const copy = newInvoice('SalesInvoice', { make_auto_payment: false });
-  assert.equal(copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment, 0);
+  assert.equal(
+    copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment,
+    0
+  );
 });
 
 test('a cleared row tax goes to the server empty, so it is not filled again', () => {
@@ -428,7 +442,11 @@ test('a new party or price list prices rows again, except manual and free ones',
   setSettings();
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen', rate: fyo.pesa(5) });
-  invoice.push('items', { item: 'Ink', rate: fyo.pesa(9), is_manual_rate: true });
+  invoice.push('items', {
+    item: 'Ink',
+    rate: fyo.pesa(9),
+    is_manual_rate: true,
+  });
   invoice.push('items', { item: 'Cap', is_free_item: true });
 
   await invoice.set('customer', 'Acme');
@@ -551,8 +569,8 @@ test("a row's transfer unit is its item's stock unit or one of its conversions",
   const requests = stubFrappe(() => ({
     data: [
       {
-        unit: 'Unit',
-        uom_conversions: [{ uom: 'Box', conversion_factor: 12 }],
+        stock_uom: 'Unit',
+        uoms: [{ uom: 'Box', conversion_factor: 12 }],
       },
     ],
   }));
@@ -689,8 +707,16 @@ test('invoice lists show their columns and filter by status, totals and docstatu
   const status = filters.fields.find(({ fieldname }) => fieldname === 'status');
   assert.deepEqual(status.states.Unpaid, 'Orange');
   assert.deepEqual(
-    frappeModels.SalesInvoice.getListViewSettings()
-      .columns.map((column) => column.fieldname ?? column),
-    ['name', 'status', 'customer', 'date', 'base_grand_total', 'outstanding_amount']
+    frappeModels.SalesInvoice.getListViewSettings().columns.map(
+      (column) => column.fieldname ?? column
+    ),
+    [
+      'name',
+      'status',
+      'customer',
+      'date',
+      'base_grand_total',
+      'outstanding_amount',
+    ]
   );
 });

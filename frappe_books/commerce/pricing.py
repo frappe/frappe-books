@@ -51,8 +51,10 @@ def standard_rates(invoice):
 	"""Map (item, unit) to the rate a row gets when nobody edits it; unit None is the item rate."""
 	items = list({row.item for row in invoice.items})
 	rates = {
-		(item.name, None): item.rate
-		for item in frappe.get_all("Books Item", filters={"name": ["in", items]}, fields=["name", "rate"])
+		(item.name, None): item.standard_rate
+		for item in frappe.get_all(
+			"Books Item", filters={"name": ["in", items]}, fields=["name", "standard_rate"]
+		)
 	}
 	if invoice.price_list and frappe.db.get_single_value("Books Accounting Settings", "enable_price_list"):
 		for row in frappe.get_all(

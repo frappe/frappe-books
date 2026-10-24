@@ -11,15 +11,15 @@ const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
 const items = {
-  [item]: { track_item: 1, has_batch: 1, unit: 'Unit' },
-  [service]: { track_item: 0, has_batch: 0, unit: 'Unit' },
-  [tea]: { track_item: 1, has_batch: 0, unit: 'Unit' },
+  [item]: { is_stock_item: 1, has_batch_no: 1, stock_uom: 'Unit' },
+  [service]: { is_stock_item: 0, has_batch_no: 0, stock_uom: 'Unit' },
+  [tea]: { is_stock_item: 1, has_batch_no: 0, stock_uom: 'Unit' },
   [flour]: {
-    track_item: 1,
-    has_batch: 1,
-    has_serial_number: 1,
-    unit: 'Kg',
-    uom_conversions: [{ uom: 'Box' }, { uom: 'Kg' }],
+    is_stock_item: 1,
+    has_batch_no: 1,
+    has_serial_no: 1,
+    stock_uom: 'Kg',
+    uoms: [{ uom: 'Box' }, { uom: 'Kg' }],
   },
 };
 const ledger = [
@@ -212,7 +212,9 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
 
 /** The ledger rows that match the location and item filters, as their sums. */
 function getSums(stock, filters) {
-  const values = Object.fromEntries(filters.map(([field, , value]) => [field, value]));
+  const values = Object.fromEntries(
+    filters.map(([field, , value]) => [field, value])
+  );
   return stock
     .filter((row) => !values.location || row.location === values.location)
     .filter((row) => !values.item || values.item.includes(row.item))
@@ -222,7 +224,7 @@ function getSums(stock, filters) {
 /** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */
 function getShortfalls(rows, stock, location) {
   const required = new Map();
-  for (const row of rows.filter((row) => items[row.item]?.track_item)) {
+  for (const row of rows.filter((row) => items[row.item]?.is_stock_item)) {
     const key = JSON.stringify([row.item, row.batch ?? '']);
     required.set(key, (required.get(key) ?? 0) + row.quantity);
   }

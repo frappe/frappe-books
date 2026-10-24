@@ -32,9 +32,9 @@ const hidden = (doc, fieldname) =>
 test('item group, unit, location, batch and serial number forms show what they showed', () => {
   assert.deepEqual(getLayout('ItemGroup'), [
     'image | Image |  | Default',
-    'name | Name | Name | Default',
+    'item_group_name | Item Group Name |  | Default',
     'tax | Tax | Tax | Default',
-    'hsn_code | HSN/SAC | HSN/SAC Code | Default',
+    'gst_hsn_code | HSN/SAC | HSN/SAC Code | Default',
   ]);
   assert.deepEqual(getLayout('UOM'), [
     'uom_name | UOM Name |  | Default',
@@ -65,18 +65,18 @@ test('item group, unit, location, batch and serial number forms show what they s
 });
 
 test('item groups show HSN/SAC only for an Indian company', () => {
-  const group = newFrappeDoc('ItemGroup', { name: 'Tea' });
+  const group = newFrappeDoc('ItemGroup', { item_group_name: 'Tea' });
   const columns = () =>
     getModel('ItemGroup')
       .getListViewSettings(fyo)
       .columns.map((column) => column.fieldname ?? column);
 
   fyo.singles.AccountingSettings = { country: 'United States' };
-  assert.equal(hidden(group, 'hsn_code'), true);
+  assert.equal(hidden(group, 'gst_hsn_code'), true);
   assert.deepEqual(columns(), ['name', 'tax']);
   fyo.singles.AccountingSettings = { country: 'India' };
-  assert.equal(hidden(group, 'hsn_code'), false);
-  assert.deepEqual(columns(), ['name', 'tax', 'hsn_code']);
+  assert.equal(hidden(group, 'gst_hsn_code'), false);
+  assert.deepEqual(columns(), ['name', 'tax', 'gst_hsn_code']);
 });
 
 test('batch and serial number lists show their columns', () => {

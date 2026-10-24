@@ -75,9 +75,9 @@ test('All Items lists stock and service items, hiding only stock that is out', (
   ]);
 
   const items = [
-    { name: 'Tea', track_item: 1 },
-    { name: 'Coffee', track_item: 1 },
-    { name: 'Gift Wrapping', track_item: 0 },
+    { name: 'Tea', is_stock_item: 1 },
+    { name: 'Coffee', is_stock_item: 1 },
+    { name: 'Gift Wrapping', is_stock_item: 0 },
   ];
   const quantities = { Tea: { availableQty: 3 } };
   const listed = (hideUnavailable) =>

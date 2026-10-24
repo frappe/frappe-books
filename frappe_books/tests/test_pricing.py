@@ -150,7 +150,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		free_item = make_item(
-			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+			self.income.name, self.expense.name, uoms=[{"uom": box.name, "conversion_factor": 12}]
 		)
 		self._pricing_rule(
 			discount_type="Product Discount",
@@ -178,7 +178,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_pricing_rule", 1)
 		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
-			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+			self.income.name, self.expense.name, uoms=[{"uom": box.name, "conversion_factor": 12}]
 		)
 		self._pricing_rule(
 			applied_items=[{"item": item.name, "unit": box.name}],
@@ -206,8 +206,8 @@ class IntegrationTestPricing(IntegrationTestCase):
 		item = make_item(
 			self.income.name,
 			self.expense.name,
-			rate=15,
-			uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+			standard_rate=15,
+			uoms=[{"uom": box.name, "conversion_factor": 12}],
 		)
 		rule = self._pricing_rule(
 			applied_items=[{"item": item.name, "unit": box.name}],
@@ -233,7 +233,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 	def test_rule_takes_only_units_its_items_have(self):
 		box = frappe.get_doc({"doctype": "Books UOM", "uom_name": unique_name("Box")}).insert()
 		item = make_item(
-			self.income.name, self.expense.name, uom_conversions=[{"uom": box.name, "conversion_factor": 12}]
+			self.income.name, self.expense.name, uoms=[{"uom": box.name, "conversion_factor": 12}]
 		)
 		self._pricing_rule(applied_items=[{"item": item.name, "unit": unit} for unit in ("Unit", box.name)])
 		with self.assertRaisesRegex(frappe.ValidationError, "not applicable"):
@@ -247,7 +247,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 				item = make_item(
 					self.income.name,
 					self.expense.name,
-					uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+					uoms=[{"uom": box.name, "conversion_factor": 12}],
 				)
 				self._pricing_rule(
 					applied_items=[{"item": item.name, "unit": unit} for unit in units],
@@ -370,7 +370,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			{"price_discount_type": "rate", "discount_rate": 80},
 		):
 			with self.subTest(values=values):
-				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				self.item = make_item(self.income.name, self.expense.name, standard_rate=100)
 				rule = self._pricing_rule(min_quantity=2, **values)
 				invoice = make_invoice(
 					"Books Sales Invoice",
@@ -402,7 +402,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			),
 		):
 			with self.subTest(values=values):
-				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				self.item = make_item(self.income.name, self.expense.name, standard_rate=100)
 				self._pricing_rule(**values)
 				invoice = make_invoice(
 					"Books Sales Invoice",
@@ -419,7 +419,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 
 	def test_empty_rate_comes_from_price_list_in_invoice_currency(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
-		item = make_item(self.income.name, self.expense.name, rate=100)
+		item = make_item(self.income.name, self.expense.name, standard_rate=100)
 		price_list = frappe.get_doc(
 			{
 				"doctype": "Books Price List",
@@ -477,8 +477,8 @@ class IntegrationTestPricing(IntegrationTestCase):
 		item = make_item(
 			self.income.name,
 			self.expense.name,
-			rate=100,
-			uom_conversions=[{"uom": box.name, "conversion_factor": 12}],
+			standard_rate=100,
+			uoms=[{"uom": box.name, "conversion_factor": 12}],
 		)
 		for unit, price, rate in ((box.name, 120, 10), ("Unit", 9, 9)):
 			with self.subTest(unit=unit):
@@ -637,7 +637,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 			({"price_discount_type": "percentage", "discount_percentage": 25}, 75),
 		):
 			with self.subTest(values=values):
-				self.item = make_item(self.income.name, self.expense.name, rate=100)
+				self.item = make_item(self.income.name, self.expense.name, standard_rate=100)
 				self._pricing_rule(**values)
 				invoice = frappe.get_doc(
 					{
@@ -664,7 +664,7 @@ class IntegrationTestPricing(IntegrationTestCase):
 		).insert()
 
 	def test_price_list_and_pricing_rule_previews_fill_units_without_saving(self):
-		sugar = make_item(self.income.name, self.expense.name, unit="Kg")
+		sugar = make_item(self.income.name, self.expense.name, stock_uom="Kg")
 		price_list = frappe.new_doc("Books Price List")
 		price_list.name = unique_name("Preview Prices")
 		price_list.append("price_list_item", {"item": sugar.name, "rate": 5})

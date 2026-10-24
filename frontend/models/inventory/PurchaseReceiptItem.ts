@@ -16,6 +16,6 @@ export class PurchaseReceiptItem extends StockTransferItem {
   // Items are Frappe-backed.
   static filters: FiltersMap = {
     ...transferRowFilters,
-    item: () => [['track_item', '=', 1]],
+    item: () => [['is_stock_item', '=', 1]],
   };
 }

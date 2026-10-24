@@ -34,7 +34,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		income = make_account("Income", root_type="Income")
 		payable = make_account("Payable", root_type="Liability", account_type="Payable")
 		party = make_supplier(payable.name)
-		item = make_item(income.name, received.name, track_item=1)
+		item = make_item(income.name, received.name, is_stock_item=1)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 
 		receipt = frappe.get_doc(
@@ -62,7 +62,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			make_account("Income", root_type="Income").name,
 			make_account("Received", root_type="Liability").name,
-			track_item=1,
+			is_stock_item=1,
 		)
 		make_receipt(item.name, quantity=2, rate=10)
 		receipt = make_receipt(item.name, quantity=2, rate=20)
@@ -83,7 +83,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			make_account("Income", root_type="Income").name,
 			make_account("Received", root_type="Liability").name,
-			track_item=1,
+			is_stock_item=1,
 		)
 		make_receipt(item.name, quantity=5, rate=10)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
@@ -100,7 +100,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			make_account("Income", root_type="Income").name,
 			make_account("Received", root_type="Liability").name,
-			track_item=1,
+			is_stock_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
 		payable = party_account("Books Supplier", receipt.supplier)
@@ -126,7 +126,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			make_account("Income", root_type="Income").name,
 			make_account("Received", root_type="Liability").name,
-			track_item=1,
+			is_stock_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
 		first = make_purchase_invoice(receipt.name).insert()
@@ -140,7 +140,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			make_account("Income", root_type="Income").name,
 			make_account("Received", root_type="Liability").name,
-			track_item=1,
+			is_stock_item=1,
 		)
 		customer = make_customer(make_account("Receivable", account_type="Receivable").name)
 		receipt = frappe.get_doc(
@@ -161,9 +161,9 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		item = make_item(
 			income.name,
 			received.name,
-			track_item=1,
-			has_serial_number=1,
-			serial_number_series=prefix,
+			is_stock_item=1,
+			has_serial_no=1,
+			serial_no_series=prefix,
 		)
 		typed = unique_name("SN")
 		payable = make_account("Payable", root_type="Liability", account_type="Payable")

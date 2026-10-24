@@ -30,11 +30,11 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
 		expense = make_account("Item Expense", root_type="Expense", account_type="Expense Account")
 		with self.assertRaises(frappe.ValidationError):
-			make_item(income.name, expense.name, hsn_code="12A4")
+			make_item(income.name, expense.name, gst_hsn_code="12A4")
 		with self.assertRaises(frappe.NonNegativeError):
-			make_item(income.name, expense.name, rate=-1)
-		item = make_item(income.name, expense.name, hsn_code="123456")
-		self.assertEqual(item.hsn_code, "123456")
+			make_item(income.name, expense.name, standard_rate=-1)
+		item = make_item(income.name, expense.name, gst_hsn_code="123456")
+		self.assertEqual(item.gst_hsn_code, "123456")
 
 	def test_a_barcode_of_any_length_names_one_item(self):
 		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
@@ -48,7 +48,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 
 	def test_item_group_hsn_code_must_contain_four_to_eight_digits(self):
 		group = frappe.get_doc(
-			{"doctype": "Books Item Group", "name": unique_name("Group"), "hsn_code": "12A4"}
+			{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "12A4"}
 		)
 
 		self.assertRaisesRegex(frappe.ValidationError, "between 4 and 8 digits", group.insert)
@@ -57,18 +57,18 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		income = make_account("Item Sales", root_type="Income", account_type="Income Account")
 		expense = make_account("Item Expense", root_type="Expense", account_type="Expense Account")
 		with patch("frappe_books.regional.company_country", return_value="United States"):
-			item = make_item(income.name, expense.name, hsn_code="1234567890")
+			item = make_item(income.name, expense.name, gst_hsn_code="1234567890")
 
-		self.assertEqual(item.hsn_code, "1234567890")
+		self.assertEqual(item.gst_hsn_code, "1234567890")
 
 	def test_missing_accounts_and_hsn_code_get_the_app_defaults(self):
 		cogs, received, group = self.make_default_sources()
 
 		service = make_item(None, None, item_type="Service", item_group=group.name)
-		product = make_item(None, None, track_item=1)
+		product = make_item(None, None, is_stock_item=1)
 
 		self.assertEqual((service.income_account, service.expense_account), ("Service", cogs.name))
-		self.assertEqual(service.hsn_code, "998877")
+		self.assertEqual(service.gst_hsn_code, "998877")
 		self.assertEqual((product.income_account, product.expense_account), ("Sales", received.name))
 
 	def test_accounts_follow_the_item_tracking(self):
@@ -78,32 +78,35 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		for accounts, values, message in (
 			((expense, expense), {}, "Sales Acc. must be of type Income"),
 			((income, received), {}, "Purchase Acc. must be of type Expense"),
-			((income, expense), {"track_item": 1}, "Purchase Acc. must be of type Liability"),
+			((income, expense), {"is_stock_item": 1}, "Purchase Acc. must be of type Liability"),
 		):
 			with self.subTest(message=message), self.assertRaisesRegex(frappe.ValidationError, message):
 				make_item(accounts[0].name, accounts[1].name, **values)
 
-		self.assertTrue(make_item(income.name, received.name, track_item=1).track_item)
+		self.assertTrue(make_item(income.name, received.name, is_stock_item=1).is_stock_item)
 
-	def test_tracked_series_names_end_with_a_dash(self):
+	def test_tracked_series_become_naming_patterns(self):
 		income = make_account("Item Sales", root_type="Income")
 		received = make_account("Item Received", root_type="Liability")
 		prefix = f"B{frappe.generate_hash(length=6)}"
 		item = make_item(
 			income.name,
 			received.name,
-			track_item=1,
-			has_batch=1,
-			batch_series=f" {prefix} ",
-			serial_number_series="SERIAL",
+			is_stock_item=1,
+			has_batch_no=1,
+			batch_number_series=f" {prefix} ",
+			serial_no_series="SERIAL",
 		)
 
-		self.assertEqual((item.batch_series, item.serial_number_series), (f"{prefix}-", "SERIAL"))
+		self.assertEqual(
+			(item.batch_number_series, item.create_new_batch, item.serial_no_series),
+			(f"{prefix}-.####", 1, "SERIAL"),
+		)
 
 	def test_item_maps_to_an_invoice_row(self):
 		income = make_account("Mapped Sales", root_type="Income")
 		expense = make_account("Mapped Expense", root_type="Expense")
-		item = make_item(income.name, expense.name, rate=40)
+		item = make_item(income.name, expense.name, standard_rate=40)
 
 		invoice = make_purchase_invoice(item.name)
 
@@ -113,7 +116,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 	def test_item_invoice_row_shows_its_quantity(self):
 		income = make_account("Mapped Sales", root_type="Income")
 		expense = make_account("Mapped Expense", root_type="Expense")
-		item = make_item(income.name, expense.name, rate=40)
+		item = make_item(income.name, expense.name, standard_rate=40)
 
 		row = make_sales_invoice(item.name).items[0]
 
@@ -122,16 +125,16 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 	def test_preview_fills_what_a_save_would_without_saving(self):
 		cogs, received, group = self.make_default_sources()
 		item = frappe.new_doc("Books Item", item_type="Service", item_group=group.name)
-		item.name = unique_name("Preview Item")
+		item.item_code = unique_name("Preview Item")
 
 		item.preview()
 
 		self.assertEqual((item.income_account, item.expense_account), ("Service", cogs.name))
-		self.assertEqual(item.hsn_code, "998877")
-		self.assertFalse(frappe.db.exists("Books Item", item.name))
+		self.assertEqual(item.gst_hsn_code, "998877")
+		self.assertFalse(frappe.db.exists("Books Item", item.item_code))
 
 		item.update(
-			{"item_type": "Product", "track_item": 1, "income_account": None, "expense_account": None}
+			{"item_type": "Product", "is_stock_item": 1, "income_account": None, "expense_account": None}
 		)
 		item.preview()
 		self.assertEqual((item.income_account, item.expense_account), ("Sales", received.name))
@@ -151,6 +154,6 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		received = make_account("Item Received", root_type="Liability")
 		set_inventory_accounts(None, received.name, cogs.name)
 		group = frappe.get_doc(
-			{"doctype": "Books Item Group", "name": unique_name("Group"), "hsn_code": "998877"}
+			{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "998877"}
 		).insert()
 		return cogs, received, group

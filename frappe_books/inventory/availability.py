@@ -128,7 +128,7 @@ def _tracked_quantities(rows):
 	if not names:
 		return {}
 	tracked = set(
-		frappe.get_list("Books Item", filters={"name": ["in", names], "track_item": 1}, pluck="name")
+		frappe.get_list("Books Item", filters={"name": ["in", names], "is_stock_item": 1}, pluck="name")
 	)
 	quantities = defaultdict(float)
 	for row in rows:

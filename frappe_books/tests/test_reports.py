@@ -358,7 +358,7 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		self.assertEqual([row["balance_quantity"] for row in rows], [1])
 
 	def _item(self):
-		return make_item(self.income.name, self.received.name, track_item=1).name
+		return make_item(self.income.name, self.received.name, is_stock_item=1).name
 
 
 class IntegrationTestGSTR(IntegrationTestCase):

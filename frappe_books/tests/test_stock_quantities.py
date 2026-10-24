@@ -16,8 +16,8 @@ class IntegrationTestStockQuantities(IntegrationTestCase):
 	def test_quantities_are_summed_per_item_and_batch_at_a_location(self):
 		income = make_account("Stock Income", root_type="Income").name
 		received = make_account("Stock Received", root_type="Liability").name
-		item = make_item(income, received, track_item=1, has_batch=1).name
-		other = make_item(income, received, track_item=1).name
+		item = make_item(income, received, is_stock_item=1, has_batch_no=1).name
+		other = make_item(income, received, is_stock_item=1).name
 		first, second = make_batch(item), make_batch(item)
 		seed_stock(item, quantity=3, rate=10, batch=first)
 		seed_stock(item, quantity=2, rate=10, batch=first)

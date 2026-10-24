@@ -132,7 +132,7 @@ def pending_quantities(invoice, exclude=None):
 	tracked = set(
 		frappe.get_all(
 			"Books Item",
-			filters={"name": ["in", sorted({row.item for row in invoice.items})], "track_item": 1},
+			filters={"name": ["in", sorted({row.item for row in invoice.items})], "is_stock_item": 1},
 			pluck="name",
 		)
 	)

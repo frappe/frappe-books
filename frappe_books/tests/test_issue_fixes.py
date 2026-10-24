@@ -37,7 +37,7 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		tax_account = make_account("Recoverable Tax", account_type="Tax")
 		tax = make_tax(tax_account.name, rate=18)
 		party = make_supplier(payable.name)
-		item = make_item(income.name, received.name, tax=tax.name, track_item=1)
+		item = make_item(income.name, received.name, tax=tax.name, is_stock_item=1)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		invoice = make_invoice(

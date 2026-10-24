@@ -41,7 +41,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		income = make_account("Income", root_type="Income")
 		receivable = make_account("Receivable", account_type="Receivable")
 		party = make_customer(receivable.name)
-		item = make_item(income.name, received.name, track_item=1)
+		item = make_item(income.name, received.name, is_stock_item=1)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		seed_stock(item.name, quantity=4, rate=25)
 
@@ -214,7 +214,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 	def test_shipped_serial_numbers_are_delivered_until_cancelled(self):
 		item, _cogs, _stock = self._tracked_item()
-		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serials = ["SHIP-A " + item.name, "SHIP-B " + item.name]
 		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serials))
 		shipment = frappe.get_doc(
@@ -240,7 +240,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		self.assertEqual(serial_statuses(serials), {"Active"})
 
 	def test_returned_serial_numbers_are_delivered_again_when_the_return_is_cancelled(self):
-		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		item, _cogs, _stock = self._tracked_item(has_serial_no=1)
 		serial = unique_name("SER")
 		seed_stock(item.name, quantity=1, rate=10, serial_number=serial)
 		shipment = self._make_delivery_note(
@@ -265,7 +265,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			self._make_delivery_note(item, quantity=-2, rate=25, return_against=shipment.name)
 
 	def test_return_takes_back_only_the_shipped_batch_quantity(self):
-		item, _cogs, _stock = self._tracked_item(has_batch=1)
+		item, _cogs, _stock = self._tracked_item(has_batch_no=1)
 		batches = [make_batch(item.name), make_batch(item.name)]
 		for batch in batches:
 			seed_stock(item.name, quantity=2, rate=10, batch=batch)
@@ -284,7 +284,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 			)
 
 	def test_return_takes_back_only_shipped_serial_numbers(self):
-		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		item, _cogs, _stock = self._tracked_item(has_serial_no=1)
 		serials = [unique_name("SER") for _ in range(3)]
 		seed_stock(item.name, quantity=3, rate=10, serial_number="\n".join(serials))
 		shipment = self._make_delivery_note(
@@ -321,7 +321,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		self.assertEqual((returned.items[0].quantity, returned.items[0].transfer_quantity), (-1, -1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
-		item, _cogs, _stock = self._tracked_item(has_serial_number=1, hsn_code="012345")
+		item, _cogs, _stock = self._tracked_item(has_serial_no=1, gst_hsn_code="012345")
 		serial_numbers = [unique_name("SN"), unique_name("SN")]
 		seed_stock(item.name, quantity=2, rate=10, serial_number="\n".join(serial_numbers))
 		set_company_value("default_warehouse", "Stores")
@@ -355,7 +355,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		self.assertEqual(shipment.items[0].location, "Stores")
 
 	def test_empty_serial_numbers_are_the_earliest_in_stock_at_the_row_location(self):
-		item, _cogs, _stock = self._tracked_item(has_serial_number=1)
+		item, _cogs, _stock = self._tracked_item(has_serial_no=1)
 		shelf = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shelf")}).insert().name
 		serials = [unique_name("SER") for _ in range(3)]
 		now = now_datetime()
@@ -565,7 +565,7 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		income = make_account("Income", root_type="Income")
 		set_inventory_accounts(stock.name, received.name, cogs.name)
-		return make_item(income.name, received.name, track_item=1, **values), cogs, stock
+		return make_item(income.name, received.name, is_stock_item=1, **values), cogs, stock
 
 	def _make_delivery_note(self, item, quantity, rate, **values):
 		receivable = make_account("Receivable", account_type="Receivable")

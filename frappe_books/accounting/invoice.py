@@ -453,10 +453,10 @@ def _item_details(names):
 		fields=[
 			"name",
 			"description",
-			"unit",
+			"stock_uom as unit",
 			"tax",
 			"item_group.tax as group_tax",
-			"hsn_code",
+			"gst_hsn_code as hsn_code",
 			"income_account",
 			"expense_account",
 		],

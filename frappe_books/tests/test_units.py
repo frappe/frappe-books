@@ -24,8 +24,8 @@ class IntegrationTestUnits(IntegrationTestCase):
 		self.item = make_item(
 			self.income.name,
 			self.received,
-			track_item=1,
-			uom_conversions=[{"uom": self.box, "conversion_factor": 12}],
+			is_stock_item=1,
+			uoms=[{"uom": self.box, "conversion_factor": 12}],
 		)
 
 	def test_invoice_row_converts_with_the_item_factor(self):
@@ -75,9 +75,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 	def test_api_rows_take_the_item_unit_and_derive_the_missing_quantity(self):
 		piece = make_uom("Piece")
 		conversions = [{"uom": self.box, "conversion_factor": 12}]
-		item = make_item(
-			self.income.name, self.received, track_item=1, unit=piece, uom_conversions=conversions
-		)
+		item = make_item(self.income.name, self.received, is_stock_item=1, stock_uom=piece, uoms=conversions)
 		for values, expected in (
 			({"quantity": 3}, (piece, 3, 3)),
 			({"transfer_quantity": 4}, (piece, 4, 4)),
@@ -95,7 +93,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 	def test_api_invoice_rows_take_the_item_unit(self):
 		receivable = make_account("Unit Receivable", account_type="Receivable")
 		piece = make_uom("Piece")
-		item = make_item(self.income.name, self.expense.name, unit=piece)
+		item = make_item(self.income.name, self.expense.name, stock_uom=piece)
 		invoice = insert(
 			{
 				"doctype": "Books Sales Invoice",
@@ -175,9 +173,9 @@ class IntegrationTestUnits(IntegrationTestCase):
 		item = make_item(
 			self.income.name,
 			self.received,
-			track_item=1,
-			unit=piece,
-			uom_conversions=[{"uom": box, "conversion_factor": 12}],
+			is_stock_item=1,
+			stock_uom=piece,
+			uoms=[{"uom": box, "conversion_factor": 12}],
 		)
 		for values, label in (
 			({"transfer_unit": piece, "quantity": 1.5}, "Quantity"),
@@ -194,7 +192,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 	def test_invoice_rows_in_whole_number_units_take_whole_quantities(self):
 		receivable = make_account("Unit Receivable", account_type="Receivable")
 		piece = make_uom("Piece", must_be_whole_number=1)
-		item = make_item(self.income.name, self.expense.name, unit=piece)
+		item = make_item(self.income.name, self.expense.name, stock_uom=piece)
 		invoice = frappe.get_doc(
 			{
 				"doctype": "Books Sales Invoice",
@@ -225,7 +223,7 @@ class IntegrationTestUnits(IntegrationTestCase):
 					make_item,
 					self.income.name,
 					self.expense.name,
-					uom_conversions=conversions,
+					uoms=conversions,
 				)
 
 	def _receipt(self, values):

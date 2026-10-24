@@ -78,7 +78,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_pos_sale_preview_fills_serial_numbers_in_stock_at_the_pos(self):
 		invoice, item, location = self._make_pos_invoice(use_profile=False)
-		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serial_numbers = sorted(unique_name("SN") for _ in range(3))
 		row = {"item": item.name, "to_location": location.name, "quantity": 3, "rate": 10}
 		make_movement("MaterialReceipt", [{**row, "serial_number": "\n".join(serial_numbers)}]).submit()
@@ -92,7 +92,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_pos_invoice_submit_rejects_serial_numbers_out_of_stock(self):
 		invoice, item, _location = self._make_pos_invoice(use_profile=False)
-		frappe.db.set_value("Books Item", item.name, "has_serial_number", 1)
+		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serial_numbers = [unique_name("SN") for _ in range(2)]
 		invoice.items[0].serial_number = "\n".join(serial_numbers)
 		invoice.save()
@@ -161,7 +161,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 
 	def test_invoice_rows_follow_the_item_batch_rule(self):
 		invoice, item = self._sales_invoice()
-		frappe.db.set_value("Books Item", item, "has_batch", 1)
+		frappe.db.set_value("Books Item", item, "has_batch_no", 1)
 
 		self.assertRaisesRegex(frappe.ValidationError, "Please select a batch first", invoice.save)
 
@@ -266,7 +266,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		set_company_value("default_discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, is_stock_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_supplier(payable.name).name,
@@ -288,7 +288,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		set_company_value("default_discount_account", cogs.name)
 		set_inventory_accounts(stock.name, received.name, cogs.name)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", "Stores")
-		item = make_item(income.name, received.name, track_item=1, rate=10)
+		item = make_item(income.name, received.name, is_stock_item=1, standard_rate=10)
 		make_movement(
 			"MaterialReceipt",
 			[{"item": item.name, "to_location": "Stores", "quantity": 5, "rate": 10}],
@@ -310,7 +310,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		expense = make_account("FX Expense", root_type="Expense")
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, is_stock_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_supplier(payable.name, default_currency=foreign_currency()).name,
@@ -336,7 +336,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		set_company_value("default_discount_account", expense.name)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
-		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, is_stock_item=1)
 		invoice = make_invoice(
 			"Books Purchase Invoice",
 			make_supplier(payable.name).name,
@@ -391,7 +391,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		frappe.db.set_single_value("Books Pos Settings", "inventory", "Stores" if profile else location.name)
 		party = make_customer(receivable.name)
-		item = make_item(income.name, received.name, track_item=1, rate=10)
+		item = make_item(income.name, received.name, is_stock_item=1, standard_rate=10)
 		make_movement(
 			"MaterialReceipt",
 			[{"item": item.name, "to_location": location.name, "quantity": opening_quantity, "rate": 10}],

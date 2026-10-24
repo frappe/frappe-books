@@ -22,11 +22,11 @@ export const POS_ITEM_FIELDS = [
   'name',
   { barcodes: ['barcode'] },
   'image',
-  'rate',
-  'unit',
-  'track_item',
-  'has_batch',
-  'has_serial_number',
+  'standard_rate',
+  'stock_uom',
+  'is_stock_item',
+  'has_batch_no',
+  'has_serial_no',
 ];
 
 const TRACKED_ITEMS: Partial<Record<ItemVisibility, number>> = {
@@ -98,11 +98,11 @@ export async function getPOSRowItem(item?: string): Promise<POSRowItem> {
   }
 
   const doc = await getItemDoc(item);
-  const conversions = (doc.uom_conversions ?? []) as { uom?: string }[];
-  const units = [doc.unit as string, ...conversions.map(({ uom }) => uom)];
+  const conversions = (doc.uoms ?? []) as { uom?: string }[];
+  const units = [doc.stock_uom as string, ...conversions.map(({ uom }) => uom)];
   return {
-    hasBatch: !!doc.has_batch,
-    hasSerialNumber: !!doc.has_serial_number,
+    hasBatch: !!doc.has_batch_no,
+    hasSerialNumber: !!doc.has_serial_no,
     units: [...new Set(units.filter((unit): unit is string => !!unit))],
   };
 }
@@ -151,7 +151,7 @@ export function getPOSItemFilters(
   const filters: Filter[] = [];
   const tracked = visibility && TRACKED_ITEMS[visibility];
   if (tracked !== undefined) {
-    filters.push(['track_item', '=', tracked]);
+    filters.push(['is_stock_item', '=', tracked]);
   }
 
   if (itemGroup) {
@@ -166,16 +166,16 @@ export function toPOSItem(item: DocValues, itemQtyMap: ItemQtyMap): POSItem {
   const name = item.name as string;
   return {
     availableQty: itemQtyMap[name]?.availableQty ?? 0,
-    trackItem: !!item.track_item,
+    trackItem: !!item.is_stock_item,
     name,
     barcodes: ((item.barcodes ?? []) as { barcode: string }[]).map(
       ({ barcode }) => barcode
     ),
     image: item.image as string,
-    rate: fyo.pesa((item.rate as number) ?? 0),
-    unit: item.unit as string,
-    hasBatch: !!item.has_batch,
-    hasSerialNumber: !!item.has_serial_number,
+    rate: fyo.pesa((item.standard_rate as number) ?? 0),
+    unit: item.stock_uom as string,
+    hasBatch: !!item.has_batch_no,
+    hasSerialNumber: !!item.has_serial_no,
   };
 }
 

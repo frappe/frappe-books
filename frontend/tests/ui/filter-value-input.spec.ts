@@ -85,9 +85,7 @@ for (const [schema, label, field, options] of cases) {
     ).toBeVisible();
     await expect(page.getByRole('listbox')).toBeHidden();
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual([
-      [field, '=', options.at(-1)],
-    ]);
+    expect(await appliedFilters(page)).toEqual([[field, '=', options.at(-1)]]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();
@@ -191,7 +189,7 @@ test('Link field changes load the correct records and lookup errors are visible'
 }) => {
   await openField(page, 'Item', 'Item Group');
   await setValue(page, 'ItemGroup-001');
-  await choose(page, 'Field', 'Unit Type');
+  await choose(page, 'Field', 'Default Unit of Measure');
   const input = page.getByRole('combobox', { name: 'Value', exact: true });
   await input.click();
   await expect(page.getByRole('option')).toHaveText(['UOM-001', 'UOM-002']);

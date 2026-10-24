@@ -47,7 +47,7 @@ class IntegrationTestValuation(IntegrationTestCase):
 	def setUp(self):
 		income = make_account("Valuation Income", root_type="Income")
 		received = make_account("Valuation Received", root_type="Liability")
-		self.item = make_item(income.name, received.name, track_item=1).name
+		self.item = make_item(income.name, received.name, is_stock_item=1).name
 
 	def test_fifo_balances_follow_receipts_and_issues(self):
 		move(self.item, "MaterialReceipt", 5, 10)

@@ -401,7 +401,7 @@ export const previousForms = {
     'Address.country': false,
     'ItemGroup.tax': true,
     'Item.item_group': true,
-    'Item.unit': true,
+    'Item.stock_uom': true,
     'Item.income_account': true,
     'Item.expense_account': true,
     'Item.tax': true,

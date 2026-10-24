@@ -34,7 +34,8 @@ export default {
     getRecordOptions() {
       const { titleField } = getSchema(this.getTargetSchemaName());
       return this.optionRecords.map((record) => ({
-        label: record[titleField],
+        // Records that do not hold the title field, like POS items, show their name.
+        label: record[titleField] ?? record.name,
         value: record.name,
         record,
       }));

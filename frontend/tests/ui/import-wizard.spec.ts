@@ -65,8 +65,8 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
 test('rows of one invoice become one submitted invoice', async ({ page }) => {
   const item = `Import Pen ${run}`;
   await insertDocument(page, 'Books Item', {
-    name: item,
-    rate: 10,
+    item_code: item,
+    standard_rate: 10,
     income_account: 'Sales',
     expense_account: 'Cost of Goods Sold',
   });

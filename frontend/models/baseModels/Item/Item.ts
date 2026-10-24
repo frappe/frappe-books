@@ -25,34 +25,33 @@ export class Item extends FrappeDoc {
   static override doctype = 'Books Item';
   static override presentation = {
     label: 'Item',
-    nameField: { label: 'Item Name', placeholder: 'Item Name' },
     quickEditFields: [
-      'rate',
-      'unit',
+      'standard_rate',
+      'stock_uom',
       'item_type',
       'tax',
       'description',
       'income_account',
       'expense_account',
       'barcodes',
-      'hsn_code',
-      'track_item',
+      'gst_hsn_code',
+      'is_stock_item',
     ],
   };
   static override rowModels = {
     barcodes: ItemBarcode,
-    uom_conversions: UOMConversionDetail,
+    uoms: UOMConversionDetail,
   };
   static override previewMethod = 'preview';
 
   // The server checks these too; mirrored to show the message at the field.
   validations: ValidationMap = {
-    rate: (value: DocValue) => {
+    standard_rate: (value: DocValue) => {
       if ((value as Money).isNegative()) {
         throw new ValidationError(this.fyo.t`Rate can't be negative.`);
       }
     },
-    hsn_code: (value: DocValue) => {
+    gst_hsn_code: (value: DocValue) => {
       if (isHsnCodeHidden(this.fyo)) {
         return;
       }
@@ -65,14 +64,13 @@ export class Item extends FrappeDoc {
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    hsn_code: () => isHsnCodeHidden(this.fyo),
-    track_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
+    gst_hsn_code: () => isHsnCodeHidden(this.fyo),
+    is_stock_item: () => !this.fyo.singles.AccountingSettings?.enable_inventory,
     barcodes: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
-    has_batch: () => !this.fyo.singles.InventorySettings?.enable_batches,
-    has_serial_number: () =>
+    has_batch_no: () => !this.fyo.singles.InventorySettings?.enable_batches,
+    has_serial_no: () =>
       !this.fyo.singles.InventorySettings?.enable_serial_number,
-    uom_conversions: () =>
-      !this.fyo.singles.InventorySettings?.enable_uom_conversions,
+    uoms: () => !this.fyo.singles.InventorySettings?.enable_uom_conversions,
     item_group: () => !this.fyo.singles.AccountingSettings?.enableitem_group,
   };
 
@@ -86,7 +84,7 @@ export class Item extends FrappeDoc {
       [
         'root_type',
         '=',
-        doc.track_item
+        doc.is_stock_item
           ? AccountRootTypeEnum.Liability
           : AccountRootTypeEnum.Expense,
       ],
@@ -112,7 +110,7 @@ export class Item extends FrappeDoc {
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'unit', 'tax', 'rate'],
+      columns: ['name', 'stock_uom', 'tax', 'standard_rate'],
     };
   }
 }

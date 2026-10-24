@@ -37,8 +37,8 @@ export function getPOSPreference(fieldname: string): DocValue {
     return accessoryPreferences.value[fieldname] as DocValue;
   }
 
-  return (fyo.singles.POSSettings?.get(fieldname) ??
-    fyo.singles.Defaults?.get(fieldname)) as DocValue;
+  return (fyo.singles.POSSettings?.[fieldname] ??
+    fyo.singles.Defaults?.[fieldname]) as DocValue;
 }
 
 /** The notes and coins the POS counts cash in. */

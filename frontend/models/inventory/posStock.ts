@@ -57,16 +57,15 @@ export async function getPOSBatchQuantity(
  * when it is added; the server says so first too.
  */
 export async function validatePOSStock(rows: ItemQuantity[], sale?: FrappeDoc) {
-  const inventory = await getPOSInventory(sale);
+  // ERPNext rows without a warehouse yet ship from the POS Profile's.
+  const warehouse = isAccessoryMode() ? await getPOSInventory(sale) : undefined;
   const shortfalls = (
-    await getSaleShortfalls(rows, true, undefined, inventory)
-  ).map(
-    ({ item_code, batch_no, stock_qty }) => {
-      const required = getRequiredQuantity(rows, item_code!, batch_no);
-      const available = safeParseFloat(required - (stock_qty ?? 0));
-      return { item: item_code!, batch: batch_no, required, available };
-    }
-  );
+    await getSaleShortfalls(rows, true, undefined, warehouse)
+  ).map(({ item_code, batch_no, stock_qty }) => {
+    const required = getRequiredQuantity(rows, item_code!, batch_no);
+    const available = safeParseFloat(required - (stock_qty ?? 0));
+    return { item: item_code!, batch: batch_no, required, available };
+  });
   const shortfall =
     shortfalls.find(({ batch, available }) => !batch && available <= 0) ??
     shortfalls[0];
@@ -79,6 +78,7 @@ export async function validatePOSStock(rows: ItemQuantity[], sale?: FrappeDoc) {
     throw new ValidationError(getOutOfStockMessage(item));
   }
 
+  const inventory = warehouse ?? (await getPOSInventory(sale));
   const locationText = inventory ? ' ' + t`in ${inventory}` : '';
   const batchText = batch ? ' ' + t`for batch ${batch}` : '';
   throw new ValidationError(

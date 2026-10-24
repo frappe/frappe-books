@@ -28,6 +28,7 @@ class BooksQuotation(InvoiceController):
 		amended_from: DF.Link | None
 		attachment: DF.Attach | None
 		base_grand_total: DF.Currency
+		company: DF.Link | None
 		currency: DF.Link | None
 		date: DF.Datetime
 		discount_after_tax: DF.Check

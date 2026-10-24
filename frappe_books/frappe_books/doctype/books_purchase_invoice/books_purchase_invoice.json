@@ -38,7 +38,8 @@
   "settings_tab_break_20",
   "discount_after_tax",
   "make_auto_payment",
-  "make_auto_stock_transfer"
+  "make_auto_stock_transfer",
+  "company"
  ],
  "fields": [
   {
@@ -273,6 +274,13 @@
    "fieldname": "make_auto_stock_transfer",
    "fieldtype": "Check",
    "label": "Make Purchase Receipt On Submit"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

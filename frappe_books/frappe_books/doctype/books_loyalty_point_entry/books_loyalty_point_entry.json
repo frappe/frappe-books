@@ -14,7 +14,8 @@
   "loyalty_points",
   "purchase_amount",
   "expiry_date",
-  "posting_date"
+  "posting_date",
+  "company"
  ],
  "fields": [
   {
@@ -77,6 +78,13 @@
    "fieldtype": "Date",
    "label": "Posting Date",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

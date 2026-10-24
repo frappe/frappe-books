@@ -36,7 +36,8 @@
   "max_amount",
   "validity_section_break_29",
   "valid_from",
-  "valid_to"
+  "valid_to",
+  "company"
  ],
  "fields": [
   {
@@ -230,6 +231,13 @@
    "fieldname": "valid_to",
    "fieldtype": "Date",
    "label": "Valid To"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

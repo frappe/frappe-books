@@ -23,7 +23,8 @@
   "cancel_button_colour",
   "held_button_colour",
   "return_button_colour",
-  "pay_button_colour"
+  "pay_button_colour",
+  "company"
  ],
  "fields": [
   {
@@ -132,6 +133,13 @@
    "fieldtype": "Color",
    "label": "Pay Button Colour",
    "placeholder": "Select Colour"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

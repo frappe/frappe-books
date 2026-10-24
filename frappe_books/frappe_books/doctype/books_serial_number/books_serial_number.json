@@ -10,7 +10,8 @@
  "field_order": [
   "item",
   "description",
-  "status"
+  "status",
+  "company"
  ],
  "fields": [
   {
@@ -34,6 +35,13 @@
    "label": "Status",
    "options": "Inactive\nActive\nDelivered",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

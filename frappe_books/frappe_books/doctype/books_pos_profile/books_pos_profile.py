@@ -18,6 +18,7 @@ class BooksPosProfile(Document):
 		can_change_rate: DF.Check
 		can_edit_discount: DF.Check
 		cancel_button_colour: DF.Color | None
+		company: DF.Link | None
 		held_button_colour: DF.Color | None
 		hide_unavailable_items: DF.Check
 		ignore_pricing_rule: DF.Check

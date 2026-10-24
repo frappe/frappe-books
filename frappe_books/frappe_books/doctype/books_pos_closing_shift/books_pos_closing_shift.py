@@ -41,6 +41,7 @@ class BooksPosClosingShift(Document):
 		closing_amounts: DF.Table[BooksClosingAmounts]
 		closing_cash: DF.Table[BooksClosingCash]
 		closing_date: DF.Datetime | None
+		company: DF.Link | None
 		journal_entry: DF.Link | None
 		opening_shift: DF.Link | None
 	# end: auto-generated types

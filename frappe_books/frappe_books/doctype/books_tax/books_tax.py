@@ -17,6 +17,7 @@ class BooksTax(Document):
 
 		from frappe_books.frappe_books.doctype.books_tax_detail.books_tax_detail import BooksTaxDetail
 
+		company: DF.Link | None
 		details: DF.Table[BooksTaxDetail]
 	# end: auto-generated types
 

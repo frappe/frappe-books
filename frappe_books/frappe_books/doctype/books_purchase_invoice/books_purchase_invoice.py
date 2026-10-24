@@ -31,6 +31,7 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 		attachment: DF.Attach | None
 		back_reference: DF.Link | None
 		base_grand_total: DF.Currency
+		company: DF.Link | None
 		currency: DF.Link | None
 		date: DF.Datetime
 		discount_after_tax: DF.Check

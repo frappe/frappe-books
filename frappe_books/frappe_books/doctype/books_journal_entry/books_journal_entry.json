@@ -21,7 +21,8 @@
   "attachment",
   "total_debit",
   "total_credit",
-  "amended_from"
+  "amended_from",
+  "company"
  ],
  "fields": [
   {
@@ -136,6 +137,13 @@
    "fieldtype": "Attach",
    "label": "Attachment",
    "placeholder": "Add attachment"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

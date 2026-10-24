@@ -13,7 +13,8 @@
   "contacts_section_break_3",
   "email",
   "mobile",
-  "address"
+  "address",
+  "company"
  ],
  "fields": [
   {
@@ -54,6 +55,13 @@
    "fieldtype": "Link",
    "label": "Address",
    "options": "Books Address"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

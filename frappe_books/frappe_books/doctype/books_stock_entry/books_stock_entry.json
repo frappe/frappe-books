@@ -15,7 +15,8 @@
   "items_section_break_5",
   "items",
   "amount",
-  "amended_from"
+  "amended_from",
+  "company"
  ],
  "fields": [
   {
@@ -90,6 +91,13 @@
    "fieldtype": "Currency",
    "label": "Total Amount",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

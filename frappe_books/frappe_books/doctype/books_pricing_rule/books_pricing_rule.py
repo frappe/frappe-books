@@ -36,6 +36,7 @@ class BooksPricingRule(SeriesNamingMixin, Document):
 		)
 
 		applied_items: DF.Table[BooksPricingRuleItem]
+		company: DF.Link | None
 		discount_amount: DF.Currency
 		discount_percentage: DF.Float
 		discount_rate: DF.Currency

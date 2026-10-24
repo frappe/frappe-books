@@ -19,7 +19,8 @@
   "voucher_type",
   "voucher_no",
   "reverted",
-  "reverts"
+  "reverts",
+  "company"
  ],
  "fields": [
   {
@@ -109,6 +110,13 @@
    "fieldname": "reference_section_break_8",
    "fieldtype": "Section Break",
    "label": "Reference"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

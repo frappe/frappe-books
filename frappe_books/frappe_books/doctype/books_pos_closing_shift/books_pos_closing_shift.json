@@ -12,7 +12,8 @@
   "closing_amounts",
   "opening_shift",
   "journal_entry",
-  "amended_from"
+  "amended_from",
+  "company"
  ],
  "fields": [
   {
@@ -57,6 +58,13 @@
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

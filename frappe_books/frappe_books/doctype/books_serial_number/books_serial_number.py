@@ -13,6 +13,7 @@ class BooksSerialNumber(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		company: DF.Link | None
 		description: DF.Text | None
 		item: DF.Link
 		status: DF.Literal["Inactive", "Active", "Delivered"]

@@ -24,6 +24,7 @@ from frappe_books.settings import update_frappe_settings
 
 def run_setup(wizard):
 	complete_site_setup(wizard)
+	# The records the setup makes belong to the company, so it comes first.
 	save_company({"company_name": wizard.company_name, "email": wizard.email})
 	chart = load_chart(wizard.chart_of_accounts)
 	ensure_chart(chart)

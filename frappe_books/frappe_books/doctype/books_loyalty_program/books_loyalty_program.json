@@ -18,7 +18,8 @@
   "expense_account",
   "validity_and_usage_section_break_8",
   "maximum_use",
-  "used"
+  "used",
+  "company"
  ],
  "fields": [
   {
@@ -102,6 +103,13 @@
    "fieldtype": "Int",
    "label": "Used",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

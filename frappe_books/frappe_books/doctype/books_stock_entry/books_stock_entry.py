@@ -19,6 +19,7 @@ class BooksStockEntry(StockEntryController):
 
 		amended_from: DF.Link | None
 		amount: DF.Currency
+		company: DF.Link | None
 		date: DF.Datetime
 		items: DF.Table[BooksStockEntryItem]
 		movement_type: DF.Literal["MaterialIssue", "MaterialReceipt", "MaterialTransfer", "Manufacture"]

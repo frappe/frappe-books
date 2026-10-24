@@ -22,7 +22,8 @@
   "is_fully_billed",
   "back_reference",
   "return_against",
-  "amended_from"
+  "amended_from",
+  "company"
  ],
  "fields": [
   {
@@ -148,6 +149,13 @@
    "fieldtype": "Link",
    "label": "Return Against",
    "options": "Books Purchase Receipt"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

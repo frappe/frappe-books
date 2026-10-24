@@ -33,6 +33,7 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 		accounts: DF.Table[BooksJournalEntryAccount]
 		amended_from: DF.Link | None
 		attachment: DF.Attach | None
+		company: DF.Link | None
 		entry_type: DF.Literal[
 			"Journal Entry",
 			"Bank Entry",

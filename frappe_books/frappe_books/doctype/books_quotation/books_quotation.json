@@ -31,7 +31,8 @@
   "is_fully_returned",
   "amended_from",
   "settings_tab_break_19",
-  "discount_after_tax"
+  "discount_after_tax",
+  "company"
  ],
  "fields": [
   {
@@ -222,6 +223,13 @@
    "fieldname": "discount_after_tax",
    "fieldtype": "Check",
    "label": "Apply Discount After Tax"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

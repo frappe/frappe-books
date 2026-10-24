@@ -14,6 +14,7 @@ class BooksLoyaltyPointEntry(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		company: DF.Link | None
 		customer: DF.Link
 		expiry_date: DF.Date | None
 		invoice: DF.Link

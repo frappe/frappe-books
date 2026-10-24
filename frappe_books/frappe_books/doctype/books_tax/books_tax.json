@@ -9,7 +9,8 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "details"
+  "details",
+  "company"
  ],
  "fields": [
   {
@@ -18,6 +19,13 @@
    "label": "Details",
    "options": "Books Tax Detail",
    "reqd": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

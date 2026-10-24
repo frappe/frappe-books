@@ -37,6 +37,7 @@ class BooksPosOpeningShift(Document):
 		)
 
 		amended_from: DF.Link | None
+		company: DF.Link | None
 		journal_entry: DF.Link | None
 		opening_amounts: DF.Table[BooksOpeningAmounts]
 		opening_cash: DF.Table[BooksOpeningCash]

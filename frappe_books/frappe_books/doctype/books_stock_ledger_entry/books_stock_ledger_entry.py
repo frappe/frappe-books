@@ -17,6 +17,7 @@ class BooksStockLedgerEntry(Document):
 		balance_quantity: DF.Float
 		balance_value: DF.Currency
 		batch: DF.Link | None
+		company: DF.Link | None
 		date: DF.Datetime | None
 		item: DF.Link | None
 		location: DF.Link | None

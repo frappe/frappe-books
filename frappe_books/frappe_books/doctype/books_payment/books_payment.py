@@ -26,6 +26,7 @@ class BooksPayment(PaymentController):
 		amount_paid: DF.Currency
 		attachment: DF.Attach | None
 		clearance_date: DF.Date | None
+		company: DF.Link | None
 		date: DF.Datetime
 		number_series: DF.Link
 		party: DF.DynamicLink

@@ -30,7 +30,8 @@
   "payment_references",
   "attachment",
   "reference_type",
-  "amended_from"
+  "amended_from",
+  "company"
  ],
  "fields": [
   {
@@ -210,6 +211,13 @@
    "hidden": 1,
    "label": "Type",
    "options": "\nSalesInvoice\nPurchaseInvoice"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

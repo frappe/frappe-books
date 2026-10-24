@@ -23,7 +23,8 @@
   "stock_queue",
   "reference_section_break_10",
   "reference_type",
-  "reference_name"
+  "reference_name",
+  "company"
  ],
  "fields": [
   {
@@ -143,6 +144,13 @@
    "options": "reference_type",
    "read_only": 1,
    "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

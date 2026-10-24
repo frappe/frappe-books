@@ -48,6 +48,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		available_loyalty_points: DF.Int
 		back_reference: DF.Link | None
 		base_grand_total: DF.Currency
+		company: DF.Link | None
 		coupons: DF.Table[BooksAppliedCouponCodes]
 		currency: DF.Link | None
 		customer: DF.Link

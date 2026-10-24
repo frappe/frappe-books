@@ -17,7 +17,8 @@
   "gst_head",
   "lft",
   "rgt",
-  "old_parent"
+  "old_parent",
+  "company"
  ],
  "fields": [
   {
@@ -92,6 +93,13 @@
    "hidden": 1,
    "label": "Old Parent",
    "options": "Books Account"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,

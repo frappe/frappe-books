@@ -15,6 +15,7 @@ class BooksLocation(Document):
 		from frappe.types import DF
 
 		address: DF.Link | None
+		company: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Location"

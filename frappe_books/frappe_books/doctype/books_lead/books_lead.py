@@ -18,6 +18,7 @@ class BooksLead(Document):
 		from frappe.types import DF
 
 		address: DF.Link | None
+		company: DF.Link | None
 		email: DF.Data | None
 		mobile: DF.Data | None
 		status: DF.Literal[

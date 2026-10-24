@@ -24,6 +24,7 @@ class BooksDeliveryNote(StockTransferController):
 		amended_from: DF.Link | None
 		attachment: DF.Attach | None
 		back_reference: DF.Link | None
+		company: DF.Link | None
 		customer: DF.Link
 		date: DF.Datetime
 		grand_total: DF.Currency

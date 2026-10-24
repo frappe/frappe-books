@@ -79,6 +79,8 @@ export interface SchemaContext {
 
 const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
 const DEFAULT_SECTION = 'Default';
+// Fields every Books document has that the server sets, e.g. the one company it belongs to.
+const SERVER_FIELDS = ['company'];
 
 // Standard columns, labelled as the list filters show them.
 const STANDARD_FIELDS = [
@@ -149,7 +151,7 @@ function getDocFields(
   const placed: Field[] = [];
   let tab: string | undefined;
   let section = DEFAULT_SECTION;
-  const omitted = presentation.omitFields ?? [];
+  const omitted = [...SERVER_FIELDS, ...(presentation.omitFields ?? [])];
   for (const docfield of meta.fields) {
     if (omitted.includes(docfield.fieldname)) {
       continue;

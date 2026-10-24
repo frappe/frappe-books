@@ -25,6 +25,7 @@ class BooksLoyaltyProgram(Document):
 		)
 
 		collection_rules: DF.Table[BooksCollectionRulesItems]
+		company: DF.Link | None
 		conversion_factor: DF.Float
 		expense_account: DF.Link
 		expiry_duration: DF.Int

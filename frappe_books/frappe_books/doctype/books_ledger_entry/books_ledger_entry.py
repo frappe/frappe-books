@@ -15,6 +15,7 @@ class BooksLedgerEntry(Document):
 		from frappe.types import DF
 
 		account: DF.Link
+		company: DF.Link | None
 		credit: DF.Currency
 		debit: DF.Currency
 		name: DF.Int | None

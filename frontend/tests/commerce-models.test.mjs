@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   frappeModels,
   fyo,
+  getExportFields,
   getFrappeDoc,
   getLinkDisplayValue,
   getModel,
@@ -358,6 +359,56 @@ test('customer and supplier forms and lists show what they showed, without GST f
       'outstanding_amount',
     ]);
   }
+});
+
+test('a new party asks for its contact and address, a saved one shows its primary ones', async () => {
+  for (const [schemaName, key] of [
+    ['Customer', 'customer'],
+    ['Supplier', 'supplier'],
+  ]) {
+    const party = newFrappeDoc(schemaName, { name: `New ${key}` });
+    const shown = (fieldname) => !hidden(party, fieldname);
+    const entry = ['email_id', 'mobile_no', 'address_line1', 'country'];
+    const primary = [`${key}_primary_contact`, `${key}_primary_address`];
+    assert.ok(entry.every(shown) && !primary.some(shown), schemaName);
+    assert.equal(
+      party.getSectionDescription('Contact'),
+      `Saved as the primary Contact for this ${key}`
+    );
+    await party.set('address_line1', '12 Harbour Road');
+    assert.equal(party.getFrappeValues().address_line1, '12 Harbour Road');
+
+    await loadSaved(party, { [primary[0]]: 'Asha-Asha' });
+    assert.ok(primary.every(shown) && !entry.some(shown), schemaName);
+    assert.equal('address_line1' in party.getFrappeValues(), false);
+    assert.equal(party.getSectionDescription('Contact'), undefined);
+    const sections = party
+      .getFormFields(party.schema.fields)
+      .filter(({ fieldname }) => primary.includes(fieldname))
+      .map(({ section }) => section);
+    assert.deepEqual(sections, ['Primary contact', 'Primary address']);
+  }
+});
+
+test('a primary contact or address is picked from those linked to the party', async () => {
+  const customer = newFrappeDoc('Customer', { name: 'Asha' });
+  const { filters, emptyMessages } = getModel('Customer');
+  const linked = [
+    ['Dynamic Link', 'link_doctype', '=', 'Books Customer'],
+    ['Dynamic Link', 'link_name', '=', 'Asha'],
+  ];
+  assert.deepEqual(await filters.customer_primary_contact(customer), linked);
+  assert.deepEqual(await filters.customer_primary_address(customer), linked);
+  assert.equal(
+    emptyMessages.customer_primary_contact(customer),
+    'No contacts linked to this customer'
+  );
+  const contactField = getSchema('Customer').fields.find(
+    ({ fieldname }) => fieldname === 'customer_primary_contact'
+  );
+  assert.equal(contactField.create, false);
+  // Files hold the DocType's fields, which the address a new party asks for is not.
+  assert.ok(!getExportFields('Customer').some((f) => f.insertOnly));
 });
 
 test('a customer shows loyalty fields only when the program is on', async () => {

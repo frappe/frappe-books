@@ -2,12 +2,15 @@ import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
 import {
   evaluateCondition,
+  FrappeDoc,
   frappeModels,
   fyo,
   getActiveDoctype,
+  getFileFields,
   isAccessoryMode,
   loadTestDocTypes,
   newFrappeDoc,
+  setDocType,
   stubFrappe,
   toActiveDoctype,
 } from './helpers/frappe.mjs';
@@ -136,4 +139,43 @@ test('accessory mode previews through ERPNext with the fields edited since the l
   assert.deepEqual(changed.doc, ['uom_conversions', 'rate']);
   assert.deepEqual(changed.rows, { [row.name]: ['conversion_factor'] });
   assert.equal(doc.rate, 5);
+});
+
+test('files hold the fields an ERPNext form shows and the mandatory ones a user fills', () => {
+  setAccessoryMode(true);
+  const field = (fieldname, extra = {}) => ({
+    fieldname,
+    fieldtype: 'Data',
+    label: fieldname,
+    ...extra,
+  });
+  const fields = [
+    field('positioned'),
+    field('picked', { moreDetails: 'picked' }),
+    field('needed', { moreDetails: 'ifMissing', required: true }),
+    field('defaulted', {
+      moreDetails: 'ifMissing',
+      required: true,
+      default: 'A',
+    }),
+    field('filled', {
+      moreDetails: 'ifMissing',
+      required: true,
+      readOnly: true,
+    }),
+    field('optional', { moreDetails: 'ifMissing' }),
+  ];
+  setDocType('AccessoryFiles', {
+    doctype: 'Accessory Files',
+    meta: { name: 'Accessory Files', fields: [] },
+    schema: { name: 'AccessoryFiles', label: 'Accessory Files', fields },
+    Model: FrappeDoc,
+    tables: {},
+    placements: {},
+  });
+
+  assert.deepEqual(
+    getFileFields('AccessoryFiles').map(({ fieldname }) => fieldname),
+    ['positioned', 'picked', 'needed']
+  );
 });

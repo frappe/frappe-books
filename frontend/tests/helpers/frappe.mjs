@@ -15,7 +15,7 @@ await build({
   stdin: {
     contents: `
       export { FrappeDoc, afterPause, setPreviewScheduler } from './src/frappe/document';
-      export { registerFrappeModels, isFrappeBacked, getDocType } from './src/frappe/doctypes';
+      export { registerFrappeModels, isFrappeBacked, getDocType, setDocType } from './src/frappe/doctypes';
       export { getFrappeDoc, getFrappeDocOrNew, getMappedDoc, newFrappeDoc } from './src/frappe/documents';
       export { useBooksDoc } from './src/frappe/useBooksDoc';
       export { evaluateCondition, evaluateExpression } from './src/frappe/dependsOn';
@@ -27,7 +27,7 @@ await build({
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
       export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
       export { loadListData, onListChange } from './src/utils/listData';
-      export { getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
+      export { getFileFields, getModel, getQuickViewFields, getSchema, getSearchFields, getSingleSchemaNames, loadFrappeDocTypes, toSchemaName } from './src/frappe/registry';
       export { toSchema } from './src/frappe/schema';
       export { fyo } from './src/initFyo';
       export { setLanguageMapOnTranslationString } from './fyo/utils/translation';
@@ -150,6 +150,7 @@ export const {
   registerFrappeModels,
   isFrappeBacked,
   getDocType,
+  setDocType,
   getFrappeDoc,
   getFrappeDocOrNew,
   newFrappeDoc,
@@ -171,6 +172,7 @@ export const {
   getLinkDisplayValue,
   loadListData,
   onListChange,
+  getFileFields,
   getModel,
   getQuickViewFields,
   getSchema,

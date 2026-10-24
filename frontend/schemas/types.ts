@@ -128,6 +128,13 @@ export interface NumberField extends Omit<BaseField, 'fieldtype'> {
 export type Field =
   BaseField | OptionField | TargetField | DynamicLinkField | NumberField;
 
+/** A phone table row as a block: titled by `title`, two `fields` side by side, and a `result` line under them. */
+export interface MobileBlock {
+  title: string;
+  fields: [string, string];
+  result: string;
+}
+
 export type Naming = 'autoincrement' | 'random' | 'numberSeries' | 'manual';
 
 export interface Schema {
@@ -143,6 +150,7 @@ export interface Schema {
   mobileLabelledFields?: string[]; // Phone row fields shown with their labels; the amount's label goes under it
   formColumns?: 3; // A desktop form's field columns, where it has three instead of two
   mobileFieldPairs?: [string, string][]; // Fields a phone form shows side by side, like a party's type and name
+  mobileBlock?: MobileBlock; // A phone table's rows as blocks of fields instead of list rows
   isSubmittable?: boolean; // For transactional types, values considered only after submit
   quickEditFields?: string[]; // Used to get fields for the quickEditForm
   fileFields?: string[]; // Fields of export and import files, in order

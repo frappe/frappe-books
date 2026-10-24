@@ -64,7 +64,8 @@ export function getRowSummary(
   };
 }
 
-function isRedAmount(row: FrappeDoc, field: Field): boolean {
+/** Whether an amount shows in red ink: a negative value of a `negativeInRed` field. */
+export function isRedAmount(row: FrappeDoc, field: Field): boolean {
   const value = row.get(field.fieldname) as Money | undefined;
   return !!(field as NumberField).negativeInRed && !!value?.isNegative?.();
 }

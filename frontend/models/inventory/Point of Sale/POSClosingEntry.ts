@@ -24,9 +24,12 @@ export class POSClosingEntryDetail extends FrappeDoc {
   static override presentation = {
     label: 'Payment Reconciliation',
     fields: { difference: { negativeInRed: true } },
-    // A phone row fits two amounts; the counted one is in the row's sheet.
-    mobileTableFields: ['mode_of_payment', 'expected_amount', 'difference'],
-    mobileLabelledFields: ['expected_amount', 'difference'],
+    // Phones count each mode in a block: what is expected beside what was counted.
+    mobileBlock: {
+      title: 'mode_of_payment',
+      fields: ['expected_amount', 'closing_amount'] as [string, string],
+      result: 'difference',
+    },
   };
 
   declare closing_amount?: Money;

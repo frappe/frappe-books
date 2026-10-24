@@ -3,7 +3,13 @@ import {
   isReferenceField,
   isTableDocField,
 } from './fieldProperties';
-import type { Field, Naming, OptionField, Schema } from 'schemas/types';
+import type {
+  Field,
+  MobileBlock,
+  Naming,
+  OptionField,
+  Schema,
+} from 'schemas/types';
 import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
 import { getAccessoryCompany, isAccessoryMode } from './mode';
@@ -68,6 +74,8 @@ export interface Presentation {
   formColumns?: 3;
   /** Fields a phone form shows side by side, each pair in form order, like a party's type and name. */
   mobileFieldPairs?: [string, string][];
+  /** A phone table's rows as blocks of fields, like a closing count's Expected, Closing and Difference. */
+  mobileBlock?: MobileBlock;
   /**
    * The fields of list exports, import templates and quick views, in Books'
    * order, where it differs from the DocType's; fields the server fills are
@@ -171,6 +179,7 @@ export function toSchema(
     mobileLabelledFields: presentation.mobileLabelledFields,
     formColumns: presentation.formColumns,
     mobileFieldPairs: presentation.mobileFieldPairs,
+    mobileBlock: presentation.mobileBlock,
     tableFields: presentation.tableFields ?? getListViewFields(meta, context),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,

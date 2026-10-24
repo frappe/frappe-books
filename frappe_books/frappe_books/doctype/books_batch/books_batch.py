@@ -14,9 +14,10 @@ class BooksBatch(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		batch_id: DF.Data
 		expiry_date: DF.Date | None
 		item: DF.Link | None
-		manufacture_date: DF.Date | None
+		manufacturing_date: DF.Date | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Batch"

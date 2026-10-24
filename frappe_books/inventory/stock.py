@@ -42,7 +42,7 @@ def create_series_batches(rows):
 	for row in rows:
 		names = new_item_names("Books Batch", row.item, 1) if row.item in batch_items else []
 		if names:
-			frappe.get_doc({"doctype": "Books Batch", "name": names[0], "item": row.item}).insert()
+			frappe.get_doc({"doctype": "Books Batch", "batch_id": names[0], "item": row.item}).insert()
 			row.batch = names[0]
 
 

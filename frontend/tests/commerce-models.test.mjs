@@ -45,10 +45,10 @@ test('item group, unit, warehouse, batch and serial number forms show what they 
     'address | Address |  | Default',
   ]);
   assert.deepEqual(getLayout('Batch'), [
-    'name | Batch |  | Default',
+    'batch_id | Batch No |  | Default',
     'item | Item |  | Default',
     'expiry_date | Expiry Date |  | Default',
-    'manufacture_date | Manufacture Date |  | Default',
+    'manufacturing_date | Manufacturing Date |  | Default',
   ]);
   assert.deepEqual(getLayout('SerialNumber'), [
     'name | Serial Number |  | Default',
@@ -60,7 +60,7 @@ test('item group, unit, warehouse, batch and serial number forms show what they 
   assert.deepEqual(getSchema('Batch').quickEditFields, [
     'item',
     'expiry_date',
-    'manufacture_date',
+    'manufacturing_date',
   ]);
 });
 
@@ -83,7 +83,7 @@ test('batch and serial number lists show their columns', () => {
   assert.deepEqual(getColumns('Batch'), [
     'name',
     'expiry_date',
-    'manufacture_date',
+    'manufacturing_date',
   ]);
   assert.deepEqual(getColumns('SerialNumber'), [
     'name',

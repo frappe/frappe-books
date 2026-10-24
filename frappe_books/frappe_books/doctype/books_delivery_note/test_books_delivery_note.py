@@ -597,7 +597,9 @@ def seed_stock(item, quantity, rate, serial_number=None, batch=None, date=None):
 
 def make_batch(item):
 	return (
-		frappe.get_doc({"doctype": "Books Batch", "name": unique_name("BATCH"), "item": item}).insert().name
+		frappe.get_doc({"doctype": "Books Batch", "batch_id": unique_name("BATCH"), "item": item})
+		.insert()
+		.name
 	)
 
 

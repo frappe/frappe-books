@@ -30,7 +30,11 @@ const items = products.map((name, index) => ({
 const inventory = 'POS Counter';
 const coffee = items[1];
 Object.assign(coffee, { has_batch_no: 1, is_stock_item: 1 });
-const coffeeBatch = { name: 'COFFEE-2026-09', item: coffee.name };
+const coffeeBatch = {
+  name: 'COFFEE-2026-09',
+  batch_id: 'COFFEE-2026-09',
+  item: coffee.name,
+};
 
 const openingShift = {
   name: 'SHIFT-001',

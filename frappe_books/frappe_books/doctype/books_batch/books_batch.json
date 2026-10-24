@@ -2,17 +2,26 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:batch_id",
  "creation": "2026-08-27 22:09:39.570809",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "batch_id",
   "item",
   "expiry_date",
-  "manufacture_date"
+  "manufacturing_date"
  ],
  "fields": [
+  {
+   "fieldname": "batch_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Batch No",
+   "reqd": 1,
+   "unique": 1
+  },
   {
    "fieldname": "item",
    "fieldtype": "Link",
@@ -25,18 +34,19 @@
    "label": "Expiry Date"
   },
   {
-   "fieldname": "manufacture_date",
+   "fieldname": "manufacturing_date",
    "fieldtype": "Date",
-   "label": "Manufacture Date"
+   "label": "Manufacturing Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Batch",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

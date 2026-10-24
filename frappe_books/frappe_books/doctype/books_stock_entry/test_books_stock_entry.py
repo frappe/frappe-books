@@ -133,7 +133,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 	def test_batch_is_rejected_for_an_item_without_batches(self):
 		batch = frappe.get_doc(
-			{"doctype": "Books Batch", "name": unique_name("BATCH"), "item": self.item.name}
+			{"doctype": "Books Batch", "batch_id": unique_name("BATCH"), "item": self.item.name}
 		).insert()
 		receipt = frappe.get_doc(
 			movement_values(
@@ -217,7 +217,7 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 			has_serial_no=1,
 		)
 		batch = unique_name("BATCH")
-		frappe.get_doc({"doctype": "Books Batch", "name": batch, "item": tracked_item.name}).insert()
+		frappe.get_doc({"doctype": "Books Batch", "batch_id": batch, "item": tracked_item.name}).insert()
 		serials = f"{unique_name('SER')}\n{unique_name('SER')}"
 		receipt = make_movement(
 			"MaterialReceipt",

@@ -4,7 +4,7 @@
     v-if="isMobile"
     class="fixed inset-0 z-40 flex flex-col bg-surface-base"
     role="dialog"
-    :aria-label="t`Row ${index + 1}`"
+    :aria-label="number"
   >
     <header
       class="flex h-14 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-2 pt-[env(safe-area-inset-top)]"
@@ -17,7 +17,7 @@
         @click="$emit('close')"
       />
       <h2 class="min-w-0 flex-1 truncate text-lg-semibold text-ink-gray-9">
-        {{ t`Row ${index + 1}` }}
+        {{ number }}
       </h2>
       <FrappeButton
         v-if="canRemove"
@@ -104,6 +104,7 @@ import type { FrappeDoc } from 'src/frappe/document';
 import { noteRowMissingExtras } from 'src/frappe/extraFields';
 import { getFields } from 'src/frappe/registry';
 import { getErrorMessage } from 'src/utils';
+import { getOwnRowTitle } from 'src/utils/sheetFields';
 import { isMobile } from 'src/utils/viewport';
 import { computed, provide, ref, watch } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
@@ -150,12 +151,15 @@ const canRemove = computed(() => isEditable.value);
 
 const fields = computed(() => getRowBooksFields(row.value));
 
+const number = computed(
+  () => getOwnRowTitle(row.value, props.index) ?? t`Row ${props.index + 1}`
+);
+
 const title = computed(() => {
   const shown = row.value;
   const columns = getFields(shown.schemaName, shown.schema.tableFields ?? []);
   const label = getRowSummary(shown, columns).title;
-  const number = t`Row ${props.index + 1}`;
-  return label ? `${number} · ${label}` : number;
+  return label ? `${number.value} · ${label}` : number.value;
 });
 
 async function setValue(field: Field, value: DocValue) {

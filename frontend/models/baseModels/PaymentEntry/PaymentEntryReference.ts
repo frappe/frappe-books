@@ -1,3 +1,4 @@
+import { t } from 'fyo';
 import { toActiveDoctype } from 'src/frappe/mode';
 import { FiltersMap } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
@@ -32,6 +33,7 @@ export class PaymentEntryReference extends FrappeDoc {
     mobileLabelledFields: ['outstanding_amount', 'allocated_amount'],
   };
   static override calculatedFields = ['total_amount', 'outstanding_amount'];
+  static override getRowTitle = (number: number) => t`Reference ${number}`;
   // A new invoice's total and what it owes, which the server reads.
   static override refills = {
     reference_doctype: [

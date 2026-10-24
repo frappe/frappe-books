@@ -136,6 +136,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   static serverDefaults: string[] = [];
   /** The field that names the document's customer or supplier, if it has one. */
   static partyField?: string;
+  /** A row model's own title for row `number`, like "Tax row 2"; row editors say "Row 2" without one. */
+  static getRowTitle?: (number: number) => string;
 
   static lists: ListsMap = {};
   static filters: FiltersMap = {};

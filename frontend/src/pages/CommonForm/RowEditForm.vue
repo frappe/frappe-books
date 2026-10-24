@@ -2,13 +2,13 @@
   <RowDetailSheet
     v-if="isMobile && !isEditable"
     :row="row"
-    :title="t`${fieldlabel} · Row ${index + 1}`"
+    :title="ownTitle ?? t`${fieldlabel} · Row ${index + 1}`"
     @close="$emit('close')"
   />
   <FrappeBottomSheet
     v-else-if="isMobile"
     :open="true"
-    :title="t`Row ${index + 1}`"
+    :title="title"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div class="px-4">
@@ -40,7 +40,7 @@
       class="flex h-12 shrink-0 items-center gap-2 border-b border-outline-gray-1 px-3"
     >
       <h2 class="truncate text-lg-semibold text-ink-gray-8">
-        {{ t`Row ${index + 1}` }}
+        {{ title }}
       </h2>
       <span class="min-w-0 flex-1 truncate text-sm text-ink-gray-5">
         {{ fieldlabel }}
@@ -93,7 +93,7 @@ import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
 import { isMobile } from 'src/utils/viewport';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import { getRowEditFieldnames } from 'src/utils/sheetFields';
+import { getOwnRowTitle, getRowEditFieldnames } from 'src/utils/sheetFields';
 import { computed } from 'vue';
 import { inject } from 'vue';
 import { defineComponent, PropType } from 'vue';
@@ -130,6 +130,12 @@ export default defineComponent({
     },
     fieldlabel() {
       return this.doc.fieldMap[this.fieldname]?.label ?? '';
+    },
+    ownTitle(): string | undefined {
+      return getOwnRowTitle(this.row, this.index);
+    },
+    title(): string {
+      return this.ownTitle ?? this.t`Row ${this.index + 1}`;
     },
     row() {
       const rows = this.doc.get(this.fieldname);

@@ -1,4 +1,5 @@
 import type { Field, Schema } from 'schemas/types';
+import type { FrappeDoc } from 'src/frappe/document';
 
 /** Quick edit asks for every required field so the record can be saved. */
 export function getQuickEditFieldnames(
@@ -52,4 +53,12 @@ function needsInput(field: Field): boolean {
     !field.computed &&
     field.fieldname !== 'name'
   );
+}
+
+/** Row `index`'s own title, like "Tax row 2", where its model gives one. */
+export function getOwnRowTitle(
+  row: FrappeDoc,
+  index: number
+): string | undefined {
+  return (row.constructor as typeof FrappeDoc).getRowTitle?.(index + 1);
 }

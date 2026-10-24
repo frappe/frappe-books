@@ -1,4 +1,4 @@
-import { Fyo } from 'fyo';
+import { Fyo, t } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
 import { CurrenciesMap, ReadOnlyMap } from 'fyo/model/types';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
@@ -30,6 +30,7 @@ export class TaxesAndCharges extends FrappeDoc {
     ],
   };
   static override calculatedFields = ['tax_amount', 'total'];
+  static override getRowTitle = (number: number) => t`Tax row ${number}`;
   // A new type or rate is the server's to work out the amount for.
   static override refills = {
     charge_type: ['tax_amount', 'total'],

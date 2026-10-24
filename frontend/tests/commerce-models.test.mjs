@@ -716,14 +716,14 @@ test('a coupon code leaves its amount and date rules to the server', async () =>
 
 test('the loyalty program form and list show what they showed', async () => {
   assert.deepEqual(getLayout('LoyaltyProgram'), [
-    'name | Name | Name | Default',
+    'loyalty_program_name | Loyalty Program Name |  | Default',
     'from_date | From Date |  | Default',
     'to_date | To Date |  | Default',
     'is_enabled | Is Enabled |  | Default',
     'status | Status |  | Default',
     'collection_rules | Collection Rules |  | Default',
     'conversion_factor | Conversion Factor |  | Default',
-    'expiry_duration | Expiry Duration |  | Default',
+    'expiry_duration | Expiry Duration (in days) |  | Default',
     'expense_account | Expense Account |  | Default',
     'maximum_use | Maximum Use |  | Validity and Usage',
     'used | Used |  | Validity and Usage',
@@ -737,15 +737,15 @@ test('the loyalty program form and list show what they showed', async () => {
     field(schema, 'conversion_factor').sub_label,
     '100 Points → 100 (Factor 1), 50 (Factor 0.5)'
   );
-  const tiers = getSchema('CollectionRulesItems');
+  const tiers = getSchema('LoyaltyProgramCollection');
   assert.deepEqual(tiers.tableFields, [
     'tier_name',
+    'min_spent',
     'collection_factor',
-    'minimum_total_spent',
   ]);
   assert.equal(
     field(tiers, 'collection_factor').sub_label,
-    'Sale 100→ 100 (1), 50 (0.5)'
+    'For how much spent = 1 Loyalty Point'
   );
 
   const [, status] = getModel('LoyaltyProgram').getListViewSettings().columns;

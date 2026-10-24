@@ -23,7 +23,7 @@ export enum ModelNameEnum {
   Lead = 'Lead',
   LoyaltyProgram = 'LoyaltyProgram',
   LoyaltyPointEntry = 'LoyaltyPointEntry',
-  CollectionRulesItems = 'CollectionRulesItems',
+  LoyaltyProgramCollection = 'LoyaltyProgramCollection',
   CouponCode = 'CouponCode',
   PaymentEntry = 'PaymentEntry',
   PaymentEntryReference = 'PaymentEntryReference',

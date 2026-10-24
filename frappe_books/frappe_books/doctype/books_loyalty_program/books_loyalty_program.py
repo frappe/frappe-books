@@ -20,17 +20,18 @@ class BooksLoyaltyProgram(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_collection_rules_items.books_collection_rules_items import (
-			BooksCollectionRulesItems,
+		from frappe_books.frappe_books.doctype.books_loyalty_program_collection.books_loyalty_program_collection import (
+			BooksLoyaltyProgramCollection,
 		)
 
-		collection_rules: DF.Table[BooksCollectionRulesItems]
+		collection_rules: DF.Table[BooksLoyaltyProgramCollection]
 		company: DF.Link | None
 		conversion_factor: DF.Float
 		expense_account: DF.Link
 		expiry_duration: DF.Int
 		from_date: DF.Date
 		is_enabled: DF.Check
+		loyalty_program_name: DF.Data
 		maximum_use: DF.Int
 		status: DF.Literal["Active", "Disabled", "Expired", "Maxed"]
 		to_date: DF.Date
@@ -56,9 +57,9 @@ class BooksLoyaltyProgram(Document):
 		self.status = program_status(self)
 
 	def validate_tiers(self):
-		minimums = [as_decimal(row.minimum_total_spent) for row in self.collection_rules]
+		minimums = [as_decimal(row.min_spent) for row in self.collection_rules]
 		if len(minimums) != len(set(minimums)):
 			frappe.throw(_("Each loyalty tier must have a unique minimum spend."))
 		for row in self.collection_rules:
-			if as_decimal(row.collection_factor) < 0 or as_decimal(row.minimum_total_spent) < 0:
+			if as_decimal(row.collection_factor) < 0 or as_decimal(row.min_spent) < 0:
 				frappe.throw(_("Loyalty tier values cannot be negative."))

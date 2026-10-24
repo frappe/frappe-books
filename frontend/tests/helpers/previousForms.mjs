@@ -55,6 +55,7 @@ export const previousForms = {
       'loyalty_program | Loyalty Program |  | Default',
       'loyalty_program_tier | Loyalty Program Tier |  | Default',
       'customer | Customer |  | Default',
+      'invoice_type | Invoice Type |  | Default',
       'invoice | Invoice |  | Default',
       'loyalty_points | Loyalty Points |  | Default',
       'purchase_amount | Purchase Amount |  | Default',

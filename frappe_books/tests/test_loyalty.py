@@ -85,6 +85,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"doctype": "Books Loyalty Point Entry",
 				"loyalty_program": program.name,
 				"customer": self.party.name,
+				"invoice_type": "Books Sales Invoice",
 				"invoice": self._submitted_invoice().name,
 				"loyalty_points": 50,
 				"purchase_amount": 50,
@@ -272,6 +273,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"doctype": "Books Loyalty Point Entry",
 				"loyalty_program": program.name,
 				"customer": self.party.name,
+				"invoice_type": "Books Sales Invoice",
 				"invoice": invoice.name,
 				"loyalty_points": points,
 				"purchase_amount": points,
@@ -285,13 +287,13 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		program = frappe.get_doc(
 			{
 				"doctype": "Books Loyalty Program",
-				"name": unique_name("Rewards"),
+				"loyalty_program_name": unique_name("Rewards"),
 				"from_date": add_days(nowdate(), -1),
 				"to_date": add_days(nowdate(), 30),
 				"conversion_factor": 0.5,
 				"expiry_duration": 30,
 				"expense_account": self.expense.name,
-				"collection_rules": [{"tier_name": "Base", "collection_factor": 1, "minimum_total_spent": 0}],
+				"collection_rules": [{"tier_name": "Base", "collection_factor": 1, "min_spent": 0}],
 				**values,
 			}
 		).insert()

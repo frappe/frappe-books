@@ -162,7 +162,7 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 		return frappe.get_doc(
 			{
 				"doctype": "Books Loyalty Program",
-				"name": unique_name("Rewards"),
+				"loyalty_program_name": unique_name("Rewards"),
 				"from_date": add_days(nowdate(), -1),
 				"to_date": add_days(nowdate(), 30),
 				"expense_account": self.expense.name,

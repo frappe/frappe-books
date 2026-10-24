@@ -169,7 +169,8 @@ def _earn_points(invoice, program):
 	tier = _tier_for_total(program, invoice.grand_total)
 	if not tier:
 		return
-	points = _whole(_whole(abs(as_decimal(invoice.grand_total))) * as_decimal(tier.collection_factor))
+	# As ERPNext: the factor is what one point costs, and part points are dropped.
+	points = abs(as_decimal(invoice.grand_total)) / as_decimal(tier.collection_factor or 1)
 	duration = program.expiry_duration
 	expiry_date = add_days(getdate(invoice.posting_date), duration) if duration else None
 	_insert_entry(invoice, int(points), expiry_date, tier.tier_name)
@@ -274,6 +275,7 @@ def _insert_entry(invoice, points, expiry_date, tier=None):
 			"loyalty_program": invoice.loyalty_program,
 			"loyalty_program_tier": tier,
 			"customer": invoice.customer,
+			"invoice_type": invoice.doctype,
 			"invoice": invoice.name,
 			"loyalty_points": points,
 			"purchase_amount": invoice.grand_total,
@@ -318,11 +320,9 @@ def _whole(value):
 
 def _tier_for_total(program, total):
 	eligible = [
-		row
-		for row in program.collection_rules
-		if as_decimal(row.minimum_total_spent) <= abs(as_decimal(total))
+		row for row in program.collection_rules if as_decimal(row.min_spent) <= abs(as_decimal(total))
 	]
-	return max(eligible, key=lambda row: as_decimal(row.minimum_total_spent), default=None)
+	return max(eligible, key=lambda row: as_decimal(row.min_spent), default=None)
 
 
 def _is_active(program, on_date):

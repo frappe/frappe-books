@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksCollectionRulesItems(Document):
+class BooksLoyaltyProgramCollection(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -14,12 +14,12 @@ class BooksCollectionRulesItems(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		collection_factor: DF.Float
-		minimum_total_spent: DF.Currency
+		collection_factor: DF.Currency
+		min_spent: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
 		tier_name: DF.Data | None
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Collection Rules Items"
+	_DOCTYPE_NAME = "Books Loyalty Program Collection"

@@ -147,7 +147,7 @@ test('a narrowed table column keeps its description on one line', async ({
   await page.goto('/books/edit/LoyaltyProgram/new');
   await waitForBooks(page);
   const handle = page.getByRole('separator', {
-    name: 'Resize Collection Factor column',
+    name: 'Resize Collection Factor (=1 LP) column',
   });
   const header = handle.locator('xpath=ancestor::*[@role="columnheader"]');
   const height = (await header.boundingBox())!.height;

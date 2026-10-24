@@ -417,6 +417,164 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 				self.assertEqual(self._balance(realised), tax_amount)
 				self.assertEqual(self._balance(unrealised), 0)
 
+	def test_an_internal_transfer_moves_money_between_own_accounts(self):
+		set_mode_of_payment_account("Cash", self.cash.name)
+		bank = make_account("Rules Bank", account_type="Bank")
+
+		transfer = self._transfer(bank.name).insert().submit()
+
+		self.assertEqual(transfer.paid_from, self.cash.name)
+		self.assertFalse(transfer.party_type or transfer.party)
+		entries = frappe.get_all(
+			"Books GL Entry",
+			filters={"voucher_type": transfer.doctype, "voucher_no": transfer.name},
+			fields=["account", "debit", "credit", "party_type", "party"],
+			order_by="debit desc",
+		)
+		self.assertEqual(
+			[(row.account, row.debit, row.credit) for row in entries],
+			[(bank.name, 50, 0), (self.cash.name, 0, 50)],
+		)
+		self.assertFalse(any(row.party_type or row.party for row in entries))
+
+	def test_an_internal_transfer_cannot_settle_invoices_or_write_off(self):
+		bank = make_account("Rules Bank", account_type="Bank")
+		reference = {"reference_doctype": self.invoice.doctype, "reference_name": self.invoice.name}
+		for values in (
+			{"references": [{**reference, "allocated_amount": 50}]},
+			{"deductions": [{"account": self.expense.name, "amount": 5}]},
+		):
+			with (
+				self.subTest(values=values),
+				self.assertRaisesRegex(frappe.ValidationError, "An internal transfer cannot settle invoices"),
+			):
+				self._transfer(bank.name, paid_from=self.cash.name, **values).insert()
+
+	def test_a_transfer_preview_drops_what_the_form_hides(self):
+		bank = make_account("Rules Bank", account_type="Bank")
+		reference = {"reference_doctype": self.invoice.doctype, "reference_name": self.invoice.name}
+		transfer = self._transfer(bank.name, references=[reference], deductions=[{"amount": 5}])
+
+		transfer.preview()
+
+		self.assertEqual((transfer.references, transfer.deductions), ([], []))
+		self.assertEqual((transfer.party_type, transfer.party), (None, None))
+
+	def test_an_internal_transfer_goes_to_a_cash_or_bank_account(self):
+		transfer = self._transfer(self.income.name, paid_from=self.cash.name)
+		with self.assertRaisesRegex(frappe.ValidationError, "Account Paid To must be of type Cash or Bank"):
+			transfer.insert()
+
+	def test_a_receipt_write_off_debits_the_company_write_off_account(self):
+		writeoff = make_account("Rules Write Off", root_type="Expense")
+		set_company_value("write_off_account", writeoff.name)
+		payment = self._payment(self.invoice, paid_amount=170, deductions=[{"amount": 10}])
+		payment.references[0].allocated_amount = 180
+
+		payment.insert().submit()
+
+		self.assertEqual(payment.deductions[0].account, writeoff.name)
+		self.assertEqual(self.invoice.db_get("outstanding_amount"), 0)
+		entries = ledger_entries(payment.doctype, payment.name)
+		self.assertEqual(
+			[(row.debit, row.credit) for row in entries if row.account == writeoff.name], [(10, 0)]
+		)
+
+	def test_a_payment_write_off_credits_the_company_write_off_account(self):
+		writeoff = make_account("Rules Write Off", root_type="Expense")
+		set_company_value("write_off_account", writeoff.name)
+		supplier = make_supplier(self.payable.name)
+		purchase = make_invoice(
+			"Books Purchase Invoice",
+			supplier.name,
+			self.payable.name,
+			self.item.name,
+			self.expense.name,
+			make_auto_payment=0,
+		).submit()
+		payment = self._payment(
+			purchase,
+			paid_amount=170,
+			payment_type="Pay",
+			paid_to=self.payable.name,
+			deductions=[{"amount": -10}],
+		)
+		payment.references[0].allocated_amount = 180
+
+		payment.insert().submit()
+
+		entries = {
+			row.account: (row.debit, row.credit) for row in ledger_entries(payment.doctype, payment.name)
+		}
+		self.assertEqual(entries[writeoff.name], (0, 10))
+		self.assertEqual(entries[self.payable.name], (180, 0))
+		self.assertEqual(purchase.db_get("outstanding_amount"), 0)
+
+	def test_a_write_off_needs_the_company_write_off_account(self):
+		set_company_value("write_off_account", None)
+		payment = self._payment(self.invoice, paid_amount=170, deductions=[{"amount": 10}])
+		with self.assertRaisesRegex(frappe.ValidationError, "Set a write-off account in Books Company."):
+			payment.insert()
+
+	def test_submit_and_cancel_show_what_each_invoice_still_owes(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
+		payment = self._payment(self.invoice, paid_amount=100).insert()
+		row = payment.references[0]
+		self.assertEqual(row.total_amount, self.invoice.base_grand_total)
+
+		for action, outstanding in ((payment.submit, 80), (payment.cancel, 180)):
+			with self.subTest(action=action.__name__):
+				action()
+				self.assertEqual(row.db_get("outstanding_amount"), outstanding)
+
+	def test_an_allocation_cannot_exceed_what_the_invoice_owes(self):
+		message = "Row #1: Allocated Amount cannot be greater than outstanding amount."
+		with self.assertRaisesRegex(frappe.ValidationError, message):
+			self._payment(self.invoice, paid_amount=200).preview()
+
+		payment = self._payment(self.invoice)
+		payment.references[0].allocated_amount = 200
+		with self.assertRaisesRegex(frappe.ValidationError, message):
+			payment.insert()
+
+	def test_a_receipt_or_payment_needs_a_party(self):
+		for payment_type, party_type, paid_to in (
+			("Receive", "Books Customer", self.cash.name),
+			("Pay", "Books Supplier", self.payable.name),
+		):
+			with self.subTest(payment_type=payment_type):
+				payment = self._payment(
+					self.invoice,
+					payment_type=payment_type,
+					party_type=party_type,
+					party=None,
+					paid_to=paid_to,
+					references=[],
+				)
+				self.assertRaisesRegex(frappe.ValidationError, "Party is mandatory.", payment.insert)
+
+	def test_the_amount_settled_must_be_above_zero(self):
+		payment = self._payment(
+			self.invoice, paid_amount=10, deductions=[{"account": self.expense.name, "amount": -10}]
+		)
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "The amount settled, after the write-off, must be greater than zero."
+		):
+			payment.insert()
+
+	def _transfer(self, paid_to, **values):
+		return frappe.get_doc(
+			{
+				"doctype": "Books Payment Entry",
+				"payment_type": "Internal Transfer",
+				"posting_date": nowdate(),
+				"mode_of_payment": "Cash",
+				"paid_to": paid_to,
+				"paid_amount": 50,
+				**values,
+			}
+		)
+
 	def _taxed_invoice(self, unrealised, realised, discount_after_tax):
 		tax = frappe.get_doc(
 			{

@@ -60,6 +60,21 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		)
 		self.assertTrue(all(entry.is_cancelled for entry in entries))
 
+	def test_save_copies_account_amounts_to_company_amounts(self):
+		# Books has one currency, so the company amounts are the account amounts; stale ones are replaced.
+		journal_entry = make_journal_entry(
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 40, "credit": 7},
+				{"account": self.equity.name, "credit_in_account_currency": 40, "debit": 3},
+			]
+		)
+		journal_entry.reload()
+
+		self.assertEqual(
+			[(flt(row.debit), flt(row.credit)) for row in journal_entry.accounts], [(40, 0), (0, 40)]
+		)
+		self.assertEqual((flt(journal_entry.total_debit), flt(journal_entry.total_credit)), (40, 40))
+
 	def test_rejects_unbalanced_entry(self):
 		journal_entry = frappe.get_doc(
 			{

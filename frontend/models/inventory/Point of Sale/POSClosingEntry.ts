@@ -65,6 +65,8 @@ export class POSClosingEntry extends FrappeDoc {
     payment_reconciliation: POSClosingEntryDetail,
   };
   static override previewMethod = 'preview';
+  // Closing a shift submits its entry.
+  static override submitsOnInsert = true;
 
   declare period_end_date?: Date;
   declare closing_cash?: CashCount[];

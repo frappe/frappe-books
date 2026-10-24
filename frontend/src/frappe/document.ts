@@ -138,6 +138,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   static partyField?: string;
   /** A row model's own title for row `number`, like "Tax row 2"; row editors say "Row 2" without one. */
   static getRowTitle?: (number: number) => string;
+  /** Whether a new document's action is Submit, which saves and submits it, as opening a POS shift does. */
+  static submitsOnInsert = false;
 
   static lists: ListsMap = {};
   static filters: FiltersMap = {};
@@ -350,11 +352,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       return false;
     }
 
-    if (!this.dirty || this.schema.isChild) {
+    if (!this.dirty || this.schema.isChild || this.insertsBySubmit) {
       return false;
     }
 
     return this.canWrite;
+  }
+
+  /** A new document whose model submits it on insert, so its one action is Submit. */
+  get insertsBySubmit(): boolean {
+    const model = this.constructor as typeof FrappeDoc;
+    return model.submitsOnInsert && this.notInserted;
   }
 
   /** Accessory mode shows a master's Save disabled while the form is unchanged, as the design does. */
@@ -371,6 +379,10 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   get canSubmit() {
     if (!this.schema.isSubmittable || !this.can('submit')) {
       return false;
+    }
+
+    if (this.insertsBySubmit) {
+      return this.canWrite;
     }
 
     if (this.dirty || this.notInserted) {
@@ -946,6 +958,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   async submit() {
     if (!this.schema.isSubmittable || this.submitted || this.cancelled) {
       return;
+    }
+
+    // Saved first, so Frappe checks the rights to create and to submit.
+    if (this.insertsBySubmit) {
+      await this.sync();
     }
 
     const document = this.getMethodDocument();

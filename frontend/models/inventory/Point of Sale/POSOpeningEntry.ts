@@ -46,6 +46,8 @@ export class POSOpeningEntry extends FrappeDoc {
     balance_details: POSOpeningEntryDetail,
   };
   static override previewMethod = 'preview';
+  // Opening a shift submits its entry.
+  static override submitsOnInsert = true;
 
   declare period_start_date?: Date;
   declare pos_profile?: string;

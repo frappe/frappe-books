@@ -6,6 +6,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.company import default_company
 from frappe_books.frappe_books.doctype.books_item.books_item import make_purchase_invoice, make_sales_invoice
 from frappe_books.tests.accounting import (
 	ensure_user,
@@ -80,6 +81,13 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(_accounts(service), ("Service", cogs.name))
 		self.assertEqual(service.gst_hsn_code, "998877")
 		self.assertEqual(_accounts(product), ("Sales", received.name))
+
+	def test_accounts_are_kept_once_for_the_one_company(self):
+		item = make_item(None, None)
+
+		self.assertEqual([row.company for row in item.item_defaults], [default_company()])
+		item.append("item_defaults", {"company": default_company()})
+		self.assertRaisesRegex(frappe.ValidationError, "multiple Item Defaults", item.save)
 
 	def test_accounts_follow_the_item_tracking(self):
 		income = make_account("Item Sales", root_type="Income")

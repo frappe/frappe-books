@@ -148,7 +148,7 @@ type AccountItem = {
   [key: string]: unknown;
   label: string;
   name: string;
-  parent_books_account: string;
+  parent_account: string;
   root_type: AccountRootType;
   account_type: AccountType;
   is_group?: number;
@@ -161,7 +161,7 @@ type AccKey = 'addingAccount' | 'addingGroupAccount';
 
 const ACCOUNT_FIELDS = [
   'name',
-  'parent_books_account',
+  'parent_account',
   'is_group',
   'root_type',
   'account_type',
@@ -264,7 +264,7 @@ export default defineComponent({
         );
       }
 
-      if (account.parent_books_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
+      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
         label: account.is_group ? t`Delete group` : t`Delete account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),
@@ -312,7 +312,7 @@ export default defineComponent({
       const byName = new Map(nodes.map((node) => [node.name, node]));
       this.accounts = [];
       for (const node of nodes) {
-        const parent = byName.get(node.parent_books_account);
+        const parent = byName.get(node.parent_account);
         (parent?.children ?? this.accounts).push(node);
       }
 
@@ -367,7 +367,7 @@ export default defineComponent({
       await openQuickEdit({ doc });
     },
     async canDeleteAccount(account: AccountItem) {
-      if (!account.parent_books_account) {
+      if (!account.parent_account) {
         await showDialog({
           type: 'error',
           title: t`Cannot delete account`,
@@ -452,7 +452,7 @@ export default defineComponent({
     },
     async getChildren(parent: string): Promise<AccountItem[]> {
       const children = await this.getAccounts([
-        ['parent_books_account', '=', parent],
+        ['parent_account', '=', parent],
       ]);
       return children.map((child) => ({
         ...child,
@@ -507,7 +507,7 @@ export default defineComponent({
         const { name, root_type, account_type } = parentAccount;
         await doc.set({
           account_name: accountName,
-          parent_books_account: name,
+          parent_account: name,
           root_type,
           account_type,
           is_group: isGroup,

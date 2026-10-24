@@ -385,7 +385,7 @@ export const previousForms = {
     'Defaults.pos_print_template': false,
     'Defaults.pos_customer': true,
     'PrintSettings.address': true,
-    'Account.parent_books_account': false,
+    'Account.parent_account': false,
     'Company.write_off_account': false,
     'Company.round_off_account': false,
     'Company.default_discount_account': false,

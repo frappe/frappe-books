@@ -135,7 +135,7 @@ def set_pos_accounts():
 			{
 				"doctype": "Books Account",
 				"account_name": "Cash",
-				"parent_books_account": root_group("Asset"),
+				"parent_account": root_group("Asset"),
 				"account_type": "Cash",
 			}
 		).insert()

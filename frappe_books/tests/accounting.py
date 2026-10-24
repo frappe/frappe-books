@@ -36,7 +36,7 @@ def set_company_value(fieldname, value=None):
 
 def make_account(label, root_type="Asset", **values):
 	if not values.get("is_group"):
-		values.setdefault("parent_books_account", root_group(root_type))
+		values.setdefault("parent_account", root_group(root_type))
 	return frappe.get_doc(
 		{
 			"doctype": "Books Account",

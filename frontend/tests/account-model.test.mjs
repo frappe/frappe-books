@@ -44,23 +44,23 @@ test('the Account form shows the fields, labels and placeholders it showed', () 
   assert.deepEqual(layout, [
     'account_name | Account Name | ',
     'root_type | Root Type | Root Type',
-    'parent_books_account | Parent Account | ',
+    'parent_account | Parent Account | ',
     'account_type | Account Type | Account Type',
     'is_group | Is Group | ',
   ]);
   assert.deepEqual(schema.quickEditFields, [
     'root_type',
-    'parent_books_account',
+    'parent_account',
     'account_type',
     'is_group',
   ]);
   assert.equal(field('name').label, 'Account Name');
   assert.equal(schema.create, false);
-  assert.equal(field('parent_books_account').create, false);
+  assert.equal(field('parent_account').create, false);
 });
 
 test('a ledger account needs a parent group; a root group does not', () => {
-  const parent = field('parent_books_account');
+  const parent = field('parent_account');
   assert.equal(
     newAccount({ is_group: false }).getFieldState(parent).required,
     true
@@ -74,13 +74,13 @@ test('a ledger account needs a parent group; a root group does not', () => {
 test('a saved account keeps its name, types, parent and group; a saved type stays', async () => {
   const account = await savedAccount({
     account_name: 'Petty Cash',
-    parent_books_account: 'Cash In Hand',
+    parent_account: 'Cash In Hand',
     root_type: 'Asset',
   });
   for (const fieldname of [
     'account_name',
     'root_type',
-    'parent_books_account',
+    'parent_account',
     'is_group',
   ]) {
     assert.equal(account.getFieldState(field(fieldname)).readOnly, true);
@@ -105,7 +105,7 @@ test('a child account takes its root type from its group, so it is read only', (
   const rootType = field('root_type');
   const root = newAccount({ is_group: true });
   assert.equal(root.getFieldState(rootType).readOnly, false);
-  const child = newAccount({ parent_books_account: 'Current Assets' });
+  const child = newAccount({ parent_account: 'Current Assets' });
   assert.equal(child.getFieldState(rootType).readOnly, true);
 });
 
@@ -114,16 +114,16 @@ test('a root account says it cannot be deleted before asking the server', async 
   await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);
   const child = newAccount({
     account_name: 'Cash',
-    parent_books_account: 'Assets',
+    parent_account: 'Assets',
   });
   await child.beforeDelete();
 });
 
 test('the parent picker offers groups of the account root type', () => {
-  const { parent_books_account } = Account.filters;
+  const { parent_account } = Account.filters;
   const groups = ['is_group', '=', 1];
-  assert.deepEqual(parent_books_account(newAccount({})), [groups]);
-  assert.deepEqual(parent_books_account(newAccount({ root_type: 'Income' })), [
+  assert.deepEqual(parent_account(newAccount({})), [groups]);
+  assert.deepEqual(parent_account(newAccount({ root_type: 'Income' })), [
     groups,
     ['root_type', '=', 'Income'],
   ]);
@@ -182,14 +182,14 @@ test('the account list shows its name, root type, group and parent', () => {
     'name',
     'root_type',
     'is_group',
-    'parent_books_account',
+    'parent_account',
   ]);
 });
 
 test('an account saves without the nested set Frappe keeps', async () => {
   const account = await savedAccount({
     account_name: 'Petty Cash',
-    parent_books_account: 'Cash In Hand',
+    parent_account: 'Cash In Hand',
   });
   const values = account.getFrappeValues();
   for (const fieldname of ['lft', 'rgt', 'old_parent']) {

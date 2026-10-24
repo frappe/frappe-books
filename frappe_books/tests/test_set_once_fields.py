@@ -33,7 +33,7 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 		for fieldname, value, is_group in (
 			# a ledger takes its parent's root type, so only a root group keeps its own
 			("root_type", "Expense", 1),
-			("parent_books_account", group.name, 0),
+			("parent_account", group.name, 0),
 			("is_group", 1, 0),
 		):
 			with self.subTest(fieldname=fieldname):

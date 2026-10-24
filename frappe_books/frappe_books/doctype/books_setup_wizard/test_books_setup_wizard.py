@@ -60,7 +60,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.db.exists("Books Account", "Debtors"))
 		self.assertEqual(
-			frappe.db.get_value("Books Account", wizard.bank_name, "parent_books_account"),
+			frappe.db.get_value("Books Account", wizard.bank_name, "parent_account"),
 			"Bank Accounts",
 		)
 		self.assertEqual(
@@ -107,7 +107,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.db.exists("Books Account", "Print and Stationary"))
 		self.assertEqual(
-			frappe.db.get_value("Books Account", wizard.bank_name, "parent_books_account"),
+			frappe.db.get_value("Books Account", wizard.bank_name, "parent_account"),
 			"Bank Accounts",
 		)
 		self.assertEqual(
@@ -124,7 +124,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 
 		self.assertTrue(frappe.db.exists("Books Account", "Caja - 1.9.1"))
 		self.assertEqual(
-			frappe.db.get_value("Books Account", wizard.bank_name, "parent_books_account"),
+			frappe.db.get_value("Books Account", wizard.bank_name, "parent_account"),
 			"Caja y Equivalentes - 1.9",
 		)
 		# The chart's first cash and receivable accounts are empty groups.

@@ -44,10 +44,10 @@ class BooksAccount(NestedSet):
 		gst_head: DF.Literal["", "CGST", "SGST", "IGST", "Exempt"]
 		is_group: DF.Check
 		lft: DF.Int
-		old_parent: DF.Link | None
-		parent_books_account: DF.Link | None
+		old_parent: DF.Data | None
+		parent_account: DF.Link | None
 		rgt: DF.Int
-		root_type: DF.Literal["Asset", "Liability", "Equity", "Income", "Expense"]
+		root_type: DF.Literal["", "Asset", "Liability", "Income", "Expense", "Equity"]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Account"
@@ -58,19 +58,19 @@ class BooksAccount(NestedSet):
 
 	def set_missing_values(self):
 		"""A child account takes its group's root type, and its account type unless it has one."""
-		if not self.parent_books_account:
+		if not self.parent_account:
 			return
 
 		parent = frappe.db.get_value(
 			"Books Account",
-			self.parent_books_account,
+			self.parent_account,
 			["root_type", "is_group", "account_type"],
 			as_dict=True,
 		)
 		if not parent:
-			frappe.throw(_("Parent account {0} does not exist.").format(self.parent_books_account))
+			frappe.throw(_("Parent account {0} does not exist.").format(self.parent_account))
 		if not parent.is_group:
-			frappe.throw(_("Parent account {0} must be a group.").format(self.parent_books_account))
+			frappe.throw(_("Parent account {0} must be a group.").format(self.parent_account))
 
 		self.root_type = parent.root_type
 		self.account_type = self.account_type or parent.account_type
@@ -82,7 +82,7 @@ class BooksAccount(NestedSet):
 		self.set_missing_values()
 
 	def validate(self):
-		if not self.is_group and not self.parent_books_account:
+		if not self.is_group and not self.parent_account:
 			frappe.throw(_("Only group accounts can be root accounts. Select a parent group."))
 		self.validate_account_type_change()
 
@@ -97,8 +97,8 @@ class BooksAccount(NestedSet):
 
 	def on_trash(self):
 		# The /books chart checks these too, before it asks the server; NestedSet words them differently.
-		if not self.parent_books_account:
+		if not self.parent_account:
 			frappe.throw(_("Root accounts cannot be deleted."))
-		if frappe.db.exists("Books Account", {"parent_books_account": self.name}):
+		if frappe.db.exists("Books Account", {"parent_account": self.name}):
 			frappe.throw(_("{0} has linked child accounts.").format(self.name), NestedSetChildExistsError)
 		super().on_trash()

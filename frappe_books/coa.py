@@ -181,7 +181,7 @@ def _root_account(root_type, accounts):
 			return account.name
 	roots = frappe.get_all(
 		"Books Account",
-		filters={"root_type": root_type, "parent_books_account": ["is", "not set"]},
+		filters={"root_type": root_type, "parent_account": ["is", "not set"]},
 		pluck="name",
 		order_by="lft asc",
 	)
@@ -197,7 +197,7 @@ def _create_account(label, parent, root_type, account_type, is_group):
 		{
 			"doctype": "Books Account",
 			"account_name": label,
-			"parent_books_account": parent,
+			"parent_account": parent,
 			"root_type": root_type,
 			"account_type": account_type,
 			"is_group": is_group,

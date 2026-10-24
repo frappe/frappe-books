@@ -69,7 +69,7 @@ test('an Indian account names the GST head it holds, in quick edit too', () => {
   assert.equal(hidden(account, 'gst_head'), false);
   assert.deepEqual(getSchema('Account').quickEditFields, [
     'root_type',
-    'parent_books_account',
+    'parent_account',
     'account_type',
     'is_group',
     'gst_head',

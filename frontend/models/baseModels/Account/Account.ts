@@ -22,11 +22,11 @@ export class Account extends FrappeDoc {
     omitFields: ['lft', 'rgt', 'old_parent', 'gst_head'],
     quickEditFields: [
       'root_type',
-      'parent_books_account',
+      'parent_account',
       'account_type',
       'is_group',
     ],
-    fields: { parent_books_account: { create: false } },
+    fields: { parent_account: { create: false } },
   };
   static override previewMethod = 'preview';
 
@@ -36,20 +36,20 @@ export class Account extends FrappeDoc {
 
   // The server refuses this too; checked here to say so before asking it.
   async beforeDelete() {
-    if (!this.parent_books_account) {
+    if (!this.parent_account) {
       throw new ValidationError(this.fyo.t`Root accounts cannot be deleted.`);
     }
   }
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', 'root_type', 'is_group', 'parent_books_account'],
+      columns: ['name', 'root_type', 'is_group', 'parent_account'],
     };
   }
 
   static getTreeSettings(fyo: Fyo): void | TreeViewSettings {
     return {
-      parentField: 'parent_books_account',
+      parentField: 'parent_account',
       getRootLabel(): Promise<string> {
         return Promise.resolve(fyo.singles.Company?.company_name ?? '');
       },
@@ -57,7 +57,7 @@ export class Account extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    parent_books_account: (doc: FrappeDoc) => {
+    parent_account: (doc: FrappeDoc) => {
       const filters: Filter[] = [['is_group', '=', 1]];
       if (doc?.root_type) {
         filters.push(['root_type', '=', doc.root_type]);

@@ -31,7 +31,7 @@ const excludedFieldTypes: FieldType[] = [
  * fieldname. CSV keys start with the schema name.
  */
 const RENAMED_KEYS: Record<string, Record<string, string>> = {
-  Account: { account_name: 'name', parent_books_account: 'parentAccount' },
+  Account: { account_name: 'name', parent_account: 'parentAccount' },
   AccountingLedgerEntry: {
     posting_date: 'date',
     voucher_no: 'referenceName',

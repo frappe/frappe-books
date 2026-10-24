@@ -165,7 +165,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		"""The accounts and item group an item without its own takes them from."""
 		for name in ("Sales", "Service"):
 			if not frappe.db.exists("Books Account", name):
-				values = {"account_name": name, "parent_books_account": root_group("Income")}
+				values = {"account_name": name, "parent_account": root_group("Income")}
 				frappe.get_doc({"doctype": "Books Account", **values}).insert()
 		cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		received = make_account("Item Received", root_type="Liability")

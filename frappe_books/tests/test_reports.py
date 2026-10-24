@@ -211,7 +211,7 @@ def _account(label, root_type, parent=None, is_group=0):
 			"account_name": unique_name(label),
 			"root_type": root_type,
 			"is_group": is_group,
-			"parent_books_account": parent.name if parent else None,
+			"parent_account": parent.name if parent else None,
 		}
 	).insert()
 
@@ -645,7 +645,7 @@ def _tax_account(name, gst_head):
 		{
 			"doctype": "Books Account",
 			"account_name": name,
-			"parent_books_account": root_group("Liability"),
+			"parent_account": root_group("Liability"),
 			"account_type": "Tax",
 			"gst_head": gst_head,
 		}

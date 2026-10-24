@@ -227,11 +227,11 @@ test('named documents import their name under the DocType’s fieldname', async 
   const account = new Importer('Account', fyo);
   account.assignedTemplateFields = [
     'Account.account_name',
-    'Account.parent_books_account',
+    'Account.parent_account',
   ];
   account.valueMatrix = [[{ value: 'Petty Cash' }, { value: 'Cash' }]];
   assert.deepEqual(importRows(account), [
-    ['docstatus', 'account_name', 'parent_books_account'],
+    ['docstatus', 'account_name', 'parent_account'],
     ['0', 'Petty Cash', 'Cash'],
   ]);
   // A doctype named by a field groups its rows by that field.

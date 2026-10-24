@@ -43,7 +43,7 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		self.assertEqual(company_value("default_discount_account"), "Discounts")
 		account = frappe.get_doc("Books Account", "Discounts")
 		self.assertEqual(
-			(account.parent_books_account, account.root_type, account.account_type, account.is_group),
+			(account.parent_account, account.root_type, account.account_type, account.is_group),
 			("Indirect Income", "Income", "Income Account", 0),
 		)
 

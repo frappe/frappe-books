@@ -57,7 +57,7 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
     canChangeRate: false,
     canEditDiscount: true,
   });
-  assert.equal(await posSetup.getItemVisibility(), 'Inventory Items');
+  assert.equal(posSetup.getItemVisibility(), 'Inventory Items');
   assert.equal(requests.length, 0);
 
   fyo.singles.POSSettings.pos_profile = 'Counter 1';
@@ -65,8 +65,9 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
     canChangeRate: true,
     canEditDiscount: false,
   });
-  assert.equal(await posSetup.getItemVisibility(), 'Non-Inventory Items');
-  assert.equal((await posSetup.getPOSProfile()).pos_ui, 'Modern');
+  const profile = await posSetup.getPOSProfile();
+  assert.equal(posSetup.getItemVisibility(profile), 'Non-Inventory Items');
+  assert.equal(profile.pos_ui, 'Modern');
 });
 
 test('All Items lists stock and service items, hiding only stock that is out', () => {

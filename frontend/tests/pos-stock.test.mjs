@@ -72,7 +72,7 @@ test('the card and batch quantities use the location the server ships POS sales 
 
 test('stock sums come from the ledger through frappe.client.get_list', async () => {
   const requests = stubServer();
-  await posStock.getItemQtyMap([item]);
+  await posStock.getItemQtyMap();
   assert.deepEqual(requests[1], [
     'frappe.client.get_list',
     {
@@ -85,7 +85,6 @@ test('stock sums come from the ledger through frappe.client.get_list', async () 
       filters: [
         ['is_cancelled', '=', 0],
         ['warehouse', '=', inventory],
-        ['item_code', 'in', [item]],
       ],
       group_by: 'item_code, batch_no',
       order_by: 'item_code, batch_no',

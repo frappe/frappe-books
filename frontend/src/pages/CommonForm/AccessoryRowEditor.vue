@@ -105,7 +105,7 @@ import { noteRowMissingExtras } from 'src/frappe/extraFields';
 import { getFields } from 'src/frappe/registry';
 import { getErrorMessage } from 'src/utils';
 import { isMobile } from 'src/utils/viewport';
-import { computed, ref, watch } from 'vue';
+import { computed, provide, ref, watch } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import ExtraFields from './ExtraFields.vue';
 import { getRowBooksFields } from './extraFieldsView';
@@ -136,6 +136,8 @@ watch(
 const row = computed(
   () => (props.doc.get(props.fieldname) as FrappeDoc[])[props.index]
 );
+// Controls read the document they edit through `doc`, here the row's.
+provide('doc', row);
 watch(row, (shown) => shown && noteRowMissingExtras(shown), {
   immediate: true,
 });

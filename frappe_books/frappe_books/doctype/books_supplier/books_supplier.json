@@ -17,7 +17,7 @@
   "phone",
   "address",
   "billing_section_break_8",
-  "default_account",
+  "accounts",
   "default_currency",
   "billing_section_break_16",
   "tax_id",
@@ -76,10 +76,10 @@
    "label": "Billing"
   },
   {
-   "fieldname": "default_account",
-   "fieldtype": "Link",
-   "label": "Default Account",
-   "options": "Books Account",
+   "fieldname": "accounts",
+   "fieldtype": "Table",
+   "label": "Default Accounts",
+   "options": "Books Party Account",
    "permlevel": 1
   },
   {

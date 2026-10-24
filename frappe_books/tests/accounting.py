@@ -72,7 +72,7 @@ def _make_party(party_type, default_account, **values):
 		{
 			"doctype": party_type,
 			PARTY_NAME_FIELDS[party_type]: unique_name("Test Party"),
-			"default_account": default_account,
+			"accounts": [{"account": default_account}] if default_account else [],
 			**values,
 		}
 	).insert()

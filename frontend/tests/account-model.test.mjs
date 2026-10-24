@@ -129,7 +129,9 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
   const { Customer, Company, POSSettings } = frappeModels;
   const ledger = ['is_group', '=', 0];
   const customer = newFrappeDoc('Customer');
-  assert.deepEqual(await Customer.filters.default_account(customer), [
+  await customer.append('accounts');
+  const [row] = customer.accounts;
+  assert.deepEqual(await Customer.rowModels.accounts.filters.account(row), [
     ledger,
     ['account_type', '=', 'Receivable'],
   ]);

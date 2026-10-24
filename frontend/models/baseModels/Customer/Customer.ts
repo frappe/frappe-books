@@ -13,7 +13,7 @@ export class Customer extends Party {
       'email',
       'phone',
       'address',
-      'default_account',
+      'accounts',
       'loyalty_program',
       'default_currency',
       'tax_id',

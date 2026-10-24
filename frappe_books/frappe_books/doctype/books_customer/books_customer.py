@@ -16,9 +16,13 @@ class BooksCustomer(PartyController):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from frappe_books.frappe_books.doctype.books_party_account.books_party_account import (
+			BooksPartyAccount,
+		)
+
+		accounts: DF.Table[BooksPartyAccount]
 		address: DF.Link | None
 		customer_name: DF.Data
-		default_account: DF.Link | None
 		default_currency: DF.Link | None
 		email: DF.Data | None
 		gst_category: DF.Literal["Registered Regular", "Unregistered"]

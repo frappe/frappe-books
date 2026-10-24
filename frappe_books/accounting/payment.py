@@ -17,6 +17,7 @@ from frappe_books.accounting.accounts import (
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.party import party_account
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.company import company_value
 from frappe_books.permissions import check_preview_permission
@@ -74,7 +75,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 
 	def get_party_account(self):
 		if self.party_type in PARTY_ACCOUNT_TYPES and self.party:
-			return frappe.db.get_value(self.party_type, self.party, "default_account")
+			return party_account(self.party_type, self.party)
 
 	def set_reference_types(self):
 		"""A reference without a type is a supplier's purchase invoice, else a sales invoice."""

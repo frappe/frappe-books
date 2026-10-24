@@ -9,7 +9,7 @@ from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
-from frappe_books.accounting.party import PartyDocumentMixin
+from frappe_books.accounting.party import PartyDocumentMixin, party_account
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
@@ -40,7 +40,7 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	# The item field that holds a row's income or expense account.
 	item_account_field: str
 	# The party fields that fill an invoice's defaults.
-	party_default_fields = ("default_currency", "default_account")
+	party_default_fields = ("default_currency",)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -67,7 +67,9 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 		party = _party_defaults(self)
 		_populate_currency(self, party.default_currency)
 		if party and self.party_account_type:
-			self.account = self.get("account") or _party_account(self, party.default_account)
+			self.account = self.get("account") or _party_account(
+				self, party_account(self.party_type, self.party)
+			)
 		return party
 
 	def populate_rows(self, rows):

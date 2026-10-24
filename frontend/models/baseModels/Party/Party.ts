@@ -1,10 +1,5 @@
 import { Fyo } from 'fyo';
-import {
-  Action,
-  FiltersMap,
-  ListViewSettings,
-  ValidationMap,
-} from 'fyo/model/types';
+import { Action, ListViewSettings, ValidationMap } from 'fyo/model/types';
 import { canOpenLedger, getMappedDocAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
@@ -14,26 +9,21 @@ import {
   validateEmail,
   validatePhoneNumber,
 } from 'src/frappe/validation';
+import { PartyAccount } from './PartyAccount';
 
 /**
  * What a customer and a supplier share, served by Frappe. The server fills
  * the default account and currency on save.
  */
 export abstract class Party extends FrappeDoc {
-  /** The account type of the default account. */
+  /** The account type of the default accounts. */
   static accountType: 'Receivable' | 'Payable';
+  static override rowModels = { accounts: PartyAccount };
 
   // Frappe checks these on save; mirrored to show its message at the field.
   validations: ValidationMap = {
     email: validateEmail,
     phone: validatePhoneNumber,
-  };
-
-  static override filters: FiltersMap = {
-    default_account: (doc: FrappeDoc) => [
-      ['is_group', '=', 0],
-      ['account_type', '=', (doc.constructor as typeof Party).accountType],
-    ],
   };
 
   static getListViewSettings(): ListViewSettings {

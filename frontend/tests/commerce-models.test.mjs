@@ -329,7 +329,7 @@ test('customer and supplier forms and lists show what they showed, without GST f
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
     'address | Address |  | Contacts',
-    'default_account | Default Account |  | Billing',
+    'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
@@ -341,7 +341,7 @@ test('customer and supplier forms and lists show what they showed, without GST f
     'email | Email | john@doe.com | Contacts',
     'phone | Phone | Phone | Contacts',
     'address | Address |  | Contacts',
-    'default_account | Default Account |  | Billing',
+    'accounts | Default Accounts |  | Billing',
     'default_currency | Billing Currency | INR | Billing',
     'lead_name | Lead |  | References',
     'loyalty_program | Loyalty Program |  | Loyalty Program',
@@ -387,14 +387,17 @@ test('a customer makes and lists sales, a supplier purchases', () => {
   assert.deepEqual(labels('Supplier'), ['Create purchase', 'View purchases']);
 });
 
-test('a customer defaults to a receivable account, a supplier to a payable one', () => {
-  const accountType = (schemaName) =>
-    getModel(schemaName).filters.default_account(newFrappeDoc(schemaName));
-  assert.deepEqual(accountType('Customer'), [
+test('a customer defaults to a receivable account, a supplier to a payable one', async () => {
+  const accountType = async (schemaName) => {
+    const party = newFrappeDoc(schemaName);
+    await party.append('accounts');
+    return getModel('PartyAccount').filters.account(party.accounts[0]);
+  };
+  assert.deepEqual(await accountType('Customer'), [
     ['is_group', '=', 0],
     ['account_type', '=', 'Receivable'],
   ]);
-  assert.deepEqual(accountType('Supplier'), [
+  assert.deepEqual(await accountType('Supplier'), [
     ['is_group', '=', 0],
     ['account_type', '=', 'Payable'],
   ]);

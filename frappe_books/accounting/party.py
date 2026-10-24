@@ -7,6 +7,7 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_party_account
 from frappe_books.accounting.money import company_currency
+from frappe_books.company import default_company
 from frappe_books.regional import validate_gstin
 
 # The account a new party's ledger defaults to, when the chart has it.
@@ -17,17 +18,35 @@ class PartyController(Document):
 	"""A customer or supplier: its ledger account, currency and GST registration."""
 
 	def before_validate(self):
-		self.default_account = self.default_account or _chart_account(self.doctype)
 		self.default_currency = self.default_currency or company_currency()
+		self.set_company_account()
 
 	def validate(self):
-		validate_party_account(self, "default_account", self.doctype)
+		self.validate_accounts()
 		if self.gst_category != "Registered Regular":
 			self.gstin = None
 		elif not self.gstin:
 			frappe.throw(_("GSTIN is required for a registered party."))
 		else:
 			self.gstin = validate_gstin(self.gstin)
+
+	def set_company_account(self):
+		"""Rows belong to the one company, which takes the chart's party account when it has no row."""
+		company = default_company()
+		for row in self.accounts:
+			row.company = row.company or company
+		account = not self.get("accounts", {"company": company}) and _chart_account(self.doctype)
+		if account:
+			self.append("accounts", {"company": company, "account": account})
+
+	def validate_accounts(self):
+		companies = [row.company for row in self.accounts]
+		if len(companies) != len(set(companies)):
+			frappe.throw(
+				_("There can only be 1 Account per Company in {0} {1}").format(_(self.doctype), self.name)
+			)
+		for row in self.accounts:
+			validate_party_account(row, "account", self.doctype)
 
 
 class PartyDocumentMixin:
@@ -39,6 +58,12 @@ class PartyDocumentMixin:
 	@property
 	def party(self):
 		return self.get(self.party_field)
+
+
+def party_account(party_type, party):
+	"""The party's ledger account for the one company, if it has one."""
+	filters = {"parenttype": party_type, "parent": party, "company": default_company()}
+	return frappe.db.get_value("Books Party Account", filters, "account")
 
 
 def _chart_account(party_type):

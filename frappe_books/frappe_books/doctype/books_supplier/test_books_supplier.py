@@ -28,7 +28,7 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 			{"doctype": "Books Supplier", "supplier_name": unique_name("Supplier")}
 		).insert()
 
-		self.assertEqual(supplier.default_account, "Creditors")
+		self.assertEqual(supplier.accounts[0].account, "Creditors")
 
 	def test_supplier_outstanding_follows_its_purchase_invoices(self):
 		payable = make_account("Supplier Payable", root_type="Liability", account_type="Payable")

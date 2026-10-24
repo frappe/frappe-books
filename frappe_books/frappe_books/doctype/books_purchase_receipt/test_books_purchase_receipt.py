@@ -7,6 +7,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import now_datetime
 
+from frappe_books.accounting.party import party_account
 from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt import (
 	make_purchase_invoice,
 	make_return,
@@ -102,7 +103,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 			track_item=1,
 		)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
-		payable = frappe.db.get_value("Books Supplier", receipt.supplier, "default_account")
+		payable = party_account("Books Supplier", receipt.supplier)
 
 		invoice = make_purchase_invoice(receipt.name)
 		purchase_return = make_return(receipt.name)

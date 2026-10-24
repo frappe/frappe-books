@@ -37,7 +37,7 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
   await selectImportFile(
     page,
     'Customer',
-    `Customer Name,Default Account\n${names[0]},Debtors\n${names[1]},Debtors\n`
+    `Customer Name,Default Account (Default Accounts)\n${names[0]},Debtors\n${names[1]},Debtors\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });
@@ -45,16 +45,15 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
   for (const name of names) {
     await expect(results).toContainText(name);
   }
-  expect(
-    (await getDoc(page, 'Books Customer', names[1])).default_account
-  ).toBe('Debtors');
+  const [row] = (await getDoc(page, 'Books Customer', names[1])).accounts;
+  expect(row.account).toBe('Debtors');
 });
 
 test('links Frappe cannot find stop the import', async ({ page }) => {
   await selectImportFile(
     page,
     'Customer',
-    `Customer Name,Default Account\nImport Cid ${run},Missing ${run}\n`
+    `Customer Name,Default Account (Default Accounts)\nImport Cid ${run},Missing ${run}\n`
   );
 
   const error = page.getByRole('dialog', { name: 'Cannot import' });

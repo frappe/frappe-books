@@ -63,7 +63,7 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		).insert()
 
 		self.assertEqual(
-			(customer.default_account, customer.default_currency), ("Debtors", company_currency())
+			(customer.accounts[0].account, customer.default_currency), ("Debtors", company_currency())
 		)
 
 	def test_stale_customer_save_cannot_reset_outstanding(self):

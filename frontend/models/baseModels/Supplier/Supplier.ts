@@ -10,7 +10,7 @@ export class Supplier extends Party {
     'email',
     'phone',
     'address',
-    'default_account',
+    'accounts',
     'default_currency',
     'tax_id',
   ]);

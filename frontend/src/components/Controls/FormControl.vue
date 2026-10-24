@@ -14,6 +14,7 @@ import DynamicLink from './DynamicLink.vue';
 import Float from './Float.vue';
 import Int from './Int.vue';
 import Link from './Link.vue';
+import LinkCard from './LinkCard.vue';
 import Select from './Select.vue';
 import Text from './Text.vue';
 
@@ -58,7 +59,9 @@ export default {
   },
   render() {
     const fieldtype = this.$attrs.df.fieldtype;
-    const component = components[fieldtype] ?? Data;
+    const component = this.$attrs.df.card
+      ? LinkCard
+      : (components[fieldtype] ?? Data);
 
     return h(component, {
       ...(fieldtype === 'Check' ? { layout: 'field' } : {}),

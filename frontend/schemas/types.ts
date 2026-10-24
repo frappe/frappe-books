@@ -94,6 +94,7 @@ export interface TargetField extends Omit<BaseField, 'fieldtype'> {
   fieldtype: TargetFieldType;
   target: string;                // Name of the table or group of tables to fetch values
   create?: boolean;              // Whether to show Create in the dropdown
+  card?: boolean;                // Whether a form shows the linked record as a card
   edit?: boolean;                // Whether the Table has quick editable columns
 }
 

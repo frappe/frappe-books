@@ -133,15 +133,22 @@ export function getPartyPresentation(
   quickEditFields: string[],
   fields: Presentation['fields'] = {}
 ): Presentation {
-  const primary = { create: false };
+  // A saved party shows its primary records as cards, picked from those linked to it.
+  const card = { create: false, card: true };
   return {
     label,
     quickEditFields,
     insertFields: ADDRESS_FIELDS,
     fields: {
       ...fields,
-      [`${partyKey}_primary_contact`]: primary,
-      [`${partyKey}_primary_address`]: primary,
+      [`${partyKey}_primary_contact`]: {
+        ...card,
+        placeholder: 'No primary contact',
+      },
+      [`${partyKey}_primary_address`]: {
+        ...card,
+        placeholder: 'No primary address',
+      },
     },
     omitFields: ['gst_category', 'gstin'],
   };

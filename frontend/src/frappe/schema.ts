@@ -60,6 +60,7 @@ export type FieldPresentation = Partial<Field> &
   Pick<OptionField, 'optionLabels' | 'allowCustom'> & {
     create?: boolean;
     edit?: boolean;
+    card?: boolean;
   };
 
 /** Presentations of Links that offer no Create, by fieldname. */

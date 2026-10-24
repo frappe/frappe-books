@@ -20,6 +20,7 @@
             :class="[
               'min-w-0 self-start w-full',
               field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',
+              (field as TargetField).card ? 'md:col-span-2' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
               field.fieldname === 'terms_and_conditions' ? 'md:col-span-2' : '',
               field.invisible ? 'invisible' : '',
@@ -91,7 +92,7 @@ import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
-import { Field } from 'schemas/types';
+import { Field, TargetField } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';
 import { focusOrSelectFormControl } from 'src/utils/ui';

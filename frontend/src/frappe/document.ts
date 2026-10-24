@@ -58,6 +58,18 @@ import { toDocValue, toDocValues, toFrappeValue } from './values';
 /** Runs a document's preview later; the returned function cancels it. */
 export type PreviewScheduler = (preview: () => void) => () => void;
 
+/** What a card of a linked record shows: its title and lines, each with an icon. */
+export interface LinkCardContent {
+  title: string;
+  lines: { icon?: string; text: string }[];
+}
+
+/** The fields a card of a linked record reads, and what it shows of them. */
+export interface LinkCard {
+  fields: string[];
+  getContent: (record: DocValues) => LinkCardContent;
+}
+
 /** A warning the submit prompt shows first; a Yes runs `accept` and goes on. */
 export type SubmitWarning = {
   title: string;
@@ -107,6 +119,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   /** Filters whose values a record created from the link's Create option takes. */
   static createFilters: FiltersMap = {};
   static emptyMessages: EmptyMessageMap = {};
+  /** How a link to the doctype shows as a card, where its field asks; see `LinkCard`. */
+  static linkCard?: LinkCard;
 
   static getListViewSettings(_fyo: Fyo): ListViewSettings {
     return {};

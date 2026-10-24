@@ -1,6 +1,7 @@
 import { t } from 'fyo';
 import { EmptyMessageMap, ListViewSettings, ListsMap } from 'fyo/model/types';
-import { FrappeDoc } from 'src/frappe/document';
+import { FrappeDoc, type LinkCard } from 'src/frappe/document';
+import type { DocValues } from 'src/frappe/api';
 import type { Presentation } from 'src/frappe/schema';
 
 /** The states an address in its country offers: India's, else none, as the state is then free text. */
@@ -10,6 +11,19 @@ export function getStates(doc?: FrappeDoc): string[] {
   }
 
   return Object.values(doc.fyo.store.indianStates ?? {}).sort();
+}
+
+/** e.g. `Pune, Maharashtra 411001, India`. */
+function getPlace(address: DocValues): string {
+  const region = join(address, ['state', 'pincode'], ' ');
+  return [address.city, region, address.country].filter(Boolean).join(', ');
+}
+
+function join(values: DocValues, fieldnames: string[], separator: string) {
+  return fieldnames
+    .map((fieldname) => values[fieldname])
+    .filter(Boolean)
+    .join(separator);
 }
 
 /** Frappe's Address, which parties, locations and print settings link to. */
@@ -38,6 +52,28 @@ export class Address extends FrappeDoc {
   };
 
   static lists: ListsMap = { state: getStates };
+
+  // A party's primary address shows by name, its lines, then its place.
+  static override linkCard: LinkCard = {
+    fields: [
+      'address_line1',
+      'address_line2',
+      'city',
+      'state',
+      'pincode',
+      'country',
+    ],
+    getContent: (address) => ({
+      title: String(address.name),
+      lines: [
+        {
+          icon: 'lucide-map-pin',
+          text: join(address, ['address_line1', 'address_line2'], ', '),
+        },
+        { text: getPlace(address) },
+      ].filter(({ text }) => text),
+    }),
+  };
 
   static emptyMessages: EmptyMessageMap = {
     state: (doc: FrappeDoc) => {

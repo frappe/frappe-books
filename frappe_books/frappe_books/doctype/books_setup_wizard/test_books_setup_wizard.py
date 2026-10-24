@@ -6,6 +6,7 @@ from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
+from frappe_books.company import company_value, default_company
 from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
 	ACCOUNT_TYPES as ACCOUNTING_RULES,
 )
@@ -63,7 +64,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		)
 		self.assertEqual(
 			frappe.db.get_single_value("Books Accounting Settings", "company_name"),
-			"Test Books Company",
+			default_company(),
 		)
 		self.assertEqual(
 			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series"),
@@ -80,6 +81,14 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertTrue(frappe.db.exists("Books Tax", "GST-18"))
 		gst = frappe.get_doc("Books Tax", "GST-18")
 		self.assertEqual([(row.account, row.rate) for row in gst.details], [("CGST", 9), ("SGST", 9)])
+
+	def test_setup_makes_the_one_company(self):
+		frappe.db.delete("Books Company")
+		wizard = self._wizard(company_name="Lin's Things")
+		wizard.save(ignore_permissions=True)
+		run_setup(wizard)
+
+		self.assertEqual(company_value(["name", "abbr"]), ("Lin's Things", "LT"))
 
 	def test_setup_leaves_auto_stock_transfer_to_the_user(self):
 		frappe.db.set_single_value(
@@ -331,7 +340,8 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		wizard = frappe.get_single("Books Setup Wizard")
 		wizard.update(
 			{
-				"company_name": "Test Books Company",
+				# The site's one company, which a rerun of the setup keeps
+				"company_name": default_company(),
 				"fullname": "Test Owner",
 				"email": "owner@example.com",
 				"country": "India",

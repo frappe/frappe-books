@@ -59,6 +59,24 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 		self.assertIsNone(draft.name)
 		self.assertEqual([row.opening_amount for row in draft.balance_details], [150, 0])
 
+	def test_preview_of_a_new_shift_lists_every_mode_of_payment(self):
+		draft = frappe.new_doc("Books POS Opening Entry")
+
+		draft.preview()
+
+		modes = frappe.get_all("Books Mode of Payment", pluck="name")
+		self.assertCountEqual([row.mode_of_payment for row in draft.balance_details], modes)
+		self.assertEqual({row.opening_amount for row in draft.balance_details}, {0})
+		self.assertTrue(draft.period_start_date)
+
+	def test_preview_keeps_the_rows_a_shift_has(self):
+		draft = make_opening_shift(0)
+		draft.balance_details = draft.balance_details[:1]
+
+		draft.preview()
+
+		self.assertEqual([row.mode_of_payment for row in draft.balance_details], ["Cash"])
+
 	def test_preview_needs_the_right_to_open_a_shift(self):
 		with self.set_user(ensure_user("books-pos-shift-preview-stranger@example.com")):
 			self.assertRaises(frappe.PermissionError, make_opening_shift(100).preview)

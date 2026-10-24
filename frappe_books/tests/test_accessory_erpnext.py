@@ -185,3 +185,32 @@ class IntegrationTestAccessoryLinkedEntriesAndSearch(IntegrationTestCase):
 		self.assertIn("Customer", doctypes)
 		self.assertNotIn("Books Sales Invoice", doctypes)
 		self.assertIn("Books Sales Invoice", _get_search_doctypes(False))
+
+
+@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+class IntegrationTestAccessoryFieldPicks(IntegrationTestCase):
+	def setUp(self):
+		from frappe_books.frappe_books.doctype.books_field_pick.books_field_pick import save_field_picks
+
+		self.save = save_field_picks
+
+	def picks(self):
+		doc = frappe.get_doc("Books Field Pick", "Sales Invoice")
+		return [(row.table_fieldname or "", row.fieldname) for row in doc.fields]
+
+	def test_a_save_replaces_the_picks_of_a_form(self):
+		self.save(
+			"Sales Invoice", [{"fieldname": "po_no"}, {"table_fieldname": "items", "fieldname": "brand"}]
+		)
+		self.save("Sales Invoice", [{"table_fieldname": "", "fieldname": "po_date"}])
+
+		self.assertEqual(self.picks(), [("", "po_date")])
+
+	def test_a_pick_of_a_field_erpnext_lacks_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.save("Sales Invoice", [{"table_fieldname": "items", "fieldname": "no_such_field"}])
+
+	def test_only_system_managers_save_picks(self):
+		ensure_user(NO_RIGHTS_USER)
+		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
+			self.save("Sales Invoice", [{"fieldname": "po_no"}])

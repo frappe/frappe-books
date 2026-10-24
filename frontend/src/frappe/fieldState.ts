@@ -153,7 +153,7 @@ function getDocFields(doc: FrappeDoc): Record<string, DocField> {
  * `doc.getEvalDoc()`, worked out again only after a value of the document
  * or its rows changes, however it changed: Vue tracks what it read.
  */
-function getEvalDoc(doc: FrappeDoc): EvalDoc {
+export function getEvalDoc(doc: FrappeDoc): EvalDoc {
   const raw = toRaw(doc);
   let evalDoc = evalDocs.get(raw);
   if (!evalDoc) {

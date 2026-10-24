@@ -217,6 +217,8 @@ import FormContainer from 'src/components/FormContainer.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
+import type { EvalDoc } from 'src/frappe/dependsOn';
+import { getEvalDoc } from 'src/frappe/fieldState';
 import { getSchema } from 'src/frappe/registry';
 import { useBooksDoc } from 'src/frappe/useBooksDoc';
 import { getErrorMessage } from 'src/utils';
@@ -347,6 +349,10 @@ export default defineComponent({
   computed: {
     isAccessory(): boolean {
       return isAccessoryMode();
+    },
+    /** The values the fields' conditions read; a preview's fills change them after an edit, or with none. */
+    conditionValues(): EvalDoc | null {
+      return this.hasDoc ? getEvalDoc(this.doc) : null;
     },
     isFirstTab(): boolean {
       const [first] = this.tabOptions;
@@ -544,6 +550,7 @@ export default defineComponent({
   },
   watch: {
     'docOrNull.schema': 'updateGroupedFields',
+    conditionValues: 'updateGroupedFields',
     // The form shows a failed preview as an Alert, so the document need not toast it.
     docOrNull(doc: FrappeDoc | null, previous: FrappeDoc | null) {
       if (previous) {

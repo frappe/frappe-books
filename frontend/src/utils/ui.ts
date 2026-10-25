@@ -110,7 +110,7 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
           try {
             await doc.delete();
           } catch (err) {
-            await handleErrorWithDialog(err as Error, doc);
+            await handleErrorWithDialog(err as Error, doc, true);
             return false;
           }
 
@@ -145,7 +145,7 @@ export async function cancelDocWithPrompt(
           try {
             await doc.cancel(linkedDocs);
           } catch (err) {
-            await handleErrorWithDialog(err as Error, doc);
+            await handleErrorWithDialog(err as Error, doc, true);
             return false;
           }
 
@@ -353,7 +353,7 @@ function getDuplicateAction(doc: FrappeDoc): Action {
         const dupe = await doc.duplicate();
         await openEdit(dupe);
       } catch (err) {
-        await handleErrorWithDialog(err as Error, doc);
+        await handleErrorWithDialog(err as Error, doc, true);
       }
     },
   };
@@ -369,7 +369,7 @@ function getNewAction(doc: FrappeDoc): Action {
         const newDoc = newFrappeDoc(doc.schemaName);
         await openEdit(newDoc);
       } catch (err) {
-        await handleErrorWithDialog(err as Error, doc);
+        await handleErrorWithDialog(err as Error, doc, true);
       }
     },
   };

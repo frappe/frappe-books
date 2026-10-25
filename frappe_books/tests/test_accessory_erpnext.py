@@ -349,6 +349,7 @@ class IntegrationTestAccessoryLinkedEntriesAndSearch(IntegrationTestCase):
 		self.assertIn("Sales Invoice", doctypes)
 		self.assertIn("Customer", doctypes)
 		self.assertNotIn("Books Sales Invoice", doctypes)
+		self.assertNotIn("Stock Entry", doctypes)
 		self.assertIn("Books Sales Invoice", _get_search_doctypes(False))
 
 

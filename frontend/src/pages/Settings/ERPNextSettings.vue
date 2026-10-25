@@ -21,7 +21,6 @@
         :model-value="company || null"
         @update:model-value="setCompany"
       />
-      <FrappeDivider />
       <FrappeSwitch
         size="md"
         :label="switchLabel"
@@ -36,7 +35,7 @@
         :title="companyLabel"
         :description="companyDescription"
       >
-        <div class="w-[220px] space-y-1">
+        <div class="w-60 space-y-1">
           <FrappeSelect
             class="w-full"
             :options="companies"
@@ -82,7 +81,6 @@
 import {
   Alert as FrappeAlert,
   Dialog as FrappeDialog,
-  Divider as FrappeDivider,
   ErrorMessage as FrappeErrorMessage,
   Select as FrappeSelect,
   SettingsRow as FrappeSettingsRow,

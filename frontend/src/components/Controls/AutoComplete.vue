@@ -242,7 +242,10 @@ export default {
     },
     emptyMessage() {
       const { schemaName, fieldname } = this.df ?? {};
-      const getMessage = getModel(schemaName)?.emptyMessages?.[fieldname];
+      // An import grid's cells have no document to word the message by.
+      const getMessage = this.doc
+        ? getModel(schemaName)?.emptyMessages?.[fieldname]
+        : undefined;
       return getMessage?.(this.doc) ?? this.t`No results found`;
     },
     linkSchemaName() {

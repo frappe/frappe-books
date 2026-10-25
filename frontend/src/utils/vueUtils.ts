@@ -104,6 +104,12 @@ export async function syncOrSubmitDoc(doc: FrappeDoc) {
   showCannotSaveOrSubmitToast(doc);
 }
 
+/** A control commits its edit on blur, as a click on Save makes it do; the edit's change then runs. */
+async function commitFocusedEdit() {
+  (document.activeElement as HTMLElement | null)?.blur();
+  await new Promise((resolve) => setTimeout(resolve));
+}
+
 export function useDocShortcuts(
   shortcuts: Shortcuts,
   docRef: DocRef,
@@ -118,6 +124,7 @@ export function useDocShortcuts(
 
   const syncOrSubmitCallback = async () => {
     if (docRef.value) {
+      await commitFocusedEdit();
       await syncOrSubmit(docRef.value);
     }
   };

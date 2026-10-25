@@ -30,6 +30,7 @@ export { getTotalQuantity } from './posCart';
 /** The item fields the POS lists, searches and adds items by. */
 export const POS_ITEM_FIELDS = [
   'name',
+  'item_name',
   { barcodes: ['barcode'] },
   'image',
   'standard_rate',
@@ -200,7 +201,7 @@ export async function getPOSItemRecords(
 
   const [items, rates] = await Promise.all([
     getList('Item', {
-      fields: [...POS_ITEM_FIELDS, 'item_name'],
+      fields: POS_ITEM_FIELDS,
       filters: [...filters, ...SOLD_ITEMS],
       orFilters: getProfileGroups(profile).map(
         (group) => ['item_group', 'descendants of (inclusive)', group] as Filter

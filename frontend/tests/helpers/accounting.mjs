@@ -45,8 +45,8 @@ await build({
       } from './src/utils/dashboard';
       export { GSTR1 } from './reports/GoodsAndServiceTax/GSTR1';
       export { getGstrJsonData } from './reports/GoodsAndServiceTax/gstExporter';
-      export { call } from './src/web/api';
-      export { getDocuments } from './src/frappe/api';
+      export { call, onServerMessages, getServerMessages } from './src/web/api';
+      export { getDocuments, insertDocument } from './src/frappe/api';
       export * as errors from './fyo/utils/errors';
       export { getInsufficientItems } from './models/inventory/insufficientStock';
       export { generateCSV, parseCSV } from './utils/csvParser';

@@ -363,3 +363,32 @@ class IntegrationTestAccessoryPrintOptions(IntegrationTestCase):
 		ensure_user(NO_RIGHTS_USER)
 		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
 			self.get_print_options("Sales Invoice")
+
+
+@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+class IntegrationTestAccessoryLeadAddress(IntegrationTestCase):
+	def test_a_lead_saved_with_address_values_makes_its_address(self):
+		lead = frappe.get_doc(
+			{
+				"doctype": "Lead",
+				"first_name": "Pepper",
+				"company_name": "Stark Industries",
+				"address_line1": "1 Main Road",
+				"city": "Pune",
+			}
+		).insert()
+		[name] = frappe.get_all(
+			"Dynamic Link",
+			filters={"parenttype": "Address", "link_doctype": "Lead", "link_name": lead.name},
+			pluck="parent",
+		)
+
+		self.assertEqual(
+			frappe.db.get_value("Address", name, ["address_title", "city"]), ("Stark Industries", "Pune")
+		)
+
+	def test_a_lead_with_only_its_own_city_makes_no_address(self):
+		"""Desk fills a lead's city; only the quick-entry values /books sends make an Address."""
+		lead = frappe.get_doc({"doctype": "Lead", "first_name": "Happy", "city": "Pune"}).insert()
+
+		self.assertFalse(frappe.db.exists("Dynamic Link", {"parenttype": "Address", "link_name": lead.name}))

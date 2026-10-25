@@ -12,6 +12,7 @@ from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
 	make_item,
+	make_tax,
 	root_group,
 	set_inventory_accounts,
 	unique_name,
@@ -88,6 +89,20 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual([row.company for row in item.item_defaults], [default_company()])
 		item.append("item_defaults", {"company": default_company()})
 		self.assertRaisesRegex(frappe.ValidationError, "multiple Item Defaults", item.save)
+
+	def test_taxes_list_the_newest_valid_from_first(self):
+		account = make_account("Tax", root_type="Liability", account_type="Tax").name
+		old, new, undated = (make_tax(account).name for _ in range(3))
+		item = make_item(None, None)
+		item.taxes = []
+		item.append("taxes", {"item_tax_template": old, "valid_from": "2025-04-01"})
+		item.append("taxes", {"item_tax_template": undated})
+		item.append("taxes", {"item_tax_template": new, "valid_from": "2026-04-01"})
+		item.save()
+
+		self.assertEqual(
+			[(row.idx, row.item_tax_template) for row in item.taxes], [(1, new), (2, old), (3, undated)]
+		)
 
 	def test_accounts_follow_the_item_tracking(self):
 		income = make_account("Item Sales", root_type="Income")

@@ -23,6 +23,7 @@ await build({
       export { canPickFields, getKeptPicks, getPickerFields, getPickerTables, getSavedPicks } from './src/frappe/fieldPicks';
       export { toFilterList } from './src/frappe/linkSearch';
       export { getActiveDoctype, isAccessoryMode, toActiveDoctype } from './src/frappe/mode';
+      export { getCompanyRow, getCompanyRowValue, setCompanyRowValue } from './src/frappe/companyRow';
       export { getCalculatedState } from './src/frappe/calculated';
       export { getFrappeListPage, getFrappeRows, isSortableField } from './src/frappe/list';
       export { getLinkDisplayValue, searchFrappeLink } from './src/frappe/link';
@@ -162,6 +163,9 @@ export const {
   getActiveDoctype,
   isAccessoryMode,
   toActiveDoctype,
+  getCompanyRow,
+  getCompanyRowValue,
+  setCompanyRowValue,
   canPickFields,
   getKeptPicks,
   getPickerFields,

@@ -181,3 +181,22 @@ test('a saved item makes both sales and purchase invoices', () => {
   assert.deepEqual(labels(false), ['Sales Invoice', 'Purchase Invoice']);
   assert.deepEqual(labels(true), []);
 });
+
+test('item defaults show as fields of the company row, made by a value and gone with the last', async () => {
+  fyo.singles.AccountingSettings = { enable_inventory: true };
+  const item = newFrappeDoc('Item', { item_code: 'Kettle' });
+  assert.equal(item.income_account, null);
+
+  await item.set('income_account', 'Sales');
+  await item.set('default_warehouse', 'Stores');
+  assert.equal(item.item_defaults.length, 1);
+  assert.equal(item.item_defaults[0].income_account, 'Sales');
+  assert.equal(item.item_defaults[0].default_warehouse, 'Stores');
+
+  await item.set('income_account', null);
+  assert.equal(item.item_defaults.length, 1);
+  await item.set('default_warehouse', null);
+  assert.deepEqual(item.item_defaults, []);
+  // Files hold the table, not the fields.
+  assert.equal(item.fieldMap.income_account.clientOnly, true);
+});

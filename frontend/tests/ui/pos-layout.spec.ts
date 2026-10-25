@@ -516,8 +516,10 @@ test('invoice selection and bank payment fields work in a small dialog', async (
   await dialog
     .getByRole('radio', { name: 'Bank Transfer', exact: true })
     .click();
-  await expect(dialog.getByRole('textbox', { name: /Ref\./ })).toBeVisible();
-  await dialog.getByRole('textbox', { name: /Ref\./ }).fill('BANK-006');
+  await expect(
+    dialog.getByRole('textbox', { name: /Reference No/ })
+  ).toBeVisible();
+  await dialog.getByRole('textbox', { name: /Reference No/ }).fill('BANK-006');
   await page.screenshot({
     animations: 'disabled',
     path: test.info().outputPath('bank-payment-small.png'),

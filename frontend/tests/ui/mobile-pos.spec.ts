@@ -200,7 +200,9 @@ test('payment methods wrap in a two-column grid', async ({ page }) => {
   await page.screenshot({ path: test.info().outputPath('payment.png') });
 
   await page.getByRole('radio', { name: 'Bank Transfer' }).click();
-  await expect(page.getByRole('textbox', { name: /Ref\./ })).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: /Reference No/ })
+  ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Pay', exact: true })
   ).toBeDisabled();
@@ -219,8 +221,12 @@ test('a submitted invoice from Held offers only its payment', async ({
     })
   );
   await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(0);
+  await expect(
+    page.getByRole('button', { name: 'Pay', exact: true })
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(
+    0
+  );
 });
 
 test('a submitted invoice offers nothing that changes its totals', async ({
@@ -232,7 +238,9 @@ test('a submitted invoice offers nothing that changes its totals', async ({
       docstatus: 1,
     })
   );
-  await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Pay', exact: true })
+  ).toBeVisible();
   await expect(page.getByText('Redeem loyalty points')).toHaveCount(0);
   await expect(page.getByText('Apply coupon code')).toHaveCount(0);
 
@@ -245,15 +253,21 @@ test('a submitted invoice offers nothing that changes its totals', async ({
   const cart = page.getByRole('dialog', { name: 'Cart', exact: true });
   await expect(cart.getByRole('button', { name: /^Pay / })).toBeVisible();
   for (const name of ['Hold', 'Increase', 'Decrease', 'Remove']) {
-    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(cart.getByRole('button', { name, exact: true })).toHaveCount(
+      0
+    );
   }
   await expect(cart.getByRole('combobox')).toHaveCount(0);
-  await expect(cart.getByRole('button', { name: 'Organic Assam Tea' })).toBeDisabled();
+  await expect(
+    cart.getByRole('button', { name: 'Organic Assam Tea' })
+  ).toBeDisabled();
   await page.keyboard.press('Escape');
   await expect(cart).toBeHidden();
 
   await page.getByRole('button', { name: 'POS actions' }).click();
-  await expect(page.getByRole('menuitem', { name: 'Item enquiry' })).toBeVisible();
+  await expect(
+    page.getByRole('menuitem', { name: 'Item enquiry' })
+  ).toBeVisible();
   for (const name of ['Loyalty Program', 'Coupon Code', 'Price List']) {
     await expect(page.getByRole('menuitem', { name })).toHaveCount(0);
   }
@@ -298,9 +312,7 @@ test('an invoice is picked by tapping its row, which shows a check', async ({
   const create = sheet.getByRole('button', { name: 'Create return' });
   await expect(create).toBeDisabled();
 
-  const row = sheet
-    .getByRole('listitem')
-    .filter({ hasText: 'SINV-2026-0002' });
+  const row = sheet.getByRole('listitem').filter({ hasText: 'SINV-2026-0002' });
   await row.click();
 
   await expect(row).toHaveAttribute('aria-current', 'true');
@@ -319,7 +331,9 @@ test('negative loyalty points show a field error, not a toast', async ({
   await sheet.locator('input').first().fill('-5');
   await sheet.getByRole('button', { name: 'Redeem', exact: true }).click();
 
-  await expect(sheet.getByText('Loyalty points cannot be negative.')).toBeVisible();
+  await expect(
+    sheet.getByText('Loyalty points cannot be negative.')
+  ).toBeVisible();
   await expect(sheet).toBeVisible();
   await expect(
     page.locator('[data-sonner-toast]', {
@@ -426,10 +440,14 @@ test('leaving a submitted sale asks only to leave or stay', async ({
   const sheet = page.getByRole('dialog', { name: 'Leave this sale?' });
   await expectSheet(sheet);
   for (const name of ['Leave', 'Cancel']) {
-    await expect(sheet.getByRole('button', { name, exact: true })).toBeVisible();
+    await expect(
+      sheet.getByRole('button', { name, exact: true })
+    ).toBeVisible();
   }
   for (const name of ['Save and continue', 'Discard and continue']) {
-    await expect(sheet.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(sheet.getByRole('button', { name, exact: true })).toHaveCount(
+      0
+    );
   }
   await sheet.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(sheet).toBeHidden();

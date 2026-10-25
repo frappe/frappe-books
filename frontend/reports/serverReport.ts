@@ -14,6 +14,7 @@ export interface ServerColumn {
   fieldtype: FieldType;
   options?: string;
   width?: number;
+  hidden?: 0 | 1;
 }
 
 export type ServerRow = Record<string, RawValue | undefined>;
@@ -37,7 +38,9 @@ export async function runServerReport(
     filters: toServerFilters(filters),
     ignore_prepared_report: true,
   });
-  return { columns: columns.map(toColumnField), rows: result };
+  // Desk shows no hidden column; its values stay on the rows.
+  const shown = columns.filter((column) => !column.hidden);
+  return { columns: shown.map(toColumnField), rows: result };
 }
 
 /** Script Reports take Frappe's snake_case filter names. */

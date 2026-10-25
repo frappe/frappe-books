@@ -363,7 +363,9 @@ function getNewAction(doc: FrappeDoc): Action {
   return {
     label: t`New entry`,
     group: t`Create`,
-    condition: (doc: FrappeDoc) => fyo.can(doc.schemaName, 'create'),
+    // An unsaved document is already a new entry.
+    condition: (doc: FrappeDoc) =>
+      !doc.notInserted && fyo.can(doc.schemaName, 'create'),
     async action() {
       try {
         const newDoc = newFrappeDoc(doc.schemaName);

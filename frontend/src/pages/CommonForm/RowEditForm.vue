@@ -89,7 +89,6 @@
       <ExtraFields
         v-if="isAccessory"
         v-model:active-tab="endTab"
-        compact
         :doc="row"
         :errors="errors"
       />

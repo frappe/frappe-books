@@ -101,17 +101,6 @@
         </template>
       </MobileFormSection>
     </template>
-    <MobileExtraFields
-      v-if="isAccessory && isFirstTab"
-      :doc="doc"
-      :errors="errors"
-      @value-change="(field, value) => $emit('value-change', field, value)"
-      @row-change="
-        (field, value, parentfield) =>
-          $emit('row-change', field, value, parentfield)
-      "
-      @editrow="(row) => $emit('editrow', row)"
-    />
     <LinkedRecordsSection
       v-if="linkedRecords && isFirstTab"
       :doc="doc"
@@ -181,7 +170,6 @@ import { useRouter } from 'vue-router';
 import { isAccessoryMode } from 'src/frappe/mode';
 import type { ServerMessage } from 'src/web/api';
 import FormErrorPanel from './FormErrorPanel.vue';
-import MobileExtraFields from './MobileExtraFields.vue';
 import MobileFormSection from './MobileFormSection.vue';
 import LinkedRecordsSection from './LinkedRecordsSection.vue';
 

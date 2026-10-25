@@ -448,7 +448,7 @@ test('a primary contact or address card shows its record', () => {
   assert.deepEqual(address, {
     title: 'Asha-Billing',
     lines: [
-      { icon: 'lucide-map-pin', text: '12 Harbour Road, Unit 4' },
+      { text: '12 Harbour Road, Unit 4' },
       { text: 'Pune, Maharashtra 411001, India' },
     ],
   });

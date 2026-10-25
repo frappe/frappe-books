@@ -78,9 +78,9 @@ class IntegrationTestAccessoryMode(IntegrationTestCase):
 		self.assertTrue(bootinfo.books["accessory_mode"])
 		self.assertEqual(bootinfo.books["company"], company)
 
-	def test_saved_settings_keep_standalone_without_books_setup(self):
+	def test_a_chosen_company_keeps_standalone_without_books_setup(self):
 		forget_settings_and_books_setup()
-		frappe.get_single(SETTINGS).save()
+		frappe.db.set_single_value(SETTINGS, "default_company", "Acme")
 		with patch("frappe_books.accessory.erpnext_installed", return_value=True), ERPNEXT_SET_UP:
 			bootinfo = frappe._dict()
 			extend_bootinfo(bootinfo)

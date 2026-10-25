@@ -18,7 +18,6 @@
   "default_discount_account",
   "stock_section_break",
   "default_warehouse",
-  "stock_accounts_section_break",
   "default_inventory_account",
   "stock_received_but_not_billed",
   "default_expense_account",
@@ -28,7 +27,7 @@
   {
    "fieldname": "default_section_break",
    "fieldtype": "Section Break",
-   "label": "Default"
+   "label": "Details"
   },
   {
    "fieldname": "company_name",
@@ -41,13 +40,14 @@
    "description": "Short name of the company, as ERPNext uses it.",
    "fieldname": "abbr",
    "fieldtype": "Data",
-   "label": "Abbr",
+   "label": "Abbreviation",
    "read_only": 1,
    "reqd": 1
   },
   {
    "fieldname": "country",
    "fieldtype": "Link",
+   "hidden": 1,
    "is_virtual": 1,
    "label": "Country",
    "options": "Country",
@@ -57,6 +57,7 @@
   {
    "fieldname": "default_currency",
    "fieldtype": "Link",
+   "hidden": 1,
    "is_virtual": 1,
    "label": "Currency",
    "options": "Currency",
@@ -111,37 +112,32 @@
    "options": "Books Warehouse"
   },
   {
-   "fieldname": "stock_accounts_section_break",
-   "fieldtype": "Section Break",
-   "label": "Inventory Accounts"
-  },
-  {
    "fieldname": "default_inventory_account",
    "fieldtype": "Link",
-   "label": "Stock In Hand Acc.",
+   "label": "Inventory Account",
    "options": "Books Account"
   },
   {
    "fieldname": "stock_received_but_not_billed",
    "fieldtype": "Link",
-   "label": "Stock Received But Not Billed Acc.",
+   "label": "Stock Received But Not Billed",
    "options": "Books Account"
   },
   {
    "fieldname": "default_expense_account",
    "fieldtype": "Link",
-   "label": "Cost Of Goods Sold Acc.",
+   "label": "Cost of Goods Sold",
    "options": "Books Account"
   },
   {
    "fieldname": "stock_adjustment_account",
    "fieldtype": "Link",
-   "label": "Stock Adjustment Acc.",
+   "label": "Stock Adjustment Account",
    "options": "Books Account"
   }
  ],
  "links": [],
- "modified": "2026-10-24 12:00:00.000000",
+ "modified": "2026-10-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Company",

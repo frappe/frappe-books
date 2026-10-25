@@ -32,15 +32,16 @@
         >
           {{ item.value }}
         </div>
-        <!-- The dashboard's number card, in ERPNext's indicator colour. -->
-        <FrappeNumberCard
-          v-else
-          :class="phone ? 'w-40 shrink-0' : 'min-w-0 flex-1'"
-          :title="item.label ?? ''"
-          :value="toCardValue(item.value)"
-          :format="(value: number) => formatSummaryValue(item, value)"
-          :color="getIndicatorColor(item)"
-        />
+        <!-- The dashboard's number card, in ERPNext's indicator colour; it fills its box. -->
+        <div v-else :class="phone ? 'w-40 shrink-0' : 'min-w-0 flex-1'">
+          <FrappeNumberCard
+            class="h-full"
+            :title="item.label ?? ''"
+            :value="toCardValue(item.value)"
+            :format="(value: number) => formatSummaryValue(item, value)"
+            :color="getIndicatorColor(item)"
+          />
+        </div>
       </template>
     </div>
 

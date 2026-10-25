@@ -10,5 +10,5 @@ needs_erpnext = unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
 
 
 def skip_with_erpnext(reason):
-	"""Skip a standalone-only test on a site with ERPNext."""
+	"""Skip a test on a site with ERPNext, for `reason`."""
 	return unittest.skipIf(HAS_ERPNEXT, reason)

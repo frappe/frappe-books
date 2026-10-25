@@ -10,7 +10,6 @@
  ],
  "fields": [
   {
-   "description": "Denomination",
    "fieldname": "denomination",
    "fieldtype": "Currency",
    "in_list_view": 1,
@@ -22,7 +21,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-08-27 23:43:14.961847",
+ "modified": "2026-10-25 21:10:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Default Cash Denominations",

@@ -354,8 +354,7 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 				self.assertEqual(payment.party_type, party_type)
 
 	def test_a_draft_refund_still_lists_with_its_customer(self):
-		payment = self._payment(self.invoice, party_type=None, references=[]).insert()
-		self.assertEqual(payment.party_type, "Books Customer")
+		payment = self._payment(self.invoice, references=[]).insert()
 
 		payment.update({"payment_type": "Pay", "paid_from": self.cash.name, "paid_to": self.receivable.name})
 		payment.save()

@@ -101,9 +101,17 @@
           </template>
         </FrappeSettingsHeader>
         <FrappeSettingsBody>
-          <div class="space-y-11">
-            <section v-for="group in posScreenGroups" :key="group.title">
-              <h2 class="mb-2 text-lg-semibold text-ink-gray-8">
+          <div>
+            <!-- A lone field's own label names it, so it needs no heading and less room. -->
+            <section
+              v-for="(group, index) in posScreenGroups"
+              :key="group.title"
+              :class="index > 0 && (group.fields.length > 1 ? 'mt-11' : 'mt-6')"
+            >
+              <h2
+                v-if="group.fields.length > 1"
+                class="mb-2 text-lg-semibold text-ink-gray-8"
+              >
                 {{ group.title }}
               </h2>
               <div class="divide-y divide-outline-gray-1">

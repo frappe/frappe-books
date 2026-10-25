@@ -10,10 +10,11 @@
  "engine": "InnoDB",
  "field_order": [
   "title",
+  "company",
   "is_default",
   "disabled",
-  "taxes",
-  "company"
+  "taxes_section_break",
+  "taxes"
  ],
  "fields": [
   {
@@ -23,6 +24,13 @@
    "label": "Title",
    "reqd": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   },
   {
    "default": "0",
@@ -38,23 +46,21 @@
    "label": "Disabled"
   },
   {
+   "fieldname": "taxes_section_break",
+   "fieldtype": "Section Break",
+   "label": "Taxes and Charges"
+  },
+  {
    "fieldname": "taxes",
    "fieldtype": "Table",
    "label": "Purchase Taxes and Charges",
    "options": "Books Purchase Taxes and Charges"
-  },
-  {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "hidden": 1,
-   "label": "Company",
-   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-24 20:00:00.000000",
+ "modified": "2026-10-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Purchase Taxes and Charges Template",

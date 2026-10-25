@@ -111,6 +111,8 @@ export interface TargetField extends Omit<BaseField, 'fieldtype'> {
   card?: boolean; // Whether a form shows the linked record as a card
   edit?: boolean; // Whether the Table has quick editable columns
   emptyMessage?: string; // What a Table without rows says
+  tableFields?: string[]; // A Table's own columns, where it shows other columns of its rows than their schema does, like a tax template's rows without amounts
+  mobileTableFields?: string[]; // A Table's own phone row fields, with its own `tableFields`
 }
 
 export interface DynamicLinkField extends Omit<BaseField, 'fieldtype'> {

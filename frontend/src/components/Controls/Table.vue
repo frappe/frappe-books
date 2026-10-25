@@ -317,18 +317,21 @@ export default {
     cellPaddingClass() {
       return this.size === 'small' ? 'px-2' : 'px-3';
     },
+    /** The field's own columns, else its rows' schema's. */
+    ownColumns() {
+      return this.df.tableFields ? this.df : getSchema(this.df.target);
+    },
     tableFields() {
-      const fieldnames = getSchema(this.df.target)?.tableFields ?? [];
-      return getFields(this.df.target, fieldnames);
+      return getFields(this.df.target, this.ownColumns?.tableFields ?? []);
     },
     mobileTableFields() {
-      const fieldnames = getSchema(this.df.target)?.mobileTableFields;
+      const fieldnames = this.ownColumns?.mobileTableFields;
       return fieldnames
         ? getFields(this.df.target, fieldnames)
         : this.tableFields;
     },
     mobileRowDetail() {
-      const fieldname = getSchema(this.df.target)?.mobileRowDetail;
+      const fieldname = this.ownColumns?.mobileRowDetail;
       return fieldname ? getFields(this.df.target, [fieldname])[0] : undefined;
     },
     mobileLabelledFields() {

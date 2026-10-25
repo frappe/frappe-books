@@ -294,12 +294,13 @@ function toField(docfield: DocField, context: FieldContext): Field {
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
     create: isLink(docfield) || undefined,
     linkFilters: getLinkFilters(docfield),
-    ...shown,
     ...(SERVER_FIELDS.includes(fieldname) && {
       hidden: true,
       readOnly: true,
       default: getAccessoryCompany(),
     }),
+    // A presentation may show a server field, like a tax template's company.
+    ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
   if (isTableDocField(docfield)) {

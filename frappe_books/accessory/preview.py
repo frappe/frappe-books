@@ -43,6 +43,7 @@ PRICE_SOURCES = {"selling_price_list", "buying_price_list", "currency", "price_l
 FORM_FILLS = {
 	"POS Opening Entry": pos.fill_opening_entry,
 	"POS Closing Entry": pos.fill_closing_entry,
+	"Payment Entry": lambda document, edited: fill_transfer_amount(document),
 }
 
 
@@ -249,6 +250,17 @@ def reallocate_payment(document: Document, edited: set[str]):
 	paid_by_received = document.payment_type == "Pay" and "received_amount" in edited
 	amount = document.received_amount if paid_by_received else document.paid_amount
 	document.allocate_amount_to_references(flt(amount), True, True)
+
+
+def fill_transfer_amount(document: Document):
+	"""A transfer between accounts of one currency receives what it pays, as Desk's form sets it; ERPNext leaves
+	a transfer's received amount to the user, which Books does not ask for.
+	"""
+	same_currency = document.paid_from_account_currency == document.paid_to_account_currency
+	if document.payment_type == "Internal Transfer" and same_currency and not document.received_amount:
+		document.received_amount = document.paid_amount
+		document.target_exchange_rate = document.source_exchange_rate
+		document.set_amounts()
 
 
 def allocate_references(document: Document):

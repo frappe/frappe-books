@@ -94,7 +94,7 @@ export function useKeys() {
 /** What the save shortcut does: save the doc, else submit it, else say it cannot. */
 export async function syncOrSubmitDoc(doc: FrappeDoc) {
   if (doc.canSave) {
-    return await commonDocSync(doc, true);
+    return await commonDocSync(doc);
   }
 
   if (doc.canSubmit) {

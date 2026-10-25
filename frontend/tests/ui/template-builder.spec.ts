@@ -104,7 +104,7 @@ test('saving from the editor saves the text not yet applied', async ({
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.insertText('<p>Saved with the shortcut</p>');
   await page.keyboard.press('ControlOrMeta+KeyS');
-  await page.getByRole('dialog').getByRole('button', { name: 'Yes' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 
   await expect
     .poll(async () => (await getPrintFormat(page, name))?.html ?? '')

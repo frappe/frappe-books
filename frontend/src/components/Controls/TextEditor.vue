@@ -9,7 +9,7 @@
     <FrappeFormLabel
       v-else-if="showLabel"
       :label="df.label"
-      :required="isRequired && !isReadOnly"
+      :required="isRequired"
     />
     <!-- As ReadOnlyValue: a labelled field reads "Not set", a bare value a dash. -->
     <p v-if="isReadOnly && isEmpty" class="text-base text-ink-gray-4">

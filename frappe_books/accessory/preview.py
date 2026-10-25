@@ -73,6 +73,8 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 			fill_untouched(document)
 		else:
 			fill(document, edited)
+		# What the steps announced, like an Item Price added, is rolled back; the save says it again.
+		frappe.clear_messages()
 		return document.as_dict()
 	finally:
 		# ERPNext's fills only read, but a preview never keeps a write.

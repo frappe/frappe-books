@@ -1,4 +1,4 @@
-import { getHeaders } from 'src/frappe/api';
+import { getHeaders } from 'src/web/api';
 import { call } from 'src/web/api';
 import { downloadFile } from './browser';
 import type { PrintHints, PrintHTML } from './printFormats';

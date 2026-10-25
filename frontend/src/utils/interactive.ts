@@ -1,7 +1,9 @@
 import { t } from 'fyo';
 import { dialog, toast } from 'frappe-ui';
 import { shallowRef } from 'vue';
+import type { ServerMessage } from 'src/web/api';
 import { renderSafeRichText } from './safeRichText';
+import { serverHtmlToText } from './serverHtml';
 import { DialogButton, DialogOptions, ToastOptions, ToastType } from './types';
 import { isMobile } from './viewport';
 
@@ -165,6 +167,33 @@ export function showToast(options: ToastOptions) {
   }
 
   return toast.info(options.message, toastOptions);
+}
+
+// Frappe's indicator colours, as toast types.
+const INDICATOR_TOASTS: Record<string, ToastType | undefined> = {
+  green: 'success',
+  red: 'error',
+  orange: 'warning',
+  yellow: 'warning',
+};
+
+/** As Desk: alerts show as toasts, other messages in one message dialog. */
+export function showServerMessages(messages: ServerMessage[]) {
+  for (const { message, indicator } of messages.filter((m) => m.alert)) {
+    showToast({
+      type: INDICATOR_TOASTS[indicator ?? ''] ?? 'info',
+      message: serverHtmlToText(message),
+    });
+  }
+
+  const shown = messages.filter(({ alert }) => !alert);
+  if (shown.length) {
+    void showDialog({
+      title: shown.find(({ title }) => title)?.title ?? t`Message`,
+      detail: shown.map(({ message }) => serverHtmlToText(message)),
+      type: 'info',
+    });
+  }
 }
 
 function getPrimaryButton(buttons: DialogButton[]): DialogButton {

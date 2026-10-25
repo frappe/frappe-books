@@ -37,6 +37,8 @@ export class StockEntryDetail extends FrappeDoc {
   };
 
   static createFilters: FiltersMap = {
+    // A new batch is of the row's item, whatever the search lists.
+    batch_no: (doc) => [['item', '=', doc.item_code]],
     item_code: () => [
       ['is_stock_item', '=', 1],
       ['item_type', '=', 'Product'],

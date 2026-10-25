@@ -7,6 +7,8 @@ export class Batch extends FrappeDoc {
   static override presentation = {
     label: 'Batch',
     quickEditFields: ['item', 'expiry_date', 'manufacturing_date'],
+    // ERPNext names a batch by script from its Batch No; a link's typed text goes in it.
+    titleField: 'batch_id',
   };
 
   static getListViewSettings(): ListViewSettings {

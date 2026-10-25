@@ -22,6 +22,7 @@ import {
   getNamingField,
   getTableSchemaName,
   toSchema,
+  withoutBooksPrefix,
   type Placements,
   type Presentation,
 } from './schema';
@@ -294,7 +295,7 @@ function toDocType(
   // Rows without a model of their own are labelled by their doctype.
   const presentation: Presentation = {
     ...Model.presentation,
-    label: Model.presentation.label || meta.name,
+    label: Model.presentation.label || withoutBooksPrefix(meta.name),
   };
   const schema = toSchema(meta, schemaName, presentation, {
     schemaNames: getSchemaNames(),

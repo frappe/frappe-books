@@ -338,7 +338,12 @@ export function getCustomFieldname(fieldname: string): string {
 
 /** The schema of a table's rows: its DocType without `Books ` and spaces, e.g. `SalesInvoiceItem`. */
 export function getTableSchemaName(doctype: string): string {
-  return doctype.replace(/^Books /, '').replaceAll(' ', '');
+  return withoutBooksPrefix(doctype).replaceAll(' ', '');
+}
+
+/** A DocType as users read it: without `Books `, e.g. `Payment Entry Deduction`. */
+export function withoutBooksPrefix(doctype: string): string {
+  return doctype.replace(/^Books /, '');
 }
 
 /** A DocField's link_filters as list filters; `eval:` values need Desk's form script, so they are left out. */

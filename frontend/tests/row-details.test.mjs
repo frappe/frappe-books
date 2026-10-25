@@ -94,6 +94,7 @@ test('a tax row summary names its account, type and rate, and its running total'
     detail: 'Total 1,090.00',
     amountLabel: undefined,
     failed: false,
+    isNegative: false,
   });
   // An Actual charge has no rate.
   assert.equal(getRowSummary(freight, fields, detail).meta, 'Actual');

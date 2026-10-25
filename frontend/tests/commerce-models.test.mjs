@@ -765,8 +765,8 @@ test('the loyalty program form and list show what they showed', async () => {
   const tiers = getSchema('LoyaltyProgramCollection');
   assert.deepEqual(tiers.tableFields, [
     'tier_name',
-    'min_spent',
     'collection_factor',
+    'min_spent',
   ]);
   assert.equal(
     field(tiers, 'collection_factor').sub_label,

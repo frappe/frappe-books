@@ -7,8 +7,8 @@
  "engine": "InnoDB",
  "field_order": [
   "tier_name",
-  "min_spent",
-  "collection_factor"
+  "collection_factor",
+  "min_spent"
  ],
  "fields": [
   {
@@ -18,24 +18,24 @@
    "label": "Tier Name"
   },
   {
-   "fieldname": "min_spent",
-   "fieldtype": "Currency",
-   "in_list_view": 1,
-   "label": "Minimum Total Spent"
-  },
-  {
    "description": "For how much spent = 1 Loyalty Point",
    "fieldname": "collection_factor",
    "fieldtype": "Currency",
    "in_list_view": 1,
    "label": "Collection Factor (=1 LP)"
+  },
+  {
+   "fieldname": "min_spent",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Minimum Total Spent"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-24 22:00:00.000000",
+ "modified": "2026-10-25 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Loyalty Program Collection",

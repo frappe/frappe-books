@@ -175,7 +175,7 @@ import StatusPill from 'src/components/StatusPill.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { revealActiveTab } from 'src/mobile/revealActiveTab';
 import { UIGroupedFields } from 'src/utils/types';
-import { getActionsForDoc } from 'src/utils/ui';
+import { getActionsForDoc, getTabOptions } from 'src/utils/ui';
 import { computed, nextTick, useTemplateRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { isAccessoryMode } from 'src/frappe/mode';
@@ -218,12 +218,7 @@ const isAccessory = isAccessoryMode();
 
 const router = useRouter();
 
-const tabOptions = computed(() =>
-  [...(props.groupedFields?.keys() ?? [])].map((tab) => ({
-    value: tab,
-    label: tab,
-  }))
-);
+const tabOptions = computed(() => getTabOptions(props.groupedFields));
 
 const activeSections = computed(() => {
   const tab = props.groupedFields?.get(props.activeTab);

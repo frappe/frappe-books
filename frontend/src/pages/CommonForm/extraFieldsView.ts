@@ -1,6 +1,5 @@
-import { t } from 'fyo';
 import type { Field } from 'schemas/types';
-import { CUSTOM_TAB, OTHER_APPS_TAB } from 'src/frappe/accessoryLayout';
+import { getEndTabLabel } from 'src/frappe/accessoryLayout';
 import type { FrappeDoc } from 'src/frappe/document';
 import { getEndTabs, getMoreDetailsFields } from 'src/frappe/extraFields';
 import { getFields } from 'src/frappe/registry';
@@ -21,15 +20,6 @@ export function useExtraFields(doc: MaybeRefOrGetter<FrappeDoc>) {
     return new Map(tabs);
   });
   return { moreFields, endTabs };
-}
-
-/** An end tab's label: Custom, Other apps or the app's title. */
-export function getEndTabLabel(tab: string): string {
-  if (tab === CUSTOM_TAB) {
-    return t`Custom`;
-  }
-
-  return tab === OTHER_APPS_TAB ? t`Other apps` : tab;
 }
 
 export function getEndTabOptions(tabs: Map<string, Field[]>) {

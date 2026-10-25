@@ -1,3 +1,4 @@
+import { t } from 'fyo';
 import type { Field } from 'schemas/types';
 import type { DocField, DocTypeMeta } from './meta';
 
@@ -42,6 +43,15 @@ export function sortEndTabs(tabs: string[]): string[] {
     return tab === OTHER_APPS_TAB ? Infinity : appTitles.indexOf(tab);
   };
   return [...tabs].sort((a, b) => rank(a) - rank(b));
+}
+
+/** An end tab's label: Custom, Other apps or the app's title. */
+export function getEndTabLabel(tab: string): string {
+  if (tab === CUSTOM_TAB) {
+    return t`Custom`;
+  }
+
+  return tab === OTHER_APPS_TAB ? t`Other apps` : tab;
 }
 
 type Positioned = { docfield: DocField; section: string; tab?: string };

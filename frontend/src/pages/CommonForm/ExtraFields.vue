@@ -48,31 +48,6 @@
           $emit('row-change', field, value, parentfield)
       "
     />
-    <section v-if="tabOptions.length" class="py-5">
-      <div class="mb-4 flex border-b border-outline-gray-1">
-        <FrappeTabButtons
-          :model-value="shownTab"
-          class="-mb-px flex"
-          :options="tabOptions"
-          variant="underline"
-          @update:model-value="(tab) => $emit('update:activeTab', String(tab))"
-        />
-      </div>
-      <CommonFormSection
-        :key="shownTab"
-        :fields="endTabs.get(shownTab) ?? []"
-        :doc="doc"
-        :errors="errors"
-        @editrow="(row: FrappeDoc) => $emit('editrow', row)"
-        @value-change="
-          (field: Field, value: DocValue) => $emit('value-change', field, value)
-        "
-        @row-change="
-          (field: Field, value: DocValue, parentfield: Field) =>
-            $emit('row-change', field, value, parentfield)
-        "
-      />
-    </section>
   </template>
 </template>
 <script setup lang="ts">
@@ -86,11 +61,11 @@ import { computed } from 'vue';
 import CommonFormSection from './CommonFormSection.vue';
 import { getEndTabOptions, useExtraFields } from './extraFieldsView';
 
-/** Accessory mode: More details, then the end tabs, after a form's or a row's Books fields. */
+/** Accessory mode: More details after a form's Books fields; a row's panel also lists the end tabs, which a form shows as its own tabs. */
 const props = defineProps<{
   doc: FrappeDoc;
   errors: Record<string, string>;
-  /** The selected end tab; the first one when unset or gone. */
+  /** The row panel's selected end tab; the first one when unset or gone. */
   activeTab?: string;
   /** Label and value rows, as the row editor's panel shows a row's fields. */
   compact?: boolean;

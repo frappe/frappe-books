@@ -10,7 +10,7 @@ import { getActions } from 'fyo/utils';
 import { ConflictError, ValueError } from 'fyo/utils/errors';
 import { canOpenLedger, getLedgerLink } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { Schema } from 'schemas/types';
+import { Field, Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
 import { getDeskFormUrl, openInDesk } from 'src/frappe/desk';
@@ -27,6 +27,11 @@ import { SelectFileOptions } from 'utils/types';
 import { RouteLocationRaw } from 'vue-router';
 import { selectFile } from './browser';
 import { isFieldShown } from './doc';
+import {
+  DEFAULT_SECTION,
+  getEndTabLabel,
+  sortEndTabs,
+} from 'src/frappe/accessoryLayout';
 import { showDialog, showToast } from './interactive';
 import { showSidebar } from './refs';
 import {
@@ -397,6 +402,7 @@ export function getFieldsGroupedByTabAndSection(
   doc: FrappeDoc
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
+  const appTabs = new Map<string, Field[]>();
   for (const field of doc.getFormFields(schema?.fields ?? [])) {
     const tab = field.tab ?? 'Main';
     const section = field.section ?? 'Default';
@@ -409,12 +415,13 @@ export function getFieldsGroupedByTabAndSection(
       tabbed.set(section, []);
     }
 
-    // Accessory mode's ERPNext fields with no Books position show after these; see `extraFields.ts`.
-    if (field.meta || field.moreDetails || field.appTab) {
+    // Accessory mode's ERPNext fields with no Books position: More details shows these; see `extraFields.ts`.
+    if (field.meta || field.moreDetails || !isFieldShown(doc, field)) {
       continue;
     }
 
-    if (!isFieldShown(doc, field)) {
+    if (field.appTab) {
+      appTabs.set(field.appTab, [...(appTabs.get(field.appTab) ?? []), field]);
       continue;
     }
 
@@ -441,7 +448,25 @@ export function getFieldsGroupedByTabAndSection(
     }
   }
 
+  // Custom fields and other apps' fields follow as tabs of their own.
+  for (const tab of sortEndTabs([...appTabs.keys()])) {
+    grouped.set(
+      getEndTabLabel(tab),
+      new Map([[DEFAULT_SECTION, appTabs.get(tab)!]])
+    );
+  }
+
   return grouped;
+}
+
+/** A form's tabs; the unnamed first one reads Details, as Desk's does, once app tabs join it. */
+export function getTabOptions(
+  grouped: UIGroupedFields | null | undefined
+): { value: string; label: string }[] {
+  return [...(grouped?.keys() ?? [])].map((value) => ({
+    value,
+    label: value === 'Main' ? t`Details` : value,
+  }));
 }
 
 export function getFormRoute(schemaName: string, name: string): string {

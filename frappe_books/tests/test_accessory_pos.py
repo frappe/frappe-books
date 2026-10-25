@@ -134,7 +134,10 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 			self.preview(values, {}, check_coupons=True)
 
 	def open_shift(self):
-		"""A submitted POS Opening Entry of the user with 100 in cash."""
+		"""A submitted POS Opening Entry of the user with 100 in cash, the profile's and user's only open one."""
+		# ERPNext opens one shift per profile and per user; earlier tests of the class leave theirs open.
+		for fieldname, value in (("pos_profile", self.profile.name), ("user", frappe.session.user)):
+			frappe.db.set_value("POS Opening Entry", {fieldname: value, "status": "Open"}, "status", "Closed")
 		opening = frappe.get_doc(
 			{
 				"doctype": "POS Opening Entry",

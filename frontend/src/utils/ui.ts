@@ -13,6 +13,7 @@ import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
+import { getDeskFormUrl, openInDesk } from 'src/frappe/desk';
 import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
@@ -260,6 +261,7 @@ export function getActionsForDoc(doc?: FrappeDoc): Action[] {
     ...getActions(doc),
     getDuplicateAction(doc),
     getNewAction(doc),
+    getOpenInERPNextAction(doc),
     getDeleteAction(doc),
     getCancelAction(doc),
   ];
@@ -356,6 +358,19 @@ function getDuplicateAction(doc: FrappeDoc): Action {
         await handleErrorWithDialog(err as Error, doc, true);
       }
     },
+  };
+}
+
+/** Accessory mode: a saved ERPNext document in Desk, where ERPNext's own form shows it. */
+function getOpenInERPNextAction(doc: FrappeDoc): Action {
+  return {
+    label: t`Open in ERPNext`,
+    condition: (doc: FrappeDoc) =>
+      isAccessoryMode() &&
+      !doc.notInserted &&
+      !doc.schema.isSingle &&
+      !doc.doctype.startsWith('Books '),
+    action: () => openInDesk(getDeskFormUrl(doc.doctype, doc.name!)),
   };
 }
 

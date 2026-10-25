@@ -181,13 +181,14 @@ test('the General and Company tabs show the fields, placeholders and sections th
   assert.deepEqual(layout('AccountingSettings').slice(-1), [
     'gstin | 27AAAAA0000A1Z5 | Default |',
   ]);
+  // The Company tab hides country and currency, which are System Settings'.
   assert.deepEqual(layout('Company').slice(0, 6), [
-    'company_name |  | Default | read only',
-    'abbr |  | Default | read only',
-    'country | Select Country | Default | read only',
-    'default_currency |  | Default | read only',
-    'email |  | Default |',
-    'tax_id | CHE-123.456.789 | Default |',
+    'company_name |  | Details | read only',
+    'abbr |  | Details | read only',
+    'email |  | Details |',
+    'tax_id | CHE-123.456.789 | Details |',
+    'write_off_account |  | Accounts |',
+    'round_off_account |  | Accounts |',
   ]);
 });
 

@@ -37,7 +37,7 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		tax_account = make_account("Recoverable Tax", account_type="Tax")
 		tax = make_tax(tax_account.name, rate=18)
 		party = make_supplier(payable.name)
-		item = make_item(income.name, received.name, tax=tax.name, track_item=1)
+		item = make_item(income.name, received.name, tax=tax.name, is_stock_item=1)
 		set_inventory_accounts(stock.name, received.name, expense.name)
 		frappe.db.set_single_value("Books Defaults", "purchase_receipt_location", "Stores")
 		invoice = make_invoice(
@@ -48,17 +48,22 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 			received.name,
 			make_auto_stock_transfer=1,
 		)
-		invoice.items[0].update({"quantity": 1, "rate": 100, "item_discount_percent": 0})
+		invoice.items[0].update(
+			{"qty": 1, "price_list_rate": 100, "discount_percentage": 0, "discount_amount": 0}
+		)
 		invoice.save().submit()
-		receipt = frappe.get_doc("Books Purchase Receipt", invoice.reload().back_reference)
+		receipt = frappe.get_doc(
+			"Books Purchase Receipt",
+			frappe.db.get_value("Books Purchase Receipt Item", {"purchase_invoice": invoice.name}, "parent"),
+		)
 		self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("118"))
 		self.assertEqual(Decimal(str(receipt.grand_total)), Decimal("100"))
 		entries = ledger_entries(receipt.doctype, receipt.name)
 		self.assertEqual(sum(Decimal(str(row.debit)) for row in entries if row.account == stock.name), 100)
 		self.assertEqual(sum(Decimal(str(row.debit)) - Decimal(str(row.credit)) for row in entries), 0)
-		self.assertEqual(get_ledger_data({"item": item.name})[0]["balance_value"], 100)
+		self.assertEqual(get_ledger_data({"item_code": item.name})[0]["stock_value"], 100)
 		invoice.cancel()
-		self.assertFalse(get_ledger_data({"item": item.name}))
+		self.assertFalse(get_ledger_data({"item_code": item.name}))
 
 	def test_payment_settles_multiple_invoices_and_cancel_restores_each(self):
 		receivable = make_account("Multiple Receivable", account_type="Receivable")
@@ -70,25 +75,27 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		invoices = []
 		for amount in (157.5, 63):
 			invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
-			invoice.items[0].update({"quantity": 1, "rate": amount, "item_discount_percent": 0})
+			invoice.items[0].update(
+				{"qty": 1, "price_list_rate": amount, "discount_percentage": 0, "discount_amount": 0}
+			)
 			invoices.append(invoice.save().submit())
 		payment = (
 			frappe.get_doc(
 				{
-					"doctype": "Books Payment",
+					"doctype": "Books Payment Entry",
 					"party_type": party.doctype,
 					"party": party.name,
-					"date": frappe.utils.now_datetime(),
+					"posting_date": frappe.utils.nowdate(),
 					"payment_type": "Receive",
-					"account": receivable.name,
-					"payment_account": cash.name,
-					"amount": 220.5,
-					"payment_method": "Cash",
-					"payment_references": [
+					"paid_from": receivable.name,
+					"paid_to": cash.name,
+					"paid_amount": 220.5,
+					"mode_of_payment": "Cash",
+					"references": [
 						{
-							"reference_type": invoice.doctype,
+							"reference_doctype": invoice.doctype,
 							"reference_name": invoice.name,
-							"amount": invoice.grand_total,
+							"allocated_amount": invoice.grand_total,
 						}
 						for invoice in invoices
 					],

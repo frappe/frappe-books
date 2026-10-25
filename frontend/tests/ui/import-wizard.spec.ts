@@ -37,7 +37,7 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
   await selectImportFile(
     page,
     'Customer',
-    `Name,Default Account\n${names[0]},Debtors\n${names[1]},Debtors\n`
+    `Customer Name,Default Account (Default Accounts)\n${names[0]},Debtors\n${names[1]},Debtors\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });
@@ -45,16 +45,15 @@ test('Frappe’s Data Import saves the rows and lists what it imported', async (
   for (const name of names) {
     await expect(results).toContainText(name);
   }
-  expect(
-    (await getDoc(page, 'Books Customer', names[1])).default_account
-  ).toBe('Debtors');
+  const [row] = (await getDoc(page, 'Books Customer', names[1])).accounts;
+  expect(row.account).toBe('Debtors');
 });
 
 test('links Frappe cannot find stop the import', async ({ page }) => {
   await selectImportFile(
     page,
     'Customer',
-    `Name,Default Account\nImport Cid ${run},Missing ${run}\n`
+    `Customer Name,Default Account (Default Accounts)\nImport Cid ${run},Missing ${run}\n`
   );
 
   const error = page.getByRole('dialog', { name: 'Cannot import' });
@@ -66,17 +65,20 @@ test('links Frappe cannot find stop the import', async ({ page }) => {
 test('rows of one invoice become one submitted invoice', async ({ page }) => {
   const item = `Import Pen ${run}`;
   await insertDocument(page, 'Books Item', {
-    name: item,
-    rate: 10,
-    income_account: 'Sales',
-    expense_account: 'Cost of Goods Sold',
+    item_code: item,
+    standard_rate: 10,
+    item_defaults: [
+      { income_account: 'Sales', expense_account: 'Cost of Goods Sold' },
+    ],
   });
-  await insertDocument(page, 'Books Customer', { name: `Import Dan ${run}` });
+  await insertDocument(page, 'Books Customer', {
+    customer_name: `Import Dan ${run}`,
+  });
   await selectImportFile(
     page,
     'Sales Invoice',
     [
-      'Invoice No,Number Series,Customer,Account,Date,Item (Items),Quantity (Items),Rate (Items)',
+      'Invoice No,Number Series,Customer,Debit To,Date,Item (Items),Quantity (Items),Rate (Items)',
       `A,SINV-,Import Dan ${run},Debtors,2026-09-30,${item},2,10`,
       `A,,,,,${item},1,5`,
     ].join('\n')
@@ -88,20 +90,18 @@ test('rows of one invoice become one submitted invoice', async ({ page }) => {
   const name = (await results.locator('p.break-words').first().textContent())!;
   const invoice = await getDoc(page, 'Books Sales Invoice', name.trim());
   expect(invoice.docstatus).toBe(1);
-  expect(
-    invoice.items.map((row: { quantity: number }) => row.quantity)
-  ).toEqual([2, 1]);
+  expect(invoice.items.map((row: { qty: number }) => row.qty)).toEqual([2, 1]);
 });
 
 test('Fix Failed keeps only the rows Frappe could not save', async ({
   page,
 }) => {
   const existing = `Import Eve ${run}`;
-  await insertDocument(page, 'Books Customer', { name: existing });
+  await insertDocument(page, 'Books Customer', { customer_name: existing });
   await selectImportFile(
     page,
     'Customer',
-    `Name,Email\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
+    `Customer Name,Email Id\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });

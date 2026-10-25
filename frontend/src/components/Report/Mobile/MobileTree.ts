@@ -110,12 +110,12 @@ export class MobileTree {
     });
   }
 
-  /** Rows under a group row per value of `groupBy`, then a total row. */
+  /** Rows under a group row per value of `groupBy`, then a total row in place of the report's own. */
   getGroupedRows(values: MobileValueColumn[], groupBy: string) {
     const groupIndex = getColumnIndex(this.report, groupBy);
     const groups = new Map<string, ReportRow[]>();
     for (const row of this.report.reportData) {
-      if (row.isEmpty) continue;
+      if (row.isEmpty || row.isTotal) continue;
       const name = row.cells[groupIndex]?.value ?? '';
       const group = groups.get(name) ?? [];
       group.push(row);
@@ -184,7 +184,8 @@ export class MobileTree {
       (total, cell) => total + Number(cell?.rawValue ?? 0),
       0
     );
-    const precision = this.report.fyo.singles.SystemSettings?.display_precision;
+    const precision =
+      this.report.fyo.singles.SystemSettings?.currency_precision;
     const isZero = Number(sum.toFixed(precision ?? 2)) === 0;
     if (cells.length === 1) {
       return { text: cells[0]?.value ?? '', isZero };

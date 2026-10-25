@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting.accounts import PAYMENT_ACCOUNT_TYPES, validate_changed_accounts
 from frappe_books.printing import default_print_format, update_default_print_formats, validate_print_format
 
@@ -18,7 +19,7 @@ PRINT_FORMAT_FIELDS = {
 	"sales_invoice_print_template": "Books Sales Invoice",
 	"purchase_invoice_print_template": "Books Purchase Invoice",
 	"journal_entry_print_template": "Books Journal Entry",
-	"payment_print_template": "Books Payment",
+	"payment_print_template": "Books Payment Entry",
 	"delivery_note_print_template": "Books Delivery Note",
 	"purchase_receipt_print_template": "Books Purchase Receipt",
 	"stock_entry_print_template": "Books Stock Entry",
@@ -98,6 +99,7 @@ def set_print_formats(print_formats: dict[str, str | None]) -> None:
 
 	A save of the settings leaves them alone, so no stored copy can set them back.
 	"""
+	forbid_in_accessory_mode()
 	# The write right on the settings is the right to choose their print formats.
 	frappe.has_permission("Books Defaults", "write", throw=True)
 	if unknown := set(print_formats) - set(PRINT_FORMAT_FIELDS):

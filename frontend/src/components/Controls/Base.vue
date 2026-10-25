@@ -49,6 +49,11 @@
         @scan="(code: string) => triggerChange(code)"
       />
     </template>
+    <template v-else-if="suffix" #suffix>
+      <span class="text-base text-ink-gray-5" aria-hidden="true">{{
+        suffix
+      }}</span>
+    </template>
   </FrappeTextInput>
 </template>
 <script lang="ts">
@@ -98,6 +103,8 @@ export default defineComponent({
     invalid: { type: Boolean, default: false },
     /** Names the value inside the control where no label is shown. */
     inlineLabel: Boolean,
+    /** Marks a required value with `*` after it, as report filters do. */
+    requiredMark: Boolean,
   },
   emits: ['focus', 'input', 'change'],
   data() {
@@ -199,8 +206,15 @@ export default defineComponent({
     inputMode(): string | undefined {
       return undefined;
     },
+    /** Text the input ends with, like a percent's `%`. */
+    suffix(): string {
+      return '';
+    },
     inputPlaceholder(): string {
       return this.placeholder || this.df.placeholder || this.df.label;
+    },
+    showsRequiredMark(): boolean {
+      return this.requiredMark && this.isRequired;
     },
     showMandatory(): boolean {
       return this.isEmpty && this.isRequired;

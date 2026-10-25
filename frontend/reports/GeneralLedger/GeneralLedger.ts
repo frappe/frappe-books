@@ -16,17 +16,17 @@ export class GeneralLedger extends Report {
     title: 'account',
     amount: 'debit',
     credit: 'credit',
-    meta: ['reference_name', 'party'],
+    meta: ['voucher_no', 'party'],
     balance: 'balance',
     chips: ['fromDate', 'toDate', 'account', 'partyType', 'party'],
   };
   usePagination = true;
 
   ascending = false;
-  reverted = false;
+  isCancelled = false;
   /** The doctype of the entries' documents, or `All`. */
-  referenceType = 'All';
-  groupBy: 'none' | 'party' | 'account' | 'reference_name' = 'none';
+  voucherType = 'All';
+  groupBy: 'none' | 'party' | 'account' | 'voucher_no' = 'none';
 
   async setDefaultFilters() {
     if (!this.toDate) {
@@ -48,8 +48,8 @@ export class GeneralLedger extends Report {
   }
 
   formatValue(column: ColumnField, rawValue: RawValue | undefined): string {
-    if (column.fieldname === 'reverted') {
-      return rawValue ? t`Reverted` : '';
+    if (column.fieldname === 'is_cancelled') {
+      return rawValue ? t`Cancelled` : '';
     }
 
     return super.formatValue(column, rawValue);
@@ -64,11 +64,11 @@ export class GeneralLedger extends Report {
       { label: t`All`, value: 'All' },
       { label: t`Sales Invoice`, value: 'Books Sales Invoice' },
       { label: t`Purchase Invoice`, value: 'Books Purchase Invoice' },
-      { label: t`Payment`, value: 'Books Payment' },
+      { label: t`Payment Entry`, value: 'Books Payment Entry' },
       { label: t`Journal Entry`, value: 'Books Journal Entry' },
     ];
 
-    if (this.fyo.singles.AccountingSettings?.enable_inventory) {
+    if (this.fyo.isFeatureOn('enable_inventory')) {
       refTypeOptions.push(
         { label: t`Delivery Note`, value: 'Books Delivery Note' },
         { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' },
@@ -81,16 +81,16 @@ export class GeneralLedger extends Report {
         fieldtype: 'Select',
         options: refTypeOptions,
         label: t`Ref Type`,
-        fieldname: 'referenceType',
+        fieldname: 'voucherType',
         placeholder: t`Ref Type`,
       },
       {
         fieldtype: 'DynamicLink',
         label: t`Ref Name`,
-        references: 'referenceType',
+        references: 'voucherType',
         placeholder: t`Ref Name`,
         emptyMessage: t`Change Ref Type`,
-        fieldname: 'referenceName',
+        fieldname: 'voucherNo',
       },
       {
         fieldtype: 'Link',
@@ -137,13 +137,13 @@ export class GeneralLedger extends Report {
           { label: t`None`, value: 'none' },
           { label: t`Party`, value: 'party' },
           { label: t`Account`, value: 'account' },
-          { label: t`Reference`, value: 'reference_name' },
+          { label: t`Reference`, value: 'voucher_no' },
         ],
       },
       {
         fieldtype: 'Check',
         label: t`Include Cancelled`,
-        fieldname: 'reverted',
+        fieldname: 'isCancelled',
       },
       {
         fieldtype: 'Check',

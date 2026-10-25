@@ -8,10 +8,11 @@ from frappe.tests import IntegrationTestCase
 import frappe_books
 from frappe_books.hooks import app_icon_route, app_icon_title, app_icon_url
 from frappe_books.printing import default_print_format, set_default_print_format
+from frappe_books.regional import ensure_address_template
 from frappe_books.setup import DEFAULT_PRINT_FORMATS, POS_PRINT_FORMAT, bootstrap
 
 POST_INSTALL_LINK_FIELDS = {
-	"Books Pos Settings": ("inventory", "cash_account", "write_off_account", "default_account"),
+	"Books POS Settings": ("warehouse", "cash_account", "write_off_account", "default_account"),
 	"Books Defaults": ("pos_print_template",),
 }
 
@@ -61,8 +62,15 @@ class IntegrationTestInstallation(IntegrationTestCase):
 
 		self.assertEqual(default_print_format("Books Sales Invoice"), POS_PRINT_FORMAT)
 
-	def test_install_seeds_a_bank_payment_method(self):
-		frappe.delete_doc("Books Payment Method", "Bank")
+	def test_install_seeds_a_bank_mode_of_payment(self):
+		frappe.delete_doc("Books Mode of Payment", "Bank")
 		bootstrap()
 
-		self.assertEqual(frappe.db.get_value("Books Payment Method", "Bank", "type"), "Bank")
+		self.assertEqual(frappe.db.get_value("Books Mode of Payment", "Bank", "type"), "Bank")
+
+	def test_setup_makes_a_default_address_template_once(self):
+		frappe.db.delete("Address Template")
+		ensure_address_template("India")
+		ensure_address_template("Germany")
+		self.assertEqual(frappe.get_all("Address Template", {"is_default": 1}, pluck="name"), ["India"])
+		self.assertIn("{{ address_line1 }}", frappe.db.get_value("Address Template", "India", "template"))

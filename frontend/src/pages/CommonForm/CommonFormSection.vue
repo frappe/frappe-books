@@ -1,24 +1,58 @@
 <template>
   <div v-if="(fields ?? []).length > 0">
     <component :is="DefineFields">
-      <div class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2">
+      <p v-if="description" class="mb-4 text-p-sm text-ink-gray-5">
+        {{ description }}
+      </p>
+      <!-- A section of calculated amounts reads as a totals block, the last one bold. -->
+      <div v-if="isTotals" class="flex justify-end">
+        <dl class="flex w-80 max-w-full flex-col gap-2 text-base">
+          <div
+            v-for="(field, index) of fields"
+            :key="field.fieldname"
+            class="flex justify-between gap-3"
+            :class="
+              index === fields.length - 1
+                ? 'border-t border-outline-gray-1 pt-2 font-semibold text-ink-gray-9'
+                : ''
+            "
+            :data-fieldname="field.fieldname"
+          >
+            <dt :class="index === fields.length - 1 ? '' : 'text-ink-gray-6'">
+              {{ field.label }}
+            </dt>
+            <dd class="tabular-nums text-ink-gray-8" dir="ltr">
+              {{ getTotal(field) }}
+            </dd>
+          </div>
+        </dl>
+      </div>
+      <div
+        v-else
+        class="grid gap-4 gap-x-8 grid-cols-1 md:grid-cols-2"
+        :class="{ 'lg:grid-cols-3': doc.schema.formColumns === 3 }"
+      >
         <div
           v-for="group in fieldGroups"
           :key="group[0].fieldname"
           :class="
             group[0].fieldtype === 'Check'
-              ? 'md:col-span-2 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
+              ? 'md:col-span-full grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2'
               : 'contents'
           "
         >
           <div
             v-for="field of group"
             :key="field.fieldname"
+            :data-fieldname="field.fieldname"
             :class="[
               'min-w-0 self-start w-full',
-              field.fieldtype === 'Table' ? 'md:col-span-2 text-base' : '',
+              field.fieldtype === 'Table' ? 'md:col-span-full text-base' : '',
+              isWideControl(field) ? 'md:col-span-full' : '',
+              (field as TargetField).card ? 'md:col-span-full' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
-              field.fieldname === 'terms_and_conditions' ? 'md:col-span-2' : '',
+              field.fieldname === 'terms_and_conditions' ? 'md:col-span-full' : '',
+              field.narrow ? 'md:max-w-xs' : '',
               field.invisible ? 'invisible' : '',
             ]"
           >
@@ -30,7 +64,7 @@
               <slot name="table" />
             </div>
             <Table
-              v-if="field.fieldtype === 'Table'"
+              v-if="field.fieldtype === 'Table' && !field.control"
               ref="fields"
               :show-label="true"
               :border="true"
@@ -46,11 +80,17 @@
             />
             <FormControl
               v-else
-              :ref="field.fieldname === doc.schema.titleField ? 'nameField' : 'fields'"
+              :ref="
+                field.fieldname === doc.schema.titleField
+                  ? 'nameField'
+                  : 'fields'
+              "
               class="w-full"
               :invalid="Boolean(errors?.[field.fieldname])"
               :layout="field.fieldtype === 'Check' ? 'inline' : undefined"
-              :as-switch="(switches && field.fieldtype === 'Check') || undefined"
+              :as-switch="
+                (switches && field.fieldtype === 'Check') || undefined
+              "
               :size="field.fieldtype === 'AttachImage' ? 'form' : undefined"
               :show-label="true"
               :border="true"
@@ -63,7 +103,10 @@
                   $emit('row-change', field, value, parentfield)
               "
             />
-            <FrappeErrorMessage class="mt-1" :message="errors?.[field.fieldname]" />
+            <FrappeErrorMessage
+              class="mt-1"
+              :message="errors?.[field.fieldname]"
+            />
           </div>
         </div>
       </div>
@@ -88,9 +131,13 @@ import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
-import { Field } from 'schemas/types';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Field, TargetField } from 'schemas/types';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';
+import { isCalculating } from 'src/frappe/calculated';
+import { fyo } from 'src/initFyo';
+import { isNumeric } from 'src/utils';
 import { focusOrSelectFormControl } from 'src/utils/ui';
 import { defineComponent, PropType } from 'vue';
 
@@ -98,6 +145,7 @@ export default defineComponent({
   components: { FrappeAccordion, FrappeErrorMessage, FormControl, Table },
   props: {
     title: { type: String, default: '' },
+    description: { type: String, default: undefined },
     errors: {
       type: Object as PropType<Record<string, string>>,
       required: true,
@@ -118,11 +166,23 @@ export default defineComponent({
     return { openSection: 'fields' as string | undefined };
   },
   computed: {
+    /** Every field is an amount the server calculates, as an invoice's totals are. */
+    isTotals(): boolean {
+      return (
+        this.fields.length > 1 &&
+        this.fields.every(
+          (field) => isNumeric(field) && this.doc.getFieldState(field).readOnly
+        )
+      );
+    },
     fieldGroups(): Field[][] {
       const groups: Field[][] = [];
       for (const field of this.fields) {
         const previous = groups[groups.length - 1];
-        if (field.fieldtype === 'Check' && previous?.[0].fieldtype === 'Check') {
+        if (
+          field.fieldtype === 'Check' &&
+          previous?.[0].fieldtype === 'Check'
+        ) {
           previous.push(field);
         } else {
           groups.push([field]);
@@ -135,6 +195,17 @@ export default defineComponent({
     focusOrSelectFormControl(this.doc, this.$refs.nameField);
   },
   methods: {
+    /** Rich text and picked records span the row. */
+    isWideControl({ control }: Field): boolean {
+      return control === 'TextEditor' || control === 'TableMultiSelect';
+    },
+    getTotal(field: Field): string {
+      if (isCalculating(this.doc, field)) {
+        return this.t`Calculating…`;
+      }
+
+      return fyo.format(this.doc.get(field.fieldname), field, this.doc);
+    },
     tableValue(value: unknown): unknown[] {
       if (Array.isArray(value)) {
         return value;

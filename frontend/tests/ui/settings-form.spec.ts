@@ -39,7 +39,9 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
   await expect(page.getByRole('combobox', { name: 'Date Format' })).toHaveValue(
     /\d{4}/
   );
-  await expect(page.getByRole('textbox', { name: 'Currency' })).toBeDisabled();
+  await expect(
+    page.getByRole('textbox', { name: 'Currency', exact: true })
+  ).toBeDisabled();
   const save = page.getByRole('button', { name: 'Save', exact: true });
   await expect(save).toBeDisabled();
 
@@ -74,4 +76,14 @@ test('the General tab shows the company country read only', async ({
   const country = page.getByRole('textbox', { name: 'Country' });
   await expect(country).toBeDisabled();
   await expect(country).not.toHaveValue('');
+});
+
+test('the Company tab shows the company and its accounts', async ({ page }) => {
+  await settings(page).getByRole('tab', { name: 'Company' }).click();
+  const name = page.getByRole('textbox', { name: 'Company Name' });
+  await expect(name).toBeDisabled();
+  await expect(name).not.toHaveValue('');
+  await expect(
+    settings(page).getByText('Write Off Account', { exact: true })
+  ).toBeVisible();
 });

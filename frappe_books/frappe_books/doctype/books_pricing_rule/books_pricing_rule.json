@@ -7,36 +7,37 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "number_series",
-  "is_enabled",
+  "naming_series",
+  "disable",
   "title",
   "items_section_break_5",
-  "applied_items",
+  "items",
   "default_section_break_7",
-  "discount_type",
-  "is_coupon_code_based",
+  "price_or_product_discount",
+  "coupon_code_based",
   "priority",
   "price_discount_scheme_section_break_11",
-  "price_discount_type",
-  "discount_rate",
+  "rate_or_discount",
+  "rate",
   "discount_percentage",
   "discount_amount",
   "product_discount_scheme_section_break_16",
   "free_item",
-  "free_item_quantity",
-  "free_item_unit",
-  "round_free_item_qty",
+  "free_qty",
+  "free_item_uom",
+  "round_free_qty",
   "rounding_method",
   "is_recursive",
-  "recurse_every",
+  "recurse_for",
   "quantity_and_amount_section_break_24",
-  "min_quantity",
-  "max_quantity",
-  "min_amount",
-  "max_amount",
+  "min_qty",
+  "max_qty",
+  "min_amt",
+  "max_amt",
   "validity_section_break_29",
   "valid_from",
-  "valid_to"
+  "valid_upto",
+  "company"
  ],
  "fields": [
   {
@@ -46,7 +47,7 @@
   },
   {
    "default": "PRLE-",
-   "fieldname": "number_series",
+   "fieldname": "naming_series",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Number Series",
@@ -55,10 +56,10 @@
    "set_only_once": 1
   },
   {
-   "default": "1",
-   "fieldname": "is_enabled",
+   "default": "0",
+   "fieldname": "disable",
    "fieldtype": "Check",
-   "label": "Is Pricing Rule Enabled"
+   "label": "Disable"
   },
   {
    "fieldname": "title",
@@ -73,10 +74,10 @@
    "label": "Items"
   },
   {
-   "fieldname": "applied_items",
+   "fieldname": "items",
    "fieldtype": "Table",
-   "label": "Applied Items",
-   "options": "Books Pricing Rule Item",
+   "label": "Apply Rule On Item Code",
+   "options": "Books Pricing Rule Item Code",
    "reqd": 1
   },
   {
@@ -85,20 +86,21 @@
    "label": "Default"
   },
   {
-   "fieldname": "discount_type",
+   "fieldname": "price_or_product_discount",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Discount Type",
-   "options": "Price Discount\nProduct Discount",
+   "label": "Price or Product Discount",
+   "options": "Price\nProduct",
    "reqd": 1
   },
   {
    "default": "0",
-   "fieldname": "is_coupon_code_based",
+   "fieldname": "coupon_code_based",
    "fieldtype": "Check",
-   "label": "Is Coupon Code Based"
+   "label": "Coupon Code Based"
   },
   {
+   "description": "Higher the number, higher the priority",
    "fieldname": "priority",
    "fieldtype": "Select",
    "in_list_view": 1,
@@ -112,27 +114,27 @@
    "label": "Price Discount Scheme"
   },
   {
-   "depends_on": "eval:doc.discount_type == 'Price Discount'",
-   "fieldname": "price_discount_type",
+   "depends_on": "eval:doc.price_or_product_discount == 'Price'",
+   "fieldname": "rate_or_discount",
    "fieldtype": "Select",
-   "label": "Price Discount Type",
-   "mandatory_depends_on": "eval:doc.discount_type == 'Price Discount'",
-   "options": "rate\npercentage\namount"
+   "label": "Rate or Discount",
+   "mandatory_depends_on": "eval:doc.price_or_product_discount == 'Price'",
+   "options": "Rate\nDiscount Percentage\nDiscount Amount"
   },
   {
-   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'rate'",
-   "fieldname": "discount_rate",
+   "depends_on": "eval:doc.price_or_product_discount == 'Price' && doc.rate_or_discount == 'Rate'",
+   "fieldname": "rate",
    "fieldtype": "Currency",
    "label": "Rate"
   },
   {
-   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'percentage'",
+   "depends_on": "eval:doc.price_or_product_discount == 'Price' && doc.rate_or_discount == 'Discount Percentage'",
    "fieldname": "discount_percentage",
    "fieldtype": "Float",
    "label": "Discount Percentage"
   },
   {
-   "depends_on": "eval:doc.discount_type == 'Price Discount' && doc.price_discount_type == 'amount'",
+   "depends_on": "eval:doc.price_or_product_discount == 'Price' && doc.rate_or_discount == 'Discount Amount'",
    "fieldname": "discount_amount",
    "fieldtype": "Currency",
    "label": "Discount Amount"
@@ -143,35 +145,35 @@
    "label": "Product Discount Scheme"
   },
   {
-   "depends_on": "eval:doc.discount_type != 'Price Discount'",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price'",
    "fieldname": "free_item",
    "fieldtype": "Link",
    "label": "Free Item",
    "options": "Books Item"
   },
   {
-   "depends_on": "eval:doc.discount_type != 'Price Discount'",
-   "fieldname": "free_item_quantity",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price'",
+   "fieldname": "free_qty",
    "fieldtype": "Float",
-   "label": "Quantity"
+   "label": "Qty"
   },
   {
-   "depends_on": "eval:doc.discount_type != 'Price Discount'",
-   "fieldname": "free_item_unit",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price'",
+   "fieldname": "free_item_uom",
    "fieldtype": "Link",
    "label": "UOM",
-   "options": "Books Uom"
+   "options": "Books UOM"
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.discount_type != 'Price Discount'",
-   "fieldname": "round_free_item_qty",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price'",
+   "fieldname": "round_free_qty",
    "fieldtype": "Check",
-   "label": "Round Free Item Quantity"
+   "label": "Round Free Qty"
   },
   {
    "default": "round",
-   "depends_on": "eval:doc.discount_type != 'Price Discount' && doc.round_free_item_qty",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price' && doc.round_free_qty",
    "fieldname": "rounding_method",
    "fieldtype": "Select",
    "label": "Rounding Method",
@@ -180,16 +182,16 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.discount_type != 'Price Discount'",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price'",
    "fieldname": "is_recursive",
    "fieldtype": "Check",
    "label": "Is Recursive"
   },
   {
-   "depends_on": "eval:doc.discount_type != 'Price Discount' && doc.is_recursive",
-   "fieldname": "recurse_every",
+   "depends_on": "eval:doc.price_or_product_discount != 'Price' && doc.is_recursive",
+   "fieldname": "recurse_for",
    "fieldtype": "Float",
-   "label": "Recurse Every (As Per Stock Unit)"
+   "label": "Recurse Every (As Per Transaction UOM)"
   },
   {
    "fieldname": "quantity_and_amount_section_break_24",
@@ -197,24 +199,24 @@
    "label": "Quantity and Amount"
   },
   {
-   "fieldname": "min_quantity",
+   "fieldname": "min_qty",
    "fieldtype": "Float",
-   "label": "Min Qty (As Per Stock Unit)"
+   "label": "Min Qty (As Per Stock UOM)"
   },
   {
-   "fieldname": "max_quantity",
+   "fieldname": "max_qty",
    "fieldtype": "Float",
-   "label": "Max Qty (As Per Stock Unit)"
+   "label": "Max Qty (As Per Stock UOM)"
   },
   {
-   "fieldname": "min_amount",
+   "fieldname": "min_amt",
    "fieldtype": "Currency",
-   "label": "Min Amount"
+   "label": "Min Amt"
   },
   {
-   "fieldname": "max_amount",
+   "fieldname": "max_amt",
    "fieldtype": "Currency",
-   "label": "Max Amount"
+   "label": "Max Amt"
   },
   {
    "fieldname": "validity_section_break_29",
@@ -227,15 +229,22 @@
    "label": "Valid From"
   },
   {
-   "fieldname": "valid_to",
+   "fieldname": "valid_upto",
    "fieldtype": "Date",
-   "label": "Valid To"
+   "label": "Valid Up To"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pricing Rule",

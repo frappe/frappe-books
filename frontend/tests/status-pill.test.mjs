@@ -16,7 +16,7 @@ function getBadge(values) {
 }
 
 test('a partly paid foreign-currency invoice shows the paid amount in the company currency', () => {
-  fyo.singles.SystemSettings = { currency: 'INR', display_precision: 2 };
+  fyo.singles.SystemSettings = { currency: 'INR', currency_precision: 2 };
   fyo.currencySymbols = { INR: '₹', USD: '$' };
 
   const badge = getBadge({
@@ -30,12 +30,29 @@ test('a partly paid foreign-currency invoice shows the paid amount in the compan
 });
 
 test('a submitted sales quote shows its status, as an invoice does', () => {
+  // A submitted quote is Open, as in ERPNext, coloured by its DocType state.
+  const status = {
+    fieldname: 'status',
+    options: [{ value: 'Open', label: 'Open' }],
+    states: { Open: 'Green' },
+  };
   const quote = {
     schemaName: 'Quotation',
     isSubmitted: true,
-    status: 'Submitted',
+    status: 'Open',
   };
 
   assert.notEqual(StatusPill.computed.showStatus?.call({ doc: quote }), false);
-  assert.deepEqual(getBadge(quote), { label: 'Submitted', theme: 'green' });
+  const pill = {
+    doc: { ...quote, schema: { isSubmittable: true, fields: [status] } },
+    fyo,
+    t: (strings, ...parts) => String.raw({ raw: strings }, ...parts),
+  };
+  for (const [name, method] of Object.entries(StatusPill.methods)) {
+    pill[name] = method.bind(pill);
+  }
+  assert.deepEqual(StatusPill.computed.badge.call(pill), {
+    label: 'Open',
+    theme: 'green',
+  });
 });

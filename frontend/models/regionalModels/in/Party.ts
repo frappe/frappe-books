@@ -9,7 +9,7 @@ function withGst(presentation: Presentation): Presentation {
     ...presentation,
     quickEditFields: [
       ...quickEditFields.filter((fieldname) => fieldname !== 'tax_id'),
-      'gst_type',
+      'gst_category',
       'gstin',
     ],
     omitFields: ['tax_id'],

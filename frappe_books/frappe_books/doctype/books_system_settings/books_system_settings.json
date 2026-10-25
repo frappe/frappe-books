@@ -13,7 +13,7 @@
   "remove_filter",
   "number_display_section_break_7",
   "locale",
-  "display_precision",
+  "currency_precision",
   "currency",
   "internal_precision"
  ],
@@ -67,11 +67,11 @@
   },
   {
    "description": "Decimal places shown for amounts. It is the Currency Precision of Frappe's System Settings, which only a System Manager can change. Quantities follow Frappe's float precision.",
-   "fieldname": "display_precision",
+   "fieldname": "currency_precision",
    "fieldtype": "Int",
    "in_list_view": 1,
    "is_virtual": 1,
-   "label": "Display Precision",
+   "label": "Currency Precision",
    "max_value": 9,
    "non_negative": 1
   },
@@ -96,7 +96,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

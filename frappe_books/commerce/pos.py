@@ -5,23 +5,25 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.query_builder import Order
-from frappe.utils import getdate
+from frappe.utils import get_datetime, getdate
 
 from frappe_books.accounting import settlement
+from frappe_books.accounting.accounts import mode_of_payment_account
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.dates import posting_datetime
 
 
 def open_shift_name():
 	"""Return the submitted opening shift that has no submitted closing shift."""
-	opening = frappe.qb.DocType("Books Pos Opening Shift")
-	closing = frappe.qb.DocType("Books Pos Closing Shift")
+	opening = frappe.qb.DocType("Books POS Opening Entry")
+	closing = frappe.qb.DocType("Books POS Closing Entry")
 	names = (
 		frappe.qb.from_(opening)
 		.left_join(closing)
-		.on((closing.opening_shift == opening.name) & (closing.docstatus == 1))
+		.on((closing.pos_opening_entry == opening.name) & (closing.docstatus == 1))
 		.select(opening.name)
 		.where((opening.docstatus == 1) & closing.name.isnull())
-		.orderby(opening.opening_date, order=Order.desc)
+		.orderby(opening.period_start_date, order=Order.desc)
 		.limit(1)
 	).run(pluck=True)
 	return names[0] if names else None
@@ -29,14 +31,14 @@ def open_shift_name():
 
 def pos_customer():
 	"""Return the customer of the POS profile in use, else the Books Defaults POS customer."""
-	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
-	customer = profile and frappe.db.get_value("Books Pos Profile", profile, "pos_customer")
+	profile = frappe.db.get_single_value("Books POS Settings", "pos_profile")
+	customer = profile and frappe.db.get_value("Books POS Profile", profile, "customer")
 	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
 
 
 def counter_cash_account():
 	"""Return the account that POS cash goes through until the shift closes."""
-	account = frappe.db.get_single_value("Books Pos Settings", "cash_account")
+	account = frappe.db.get_single_value("Books POS Settings", "cash_account")
 	if not account:
 		frappe.throw(_("POS Counter Cash Account is not set. Please set it on POS Settings"))
 	return account
@@ -44,14 +46,14 @@ def counter_cash_account():
 
 def is_cash_method(payment_method):
 	"""Cash-type methods go through the counter, which the POS shift counts and reconciles."""
-	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
+	return frappe.get_cached_value("Books Mode of Payment", payment_method, "type") == "Cash"
 
 
 def counter_payment_account(payment_method):
 	"""Cash goes through the counter; other methods use their own account."""
 	if is_cash_method(payment_method):
 		return counter_cash_account()
-	return frappe.get_cached_value("Books Payment Method", payment_method, "account")
+	return mode_of_payment_account(payment_method)
 
 
 def counter_payment_amounts(rows, due):
@@ -61,7 +63,7 @@ def counter_payment_amounts(rows, due):
 		tendered = as_decimal(row.amount)
 		if tendered <= 0:
 			frappe.throw(_("Please enter an amount greater than zero."))
-		if tendered > due and not is_cash_method(row.payment_method):
+		if tendered > due and not is_cash_method(row.mode_of_payment):
 			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
 		paid = min(tendered, due)
 		due -= paid
@@ -71,28 +73,25 @@ def counter_payment_amounts(rows, due):
 
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
-	settings = frappe.get_doc("Books Pos Settings", for_update=True)
+	settings = frappe.get_doc("Books POS Settings", for_update=True)
 	if not settings.cash_account:
 		frappe.throw(_("POS Counter Cash Account is not set. Please set it on POS Settings"))
 	return settings
 
 
 def transacted_amounts(from_date, to_date):
-	invoices = frappe.get_all(
-		"Books Sales Invoice",
-		filters={"is_pos": 1, "docstatus": 1, "date": ["between", [from_date, to_date]]},
-		fields=["name", "return_against"],
-	)
+	"""Sum the payments of the POS invoices dated from `from_date` to `to_date`, by payment method."""
+	invoices = _pos_invoices(get_datetime(from_date), get_datetime(to_date))
 	if not invoices:
 		return {}
 	references = frappe.get_all(
-		"Books Payment For",
+		"Books Payment Entry Reference",
 		filters={
-			"parenttype": "Books Payment",
-			"reference_type": "Books Sales Invoice",
+			"parenttype": "Books Payment Entry",
+			"reference_doctype": "Books Sales Invoice",
 			"reference_name": ["in", [invoice.name for invoice in invoices]],
 		},
-		fields=["parent", "reference_name", "amount"],
+		fields=["parent", "reference_name", "allocated_amount"],
 	)
 	methods = _submitted_payment_methods({reference.parent for reference in references})
 	invoices = {invoice.name: invoice for invoice in invoices}
@@ -100,7 +99,9 @@ def transacted_amounts(from_date, to_date):
 	for reference in references:
 		method = methods.get(reference.parent)
 		if method:
-			result[method] += settlement.signed(invoices[reference.reference_name], reference.amount)
+			result[method] += settlement.signed(
+				invoices[reference.reference_name], reference.allocated_amount
+			)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 
@@ -126,7 +127,11 @@ def make_cash_journal(posting_date, rows, remark):
 	for account, debit, credit in rows:
 		net[account] += as_decimal(debit) - as_decimal(credit)
 	accounts = [
-		{"account": account, "debit": rounded(max(amount, 0)), "credit": rounded(max(-amount, 0))}
+		{
+			"account": account,
+			"debit_in_account_currency": rounded(max(amount, 0)),
+			"credit_in_account_currency": rounded(max(-amount, 0)),
+		}
 		for account, amount in net.items()
 		if rounded(amount)
 	]
@@ -135,7 +140,7 @@ def make_cash_journal(posting_date, rows, remark):
 	journal = frappe.get_doc(
 		{
 			"doctype": "Books Journal Entry",
-			"entry_type": "Cash Entry",
+			"voucher_type": "Cash Entry",
 			"posting_date": getdate(posting_date),
 			"user_remark": remark,
 			"accounts": accounts,
@@ -153,14 +158,31 @@ def cancel_cash_journal(name):
 	journal.cancel()
 
 
+def _pos_invoices(from_datetime, to_datetime):
+	invoices = frappe.get_all(
+		"Books Sales Invoice",
+		filters={
+			"is_pos": 1,
+			"docstatus": 1,
+			"posting_date": ["between", [from_datetime.date(), to_datetime.date()]],
+		},
+		fields=["name", "return_against", "posting_date", "posting_time"],
+	)
+	return [
+		invoice
+		for invoice in invoices
+		if from_datetime <= posting_datetime(invoice.posting_date, invoice.posting_time) <= to_datetime
+	]
+
+
 def _submitted_payment_methods(names):
 	if not names:
 		return {}
 	return dict(
 		frappe.get_all(
-			"Books Payment",
+			"Books Payment Entry",
 			filters={"name": ["in", sorted(names)], "docstatus": 1},
-			fields=["name", "payment_method"],
+			fields=["name", "mode_of_payment"],
 			as_list=True,
 		)
 	)

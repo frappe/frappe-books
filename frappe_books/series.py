@@ -11,7 +11,7 @@ INVALID_PREFIX_CHARACTERS = "/, ?, &, =, %"
 # Doctype: (standard prefix, series reference type, Books Defaults field that selects its series)
 NUMBER_SERIES = {
 	"Books Journal Entry": ("JV-", "JournalEntry", "journal_entry_number_series"),
-	"Books Payment": ("PAY-", "Payment", "payment_number_series"),
+	"Books Payment Entry": ("PAY-", "PaymentEntry", "payment_number_series"),
 	"Books Purchase Invoice": ("PINV-", "PurchaseInvoice", "purchase_invoice_number_series"),
 	"Books Pricing Rule": ("PRLE-", "PricingRule", None),
 	"Books Purchase Receipt": ("PREC-", "PurchaseReceipt", "purchase_receipt_number_series"),
@@ -20,10 +20,10 @@ NUMBER_SERIES = {
 	"Books Stock Entry": ("SMOV-", "StockEntry", "stock_entry_number_series"),
 	"Books Quotation": ("SQUOT-", "Quotation", "quotation_number_series"),
 }
-# Named doctype: (item flag, item series field)
+# Named doctype: (item flag, item series field), the field holding a naming pattern such as BAT-.####
 ITEM_SERIES = {
-	"Books Batch": ("has_batch", "batch_series"),
-	"Books Serial Number": ("has_serial_number", "serial_number_series"),
+	"Books Batch": ("has_batch_no", "batch_number_series"),
+	"Books Serial No": ("has_serial_no", "serial_no_series"),
 }
 ITEM_SERIES_START = 1001
 ITEM_SERIES_DIGITS = 4
@@ -32,7 +32,7 @@ ITEM_SERIES_DIGITS = 4
 class SeriesNamingMixin:
 	def autoname(self):
 		self.set_number_series()
-		series = frappe.get_doc("Books Number Series", self.number_series)
+		series = frappe.get_doc("Books Number Series", self.naming_series)
 		if series.reference_type != NUMBER_SERIES[self.doctype][1]:
 			frappe.throw(
 				_("Number series {0} is not for {1} documents.").format(series.name, _(self.doctype))
@@ -41,7 +41,7 @@ class SeriesNamingMixin:
 
 	def set_number_series(self):
 		"""Number the document by the default series when none is chosen."""
-		self.number_series = self.number_series or default_series(self.doctype)
+		self.naming_series = self.naming_series or default_series(self.doctype)
 
 
 def default_series(doctype):
@@ -64,9 +64,23 @@ def start_series(pattern, start):
 
 def validate_prefix(prefix, message):
 	"""A prefix shows in /books URLs and must suit a Frappe naming series."""
-	if INVALID_PREFIX.search(prefix):
+	validate_pattern(series_pattern(prefix, 1), message)
+
+
+def validate_pattern(pattern, message):
+	"""A naming pattern's names show in /books URLs."""
+	if INVALID_PREFIX.search(pattern):
 		frappe.throw(message)
-	NamingSeries(series_pattern(prefix, 1)).validate()
+	NamingSeries(pattern).validate()
+
+
+def item_series_pattern(series):
+	"""The naming pattern a typed item series stands for: a prefix, like BAT, numbers as BAT-.####."""
+	series = (series or "").strip()
+	if not series or "#" in series:
+		return series
+	prefix = series if series.endswith("-") else f"{series}-"
+	return series_pattern(prefix, ITEM_SERIES_DIGITS)
 
 
 def new_item_names(doctype, item, count):
@@ -75,10 +89,9 @@ def new_item_names(doctype, item, count):
 	item_doc = frappe.get_doc("Books Item", item)
 	item_doc.check_permission("read")
 	flag, series_field = ITEM_SERIES[doctype]
-	prefix = (item_doc.get(series_field) or "").strip()
-	if not item_doc.get(flag) or not prefix:
+	pattern = item_doc.get(series_field)
+	if not item_doc.get(flag) or not pattern:
 		return []
-	pattern = series_pattern(prefix, ITEM_SERIES_DIGITS)
 	start_series(pattern, ITEM_SERIES_START)
 	return unused_names(doctype, pattern, count)
 

@@ -22,6 +22,17 @@
           </template>
           {{ tab.label }}
         </FrappeSettingsNavItem>
+        <FrappeSettingsNavItem v-if="erpnextTab" :value="erpnextTab.value">
+          <template #prefix>
+            <img
+              v-if="erpnextTab.icon"
+              :src="erpnextTab.icon"
+              class="size-4 shrink-0"
+              alt=""
+            />
+          </template>
+          {{ erpnextTab.label }}
+        </FrappeSettingsNavItem>
       </FrappeSettingsNavGroup>
     </FrappeSettingsSidebar>
 
@@ -65,11 +76,7 @@
               </div>
             </section>
           </div>
-          <div
-            v-else
-            class="divide-y divide-outline-gray-1"
-            aria-busy="true"
-          >
+          <div v-else class="divide-y divide-outline-gray-1" aria-busy="true">
             <div
               v-for="width in ['w-40', 'w-32', 'w-48', 'w-36']"
               :key="width"
@@ -78,6 +85,42 @@
               <FrappeSkeleton class="h-4 rounded-4" :class="width" />
               <FrappeSkeleton class="ms-auto h-7 w-60 rounded-4" />
             </div>
+          </div>
+        </FrappeSettingsBody>
+      </FrappeSettingsPanel>
+
+      <!-- Company and mode save as they change; the POS screen with Save. -->
+      <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
+        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6">
+          <template v-if="posScreenGroups.length" #actions>
+            <FrappeButton
+              variant="solid"
+              :label="t`Save`"
+              :disabled="!canSave"
+              @click="sync"
+            />
+          </template>
+        </FrappeSettingsHeader>
+        <FrappeSettingsBody>
+          <div class="space-y-11">
+            <ERPNextSettings />
+            <section v-for="group in posScreenGroups" :key="group.title">
+              <h2 class="mb-2 text-lg-semibold text-ink-gray-8">
+                {{ group.title }}
+              </h2>
+              <div class="divide-y divide-outline-gray-1">
+                <SettingsField
+                  v-for="field in group.fields"
+                  :key="field.fieldname"
+                  :field="field"
+                  :doc="group.doc"
+                  :error="errors[field.fieldname]"
+                  @change="
+                    (value: DocValue) => onValueChange(group.doc, field, value)
+                  "
+                />
+              </div>
+            </section>
           </div>
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
@@ -114,11 +157,13 @@ import { Field } from 'schemas/types';
 import QuickEditForm from 'src/pages/QuickEditForm.vue';
 import { settingsDialog } from 'src/utils/refs';
 import { computed, defineComponent } from 'vue';
+import ERPNextSettings from './ERPNextSettings.vue';
 import SettingsField from './SettingsField.vue';
-import { useSettings } from './useSettings';
+import { getERPNextTab, useSettings } from './useSettings';
 
 export default defineComponent({
   components: {
+    ERPNextSettings,
     FrappeButton,
     FrappeSettingsBody,
     FrappeSettingsContent,
@@ -133,17 +178,20 @@ export default defineComponent({
     SettingsField,
   },
   provide() {
-    return { doc: computed(() => this.doc) };
+    // The ERPNext tab's controls edit the POS screen preferences, whose table is of Defaults.
+    const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
+    return { doc: computed(() => this.doc ?? posScreen()) };
   },
   setup() {
-    return { ...useSettings(), settingsDialog };
+    return { ...useSettings(), settingsDialog, erpnextTab: getERPNextTab() };
   },
   computed: {
     /** A tab that is not shown, e.g. Inventory with inventory off, opens the first. */
     activeTab: {
       get(): string {
         const { tab } = settingsDialog;
-        return this.tabs.some(({ value }) => value === tab)
+        const tabs = [...this.tabs, this.erpnextTab];
+        return tabs.some((shown) => shown?.value === tab)
           ? tab
           : this.tabs[0].value;
       },

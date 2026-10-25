@@ -18,10 +18,10 @@ export interface MobileRowLayout {
 
 /** Line 2 fields where the phone design differs from the list columns. */
 const metaFieldnames: Record<string, string[]> = {
-  [ModelNameEnum.Customer]: ['phone'],
-  [ModelNameEnum.Supplier]: ['phone'],
-  [ModelNameEnum.Item]: ['item_type', 'tax'],
-  [ModelNameEnum.Payment]: ['name', 'date', 'payment_type'],
+  [ModelNameEnum.Customer]: ['mobile_no'],
+  [ModelNameEnum.Supplier]: ['mobile_no'],
+  [ModelNameEnum.Item]: ['item_type'],
+  [ModelNameEnum.PaymentEntry]: ['name', 'posting_date', 'payment_type'],
 };
 
 /** Schemas whose rows start with an initials avatar. */
@@ -44,7 +44,9 @@ export function getMobileRowLayout(
     (column) => column !== badge && !isNumeric(column.fieldtype)
   );
   const title =
-    text.find((column) => column.fieldname === getModel(schemaName)?.partyField) ??
+    text.find(
+      (column) => column.fieldname === getModel(schemaName)?.partyField
+    ) ??
     text[0] ??
     columns[0];
 

@@ -18,8 +18,9 @@ from frappe_books.tests.accounting import (
 	make_account,
 	make_customer,
 	make_item,
+	make_warehouse,
+	posting_values,
 	set_inventory_accounts,
-	unique_name,
 )
 
 
@@ -28,8 +29,8 @@ class IntegrationTestStockPosting(IntegrationTestCase):
 		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
 		received = make_account("Received", root_type="Liability")
 		set_inventory_accounts(make_account("Stock", account_type="Stock").name, received.name, cogs.name)
-		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1).name
-		shop = frappe.get_doc({"doctype": "Books Location", "name": unique_name("Shop")}).insert().name
+		item = make_item(make_account("Income", root_type="Income").name, received.name, is_stock_item=1).name
+		shop = make_warehouse("Shop").name
 		now = now_datetime()
 		seed_stock(item, quantity=5, rate=10, date=add_to_date(now, hours=-4))
 		transfer = _move_to(item, shop, 3, add_to_date(now, hours=-3))
@@ -51,23 +52,31 @@ class IntegrationTestStockPosting(IntegrationTestCase):
 		self.assertEqual([stock_value_change(returned), account_balance(returned, cogs.name)], [30, -30])
 
 
-def _move_to(item, location, quantity, date):
-	row = {"item": item, "from_location": "Stores", "to_location": location, "quantity": quantity, "rate": 1}
-	movement = frappe.get_doc({**movement_values("MaterialTransfer", [row]), "date": date}).insert()
+def _move_to(item, warehouse, quantity, date):
+	row = {
+		"item_code": item,
+		"s_warehouse": "Stores",
+		"t_warehouse": warehouse,
+		"qty": quantity,
+		"basic_rate": 1,
+	}
+	movement = frappe.get_doc(
+		{**movement_values("Material Transfer", [row]), **posting_values(date)}
+	).insert()
 	movement.submit()
 	return movement
 
 
-def _ship(item, location, quantity, date, return_against=None):
+def _ship(item, warehouse, quantity, date, return_against=None):
 	party = return_against.party if return_against else None
 	party = party or make_customer(make_account("Receivable", account_type="Receivable").name).name
 	shipment = frappe.get_doc(
 		{
 			"doctype": "Books Delivery Note",
 			"customer": party,
-			"date": date,
+			**posting_values(date),
 			"return_against": return_against and return_against.name,
-			"items": [{"item": item, "location": location, "quantity": quantity, "rate": 25}],
+			"items": [{"item_code": item, "warehouse": warehouse, "qty": quantity, "rate": 25}],
 		}
 	).insert()
 	shipment.submit()

@@ -30,7 +30,7 @@ test('saving marks missing fields in place', async ({ page }) => {
 
 test('one header menu holds the document actions', async ({ page }) => {
   const name = `Phone Menu Customer ${Date.now()}`;
-  await insertDocument(page, 'Books Customer', { name });
+  await insertDocument(page, 'Books Customer', { customer_name: name });
   await page.goto(`/books/edit/Customer/${encodeURIComponent(name)}`);
   await waitForBooks(page);
 
@@ -102,11 +102,11 @@ test('rows without quick edit fields edit their table columns', async ({
 });
 
 test('fields before a table stay above its header', async ({ page }) => {
-  await page.goto(`/books/edit/Tax/new-phone-${Date.now()}`);
+  await page.goto(`/books/edit/ItemTaxTemplate/new-phone-${Date.now()}`);
   await waitForBooks(page);
 
-  const name = page.getByRole('textbox', { name: 'Name' });
-  const details = page.getByRole('heading', { name: 'Details' });
+  const name = page.getByRole('textbox', { name: 'Title' });
+  const details = page.getByRole('heading', { name: 'Tax Rates' });
   await expect(details).toBeVisible();
   const [nameBox, detailsBox] = await Promise.all([
     name.boundingBox(),
@@ -126,8 +126,8 @@ test('a foreign-currency customer shows the exchange rate', async ({
     enabled: 1,
   });
   await insertDocument(page, 'Books Customer', {
-    name: customer,
-    currency: code,
+    customer_name: customer,
+    default_currency: code,
   });
 
   await page.getByRole('button', { name: 'Customer', exact: true }).click();

@@ -32,16 +32,16 @@ async function submitShortInvoice(makeDeliveryNote) {
   let submitted;
   stubFrappe(({ path, body }) => {
     if (path.endsWith('get_sale_shortfalls')) {
-      return { message: [{ item: 'Pen', quantity: 1 }] };
+      return { message: [{ item_code: 'Pen', stock_qty: 1 }] };
     }
     submitted = body.document;
     return { docs: [{ ...body.document, docstatus: 1 }] };
   });
   const invoice = newFrappeDoc('SalesInvoice', {
     name: 'SINV-1001',
-    date: new Date('2026-01-01T00:00:00Z'),
+    posting_date: new Date('2026-01-01T00:00:00Z'),
     make_auto_stock_transfer: makeDeliveryNote,
-    items: [{ item: 'Pen', quantity: 2 }],
+    items: [{ item_code: 'Pen', stock_qty: 2 }],
   });
   await loadSaved(invoice, { docstatus: 0 });
   assert.equal(await commonDocSubmit(invoice), true);
@@ -72,12 +72,12 @@ test('the submit prompt tells the payment a sale or purchase makes', async () =>
     messages.push(message.children.join(''));
     void actions[1].onClick();
   };
-  for (const [schemaName, account] of [
-    ['SalesInvoice', 'Debtors'],
-    ['PurchaseInvoice', 'Creditors'],
+  for (const [schemaName, partyAccount] of [
+    ['SalesInvoice', { debit_to: 'Debtors' }],
+    ['PurchaseInvoice', { credit_to: 'Creditors' }],
   ]) {
     const invoice = newFrappeDoc(schemaName, {
-      account,
+      ...partyAccount,
       make_auto_payment: true,
       outstanding_amount: fyo.pesa(100),
     });

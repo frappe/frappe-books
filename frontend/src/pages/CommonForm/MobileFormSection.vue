@@ -8,8 +8,18 @@
         @click="isOpen = !isOpen"
       >
         <span class="min-w-0 flex-1 truncate">{{ title }}</span>
+        <FrappeBadge
+          v-if="requiredCount"
+          theme="red"
+          :label="t`${requiredCount} required`"
+        />
         <span
-          v-if="hasError"
+          v-else-if="summary"
+          class="text-base font-normal text-ink-gray-5"
+          >{{ summary }}</span
+        >
+        <span
+          v-if="hasError && !requiredCount"
           class="size-1.5 rounded-full bg-surface-red-7"
           :aria-label="t`Has errors`"
         />
@@ -20,27 +30,34 @@
         />
       </button>
     </div>
+    <p
+      v-if="description && (kind !== 'collapsible' || isOpen)"
+      class="px-4 pt-2 text-p-sm text-ink-gray-5"
+      :class="{ 'pb-2': kind === 'collapsible' }"
+    >
+      {{ description }}
+    </p>
     <template v-for="block in blocks" :key="block.key">
       <div
-        v-if="block.key === 'table' && tableField"
+        v-if="block.table && (kind !== 'collapsible' || isOpen)"
         class="flex flex-col gap-3 p-4"
       >
-        <slot name="table" />
+        <slot v-if="block.table === tableField" name="table" />
         <Table
-          :data-fieldname="tableField.fieldname"
-          :df="tableField"
-          :value="(doc[tableField.fieldname] ?? []) as FrappeDoc[]"
-          :title="tableTitle"
+          :data-fieldname="block.table.fieldname"
+          :df="block.table"
+          :value="(doc[block.table.fieldname] ?? []) as FrappeDoc[]"
+          :title="block.table === tableField ? tableTitle : block.table.label"
           @editrow="(row: FrappeDoc) => $emit('editrow', row)"
           @change="
-            (value: DocValue) => $emit('value-change', tableField!, value)
+            (value: DocValue) => $emit('value-change', block.table!, value)
           "
           @row-change="
             (field: Field, value: DocValue, parentfield: Field) =>
               $emit('row-change', field, value, parentfield)
           "
         />
-        <FrappeErrorMessage :message="errors[tableField.fieldname]" />
+        <FrappeErrorMessage :message="errors[block.table.fieldname]" />
       </div>
       <div
         v-else-if="block.groups.length && (kind !== 'collapsible' || isOpen)"
@@ -84,18 +101,25 @@
             "
           />
         </template>
-        <slot v-if="block.key !== 'before'" name="end" />
+        <slot
+          v-if="block.key === 'fields' || block.key === 'after'"
+          name="end"
+        />
       </div>
     </template>
   </section>
 </template>
 <script setup lang="ts">
-import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
+import {
+  Badge as FrappeBadge,
+  ErrorMessage as FrappeErrorMessage,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { getRowSummary } from 'src/components/Controls/rowSummary';
+import { isCalculating } from 'src/frappe/calculated';
 import Table from 'src/components/Controls/Table.vue';
 import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
@@ -106,9 +130,18 @@ import MobileFormField from './MobileFormField.vue';
 
 const props = defineProps<{
   title: string;
+  description?: string;
   fields: Field[];
   doc: FrappeDoc;
   errors: Record<string, string>;
+  /** Always a collapsible section, like accessory mode's More details and end tabs. */
+  collapsible?: boolean;
+  /** What a collapsible header says beside its title, e.g. its field count. */
+  summary?: string;
+  /** Empty mandatory fields, which a collapsible header counts in red instead. */
+  requiredCount?: number;
+  /** Whether a collapsible section starts open; by default, when it holds a value. */
+  open?: boolean;
 }>();
 
 defineEmits<{
@@ -122,6 +155,10 @@ const dateTypes: string[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
 // Line tables (items) show as rows; read-only summary tables (taxes) as totals.
 const tableField = computed(() => props.fields.find(isLineTable));
 const kind = computed(() => {
+  if (props.collapsible) {
+    return 'collapsible';
+  }
+
   if (tableField.value) {
     return 'table';
   }
@@ -139,45 +176,51 @@ const hasError = computed(() =>
 
 // Collapsed sections open when they hold a value or an error.
 const isOpen = ref(
-  props.fields.some((field) => hasFieldValue(props.doc, field))
+  props.open ?? props.fields.some((field) => hasFieldValue(props.doc, field))
 );
 watch(hasError, (value) => value && (isOpen.value = true), { immediate: true });
 
 interface FieldBlock {
-  key: 'before' | 'table' | 'after' | 'fields';
+  /** `before` the first table, `after` a table, or `fields` in a section without tables. */
+  key: string;
   groups: Field[][];
+  table?: Field;
 }
 
-/** Fields keep their schema order around the table. */
+/** Fields keep their schema order around the tables, e.g. two of an ERPNext section. */
 const blocks = computed<FieldBlock[]>(() => {
-  const fields = visibleFields.value;
-  const index = tableField.value ? fields.indexOf(tableField.value) : -1;
-  if (index === -1) {
-    return [{ key: 'fields', groups: groupFields(fields) }];
+  const blocks: FieldBlock[] = [];
+  let fields: Field[] = [];
+  const close = (key: string) =>
+    blocks.push({ key, groups: groupFields(fields) });
+  for (const field of visibleFields.value) {
+    if (isLineTable(field)) {
+      close(blocks.length ? `after-${blocks.length}` : 'before');
+      blocks.push({
+        key: `table-${field.fieldname}`,
+        groups: [],
+        table: field,
+      });
+      fields = [];
+    } else {
+      fields.push(field);
+    }
   }
 
-  return [
-    { key: 'before', groups: groupFields(fields.slice(0, index)) },
-    { key: 'table', groups: [] },
-    { key: 'after', groups: groupFields(fields.slice(index + 1)) },
-  ];
+  close(blocks.length ? 'after' : 'fields');
+  return blocks;
 });
 
 const tableTitle = computed(() =>
   props.title === 'Default' ? tableField.value?.label : props.title
 );
 
-/** Consecutive date fields sit two to a row. */
+/** Consecutive date fields, and the schema's field pairs, sit two to a row. */
 function groupFields(fields: Field[]): Field[][] {
   const groups: Field[][] = [];
   for (const field of fields) {
     const previous = groups.at(-1);
-    const isDate = dateTypes.includes(field.fieldtype);
-    if (
-      isDate &&
-      previous?.length === 1 &&
-      dateTypes.includes(previous[0].fieldtype)
-    ) {
+    if (previous?.length === 1 && isPaired(previous[0], field)) {
       previous.push(field);
     } else {
       groups.push([field]);
@@ -185,6 +228,19 @@ function groupFields(fields: Field[]): Field[][] {
   }
 
   return groups;
+}
+
+function isPaired(first: Field, second: Field): boolean {
+  const pairs = props.doc.schema.mobileFieldPairs ?? [];
+  if (
+    pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)
+  ) {
+    return true;
+  }
+
+  return (
+    dateTypes.includes(first.fieldtype) && dateTypes.includes(second.fieldtype)
+  );
 }
 
 function getListClass(block: FieldBlock) {
@@ -196,7 +252,7 @@ function getListClass(block: FieldBlock) {
   return [
     'p-4',
     onlyTotals ? 'gap-2.5 text-md tabular-nums' : 'gap-4',
-    { 'border-t border-outline-gray-1': block.key === 'after' },
+    { 'border-t border-outline-gray-1': block.key.startsWith('after') },
   ];
 }
 
@@ -209,16 +265,26 @@ const visibleFields = computed(() => {
   return props.fields.filter((field) => hasFieldValue(props.doc, field));
 });
 
+// A Table MultiSelect is a field, not a table of rows.
+function isTable(field: Field) {
+  return field.fieldtype === FieldTypeEnum.Table && !field.control;
+}
+
 function isLineTable(field: Field) {
-  return field.fieldtype === FieldTypeEnum.Table && !field.readOnly;
+  return isTable(field) && !field.readOnly;
 }
 
 function isTotal(field: Field) {
-  if (field.fieldtype === FieldTypeEnum.Table) {
+  if (isTable(field)) {
     return !!field.readOnly;
   }
 
-  return isNumeric(field) && props.doc.getFieldState(field).readOnly;
+  // A Percent reads as a value under its label, not as an amount.
+  return (
+    isNumeric(field) &&
+    !field.control &&
+    props.doc.getFieldState(field).readOnly
+  );
 }
 
 function getTotalLines(field: Field) {
@@ -230,7 +296,9 @@ function getTotalLines(field: Field) {
         .at(-1);
 
   if (field.fieldtype !== FieldTypeEnum.Table) {
-    const value = fyo.format(props.doc.get(field.fieldname), field, props.doc);
+    const value = isCalculating(props.doc, field)
+      ? t`Calculating…`
+      : fyo.format(props.doc.get(field.fieldname), field, props.doc);
     return [{ label: field.label ?? field.fieldname, value, emphasis }];
   }
 

@@ -2,53 +2,97 @@ import { expect, test, type Page } from '@playwright/test';
 import { updateSingle } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
-// Frappe serves customers, addresses, leads and pricing rules directly; their
-// screens still look and behave as before.
+// Frappe serves customers, their contacts and addresses, leads and pricing
+// rules directly.
 useBooksSession('/books/list/Customer');
 
-test('a new customer saves with an address made from its link', async ({
+test('a new customer saves its contact and address as its primary ones', async ({
   page,
 }) => {
   const name = `Form Customer ${Date.now()}`;
-  const addressName = `${name} Office`;
   await page.getByRole('button', { name: 'New', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/Customer\//);
-  await page
-    .getByRole('textbox', { name: 'Name (required)', exact: true })
-    .fill(name);
-
-  const address = page.getByRole('combobox', { name: 'Address', exact: true });
-  await address.fill(addressName);
-  await page.getByRole('option', { name: /^Create/ }).click();
   await expect(
-    page.getByRole('textbox', { name: 'Address Name', exact: true })
-  ).toHaveValue(addressName);
+    page.getByText('Saved as the primary Contact for this customer')
+  ).toBeVisible();
   await page
-    .getByRole('textbox', { name: 'Address Line 1' })
+    .getByRole('textbox', { name: 'Customer Name (required)', exact: true })
+    .fill(name);
+  await page
+    .getByRole('textbox', { name: 'Email Id', exact: true })
+    .fill('asha@example.com');
+  await page
+    .getByRole('textbox', { name: 'Address Line 1', exact: true })
     .fill('7 Hill Road');
-  await page.getByRole('textbox', { name: 'City / Town' }).fill('Pune');
-  await page.getByRole('combobox', { name: /^Country/ }).fill('India');
+  await page.getByRole('textbox', { name: 'City', exact: true }).fill('Pune');
+  await page
+    .getByRole('combobox', { name: 'Country', exact: true })
+    .fill('India');
   await page.getByRole('option', { name: 'India', exact: true }).click();
-  await page.getByRole('button', { name: 'Save', exact: true }).last().click();
-
-  // The link shows the display text the server wrote for the new address.
-  await expect(address).toHaveValue('7 Hill Road, Pune, India');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/Customer/${encodeURIComponent(name)}$`)
   );
-  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
-  expect(await getValue(page, 'Books Customer', name, 'address')).toBe(
-    addressName
+
+  // The saved customer shows the records the server made, as cards.
+  const contact = page.locator('[data-fieldname="customer_primary_contact"]');
+  const address = page.locator('[data-fieldname="customer_primary_address"]');
+  await expect(contact).toContainText('asha@example.com');
+  await expect(address).toContainText(`${name}-Billing`);
+  await expect(address).toContainText('7 Hill Road');
+  await expect(
+    page.getByRole('textbox', { name: 'Email Id', exact: true })
+  ).toBeHidden();
+  expect(await getValue(page, 'Books Customer', name, 'email_id')).toBe(
+    'asha@example.com'
   );
+
+  await address.getByRole('button', { name: 'Open', exact: true }).click();
+  await expect(page).toHaveURL(
+    new RegExp(`/books/edit/Address/${encodeURIComponent(`${name}-Billing`)}$`)
+  );
+  await page.goBack();
+  await expect(contact).toBeVisible();
+});
+
+test('a primary contact changes only to one linked to the customer', async ({
+  page,
+}) => {
+  const name = `Card Customer ${Date.now()}`;
+  await insert(page, 'Books Customer', { customer_name: name });
+  for (const [first_name, links] of [
+    ['Mira', [{ link_doctype: 'Books Customer', link_name: name }]],
+    [`Stranger ${name}`, []],
+  ] as const) {
+    await insert(page, 'Contact', { first_name, links });
+  }
+  await page.goto(`/books/edit/Customer/${encodeURIComponent(name)}`);
+  await waitForBooks(page);
+
+  const contact = page.locator('[data-fieldname="customer_primary_contact"]');
+  await expect(contact).toContainText('No primary contact');
+  await contact.getByRole('button', { name: 'Select', exact: true }).click();
+  await expect(page.getByRole('option', { name: 'Mira' })).toBeVisible();
+  await expect(page.getByRole('option', { name: /^Stranger/ })).toBeHidden();
+  await page.getByRole('option', { name: 'Mira' }).click();
+  await expect(page.getByText('Not Saved', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Yes', exact: true }).click();
+  await expect(page.getByText(`${name} saved`)).toBeVisible();
+  await expect(contact).toContainText('Mira');
+  expect(
+    await getValue(page, 'Books Customer', name, 'customer_primary_contact')
+  ).toBe(`Mira-${name}`);
 });
 
 test('a customer email is checked as Frappe checks it, with the Books message', async ({
   page,
 }) => {
   await page.getByRole('button', { name: 'New', exact: true }).click();
-  await page.getByRole('textbox', { name: 'Email', exact: true }).fill('asha@');
+  await page
+    .getByRole('textbox', { name: 'Email Id', exact: true })
+    .fill('asha@');
   await page.keyboard.press('Tab');
   await expect(
     page.getByText('Invalid email: asha@', { exact: true })
@@ -60,7 +104,10 @@ test('a lead makes its customer through the server mapper', async ({
 }) => {
   const lead = `Form Lead ${Date.now()}`;
   await updateSingle(page, 'Books Accounting Settings', { enable_lead: 1 });
-  await insert(page, 'Books Lead', { name: lead, email: 'lead@example.com' });
+  await insert(page, 'Books Lead', {
+    lead_name: lead,
+    email_id: 'lead@example.com',
+  });
   await page.goto(`/books/edit/Lead/${encodeURIComponent(lead)}`);
   await waitForBooks(page);
 
@@ -84,10 +131,12 @@ test('a pricing rule shows the fields of its discount scheme', async ({
   await expect(page.getByRole('textbox', { name: 'ID' })).toBeVisible();
   await expect(page.getByText('Free Item', { exact: true })).toBeVisible();
 
-  await page.getByRole('combobox', { name: 'Discount Type' }).click();
-  await page.getByRole('option', { name: 'Price Discount' }).click();
+  await page
+    .getByRole('combobox', { name: 'Price or Product Discount' })
+    .click();
+  await page.getByRole('option', { name: 'Price', exact: true }).click();
   await expect(page.getByText('Free Item', { exact: true })).toBeHidden();
-  await page.getByRole('combobox', { name: 'Price Discount Type' }).click();
+  await page.getByRole('combobox', { name: 'Rate or Discount' }).click();
   await expect(page.getByRole('option')).toHaveText([
     'Rate',
     'Discount Percentage',
@@ -101,7 +150,7 @@ test('a narrowed table column keeps its description on one line', async ({
   await page.goto('/books/edit/LoyaltyProgram/new');
   await waitForBooks(page);
   const handle = page.getByRole('separator', {
-    name: 'Resize Collection Factor column',
+    name: 'Resize Collection Factor (=1 LP) column',
   });
   const header = handle.locator('xpath=ancestor::*[@role="columnheader"]');
   const height = (await header.boundingBox())!.height;
@@ -122,21 +171,31 @@ test.describe('on a phone', () => {
     hasTouch: true,
   });
 
-  test('a customer saves a new phone number', async ({ page }) => {
+  test('a new customer saves its mobile as its primary contact', async ({
+    page,
+  }) => {
     const name = `Phone Customer ${Date.now()}`;
-    await insert(page, 'Books Customer', { name });
-    await page.goto(`/books/edit/Customer/${encodeURIComponent(name)}`);
+    await page.goto('/books/edit/Customer/new');
     await waitForBooks(page);
+    await page.getByRole('textbox', { name: /^Customer Name/ }).fill(name);
 
-    // Phones collapse sections that hold no value.
-    await page.getByRole('button', { name: 'Contacts', exact: true }).click();
-    await page.getByRole('textbox', { name: 'Phone' }).fill('+91 98200 00000');
+    // A new party's Contact section starts open for its quick entry.
+    await expect(
+      page.getByRole('button', { name: 'Contact', exact: true })
+    ).toHaveAttribute('aria-expanded', 'true');
+    await page
+      .getByRole('textbox', { name: 'Mobile No' })
+      .fill('+91 98200 00000');
     await page.keyboard.press('Tab');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await expect(page.getByText(`${name} saved`)).toBeVisible();
-    expect(await getValue(page, 'Books Customer', name, 'phone')).toBe(
+    expect(await getValue(page, 'Books Customer', name, 'mobile_no')).toBe(
       '+91 98200 00000'
     );
+    // A section that holds a value opens.
+    await expect(
+      page.locator('[data-fieldname="customer_primary_contact"]')
+    ).toContainText('+91 98200 00000');
   });
 });
 

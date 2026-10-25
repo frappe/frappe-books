@@ -121,9 +121,11 @@ function onClick(row: MobileTreeRow) {
   toggled.value = next;
 }
 
-/** Leaves line up with the names of the groups above them. */
+const hasGroups = computed(() => props.rows.some((row) => row.isGroup));
+
+/** Leaves line up with the names of the groups above them, if there are any. */
 function getIndent(row: MobileTreeRow) {
-  if (row.isChild || row.isTotal) {
+  if (row.isChild || row.isTotal || !hasGroups.value) {
     return 0;
   }
 

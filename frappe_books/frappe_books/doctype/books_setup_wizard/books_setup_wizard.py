@@ -9,6 +9,7 @@ from frappe.geo.country_info import get_country_info
 from frappe.model.document import Document
 from frappe.utils import add_days, add_years, getdate, momentjs
 
+from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.coa import chart_options
 from frappe_books.permissions import check_preview_permission
 from frappe_books.setup_service import get_books_country_info, run_setup
@@ -112,6 +113,7 @@ def get_fiscal_year_date(info: dict, fieldname: str) -> date | None:
 @frappe.whitelist(methods=["POST"])
 def complete_setup() -> dict:
 	"""Set up the company from the saved wizard values, once."""
+	forbid_in_accessory_mode()
 	wizard = frappe.get_single("Books Setup Wizard")
 	wizard.check_permission("write")
 	if frappe.db.get_single_value("Books Accounting Settings", "setup_complete"):

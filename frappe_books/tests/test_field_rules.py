@@ -21,7 +21,7 @@ class IntegrationTestFieldRules(IntegrationTestCase):
 		self.assertRaises(frappe.NonNegativeError, settings.save)
 
 	def test_pos_settings_need_a_cash_account(self):
-		settings = frappe.get_single("Books Pos Settings")
+		settings = frappe.get_single("Books POS Settings")
 		settings.cash_account = None
 		self.assertRaises(frappe.MandatoryError, settings.save)
 
@@ -31,8 +31,9 @@ class IntegrationTestFieldRules(IntegrationTestCase):
 		item = make_item(income, make_account("Dated Expense", root_type="Expense").name).name
 		started = now_datetime().replace(microsecond=0)
 		invoice = make_invoice(
-			"Books Sales Invoice", make_customer(receivable).name, receivable, item, income, date=None
+			"Books Sales Invoice", make_customer(receivable).name, receivable, item, income, posting_date=None
 		)
 
-		self.assertGreaterEqual(get_datetime(invoice.date), started)
+		self.assertEqual(str(invoice.posting_date), nowdate())
+		self.assertGreaterEqual(get_datetime(f"{invoice.posting_date} {invoice.posting_time}"), started)
 		self.assertEqual(str(frappe.new_doc("Books Journal Entry").posting_date), nowdate())

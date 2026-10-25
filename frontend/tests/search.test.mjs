@@ -42,9 +42,9 @@ test('the palette searches the schemas the DocType search fields name', () => {
 
   assert.equal(requests.length, 0);
   assert.deepEqual(fields('SalesInvoice'), ['name', 'customer']);
-  assert.deepEqual(fields('Customer'), ['name', 'email', 'phone']);
-  assert.deepEqual(fields('Supplier'), ['name', 'email', 'phone']);
-  assert.deepEqual(fields('Tax'), ['name']);
+  assert.deepEqual(fields('Customer'), ['name', 'email_id', 'mobile_no']);
+  assert.deepEqual(fields('Supplier'), ['name', 'email_id', 'mobile_no']);
+  assert.deepEqual(fields('ItemTaxTemplate'), ['name']);
   assert.equal(fields('SalesInvoiceItem'), undefined);
   assert.equal(fields('Account'), undefined);
 });
@@ -55,10 +55,14 @@ test('filter chips show transactions first, by schema label', () => {
   assert.deepEqual(labels.slice(0, 3), [
     'Delivery Note',
     'Journal Entry',
-    'Payment',
+    'Payment Entry',
   ]);
-  assert.deepEqual(labels.slice(-2), ['Supplier', 'Tax Template']);
-  assert.equal(labels.length, 19);
+  // Then the masters, by schema name.
+  assert.equal(labels.at(-1), 'Supplier');
+  assert.ok(labels.includes('Tax Template'));
+  assert.ok(labels.includes('Sales Taxes and Charges Template'));
+  assert.ok(labels.includes('Purchase Taxes and Charges Template'));
+  assert.equal(labels.length, 23);
 });
 test('one request searches the text in the doctypes the filters allow', async () => {
   const { search, requests } = makeSearch();
@@ -71,9 +75,12 @@ test('one request searches the text in the doctypes the filters allow', async ()
   assert.equal(requests.length, 2);
   assert.equal(requests[0].path, '/api/method/frappe_books.search.search');
   assert.equal(requests[0].body.text, 'Karen SINV-1');
-  assert.equal(requests[0].body.doctypes.length, 19);
+  assert.equal(requests[0].body.doctypes.length, 23);
   assert.equal(requests[0].body.doctypes.includes('Books Sales Invoice'), true);
-  assert.equal(requests[1].body.doctypes.includes('Books Sales Invoice'), false);
+  assert.equal(
+    requests[1].body.doctypes.includes('Books Sales Invoice'),
+    false
+  );
   assert.equal(requests[1].body.doctypes.includes('Books Customer'), true);
 });
 test('the palette lists only the lists of features that are on', () => {
@@ -89,9 +96,10 @@ test('the palette lists only the lists of features that are on', () => {
   const featureLists = [
     'Batch',
     'Custom Form',
+    'Item Price',
     'Lead',
     'Price List',
-    'Serial Number',
+    'Serial No',
     'Stock Entry',
   ];
   try {
@@ -196,8 +204,8 @@ test('a document shows its search fields and opens its form', async () => {
     {
       doctype: 'Books Customer',
       name: 'Acme',
-      email: 'acme@example.com',
-      phone: '9876543210',
+      email_id: 'acme@example.com',
+      mobile_no: '9876543210',
       docstatus: 0,
     },
   ]);

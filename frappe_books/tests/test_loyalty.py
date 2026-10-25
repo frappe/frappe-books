@@ -2,16 +2,21 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime, nowdate
+from frappe.utils import add_days, nowdate
 
 from frappe_books.accounting.returns import map_return
-from frappe_books.commerce.loyalty import expire_programs_and_points, get_available_points
+from frappe_books.commerce.loyalty import (
+	expire_programs_and_points,
+	get_available_points,
+	get_loyalty_program_details_with_points,
+)
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
 	make_customer,
 	make_invoice,
 	make_item,
+	set_company_value,
 	unique_name,
 )
 
@@ -21,7 +26,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.receivable = make_account("Commerce Receivable", account_type="Receivable")
 		self.income = make_account("Commerce Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Commerce Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		set_company_value("default_discount_account", self.expense.name)
 		self.party = make_customer(self.receivable.name)
 		self.item = make_item(self.income.name, self.expense.name)
 
@@ -37,6 +42,8 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		)
 		invoice.submit()
 		self.assertEqual(frappe.db.get_value("Books Customer", self.party.name, "loyalty_points"), 180)
+		details = get_loyalty_program_details_with_points(self.party.name)
+		self.assertEqual((details["loyalty_program"], details["loyalty_points"]), (program.name, 180))
 
 		redemption = make_invoice(
 			"Books Sales Invoice",
@@ -48,13 +55,21 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 			redeem_loyalty_points=1,
 			loyalty_points=20,
 		)
-		self.assertEqual(Decimal(str(redemption.grand_total)), Decimal("170"))
-		self.assertEqual(Decimal(str(redemption.as_dict().loyalty_points_amount)), Decimal("10"))
+		# The points pay 10 of the 180, as ERPNext counts a redemption.
+		self.assertEqual(
+			(redemption.grand_total, redemption.loyalty_amount, redemption.outstanding_amount), (180, 10, 170)
+		)
 		redemption.submit()
 		self.assertEqual(frappe.db.get_value("Books Customer", self.party.name, "loyalty_points"), 160)
 		entries = ledger_entries(redemption.doctype, redemption.name)
-		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("200"))
-		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("200"))
+		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("210"))
+		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("210"))
+		owed = sum(
+			Decimal(str(row.debit or 0)) - Decimal(str(row.credit or 0))
+			for row in entries
+			if row.account == self.receivable.name
+		)
+		self.assertEqual(owed, Decimal("170"))
 		redemption.cancel()
 		self.assertEqual(frappe.db.get_value("Books Customer", self.party.name, "loyalty_points"), 180)
 
@@ -70,6 +85,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"doctype": "Books Loyalty Point Entry",
 				"loyalty_program": program.name,
 				"customer": self.party.name,
+				"invoice_type": "Books Sales Invoice",
 				"invoice": self._submitted_invoice().name,
 				"loyalty_points": 50,
 				"purchase_amount": 50,
@@ -97,7 +113,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 					self.receivable.name,
 					self.item.name,
 					self.income.name,
-					date=add_days(now_datetime(), -2),
+					posting_date=add_days(nowdate(), -2),
 					loyalty_program=program.name,
 				).submit()
 
@@ -161,7 +177,9 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self._loyalty_invoice(program).submit()
 
 		redemption = self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=240)
-		self.assertEqual(Decimal(str(redemption.grand_total)), Decimal("60"))
+		self.assertEqual(
+			(redemption.grand_total, redemption.loyalty_amount, redemption.outstanding_amount), (180, 120, 60)
+		)
 
 	def test_cancel_does_not_enable_a_disabled_program(self):
 		program = self._loyalty_program(maximum_use=1)
@@ -200,9 +218,12 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		self.assertEqual(self._points(), 140)
 
 		partial = map_return(redemption.doctype, redemption.name)
-		partial.items[0].quantity = -1
+		partial.items[0].qty = -1
 		partial.insert().submit()
-		self.assertEqual((partial.loyalty_points, partial.grand_total), (-20, -80))
+		self.assertEqual(
+			(partial.loyalty_points, partial.grand_total, partial.loyalty_amount, partial.outstanding_amount),
+			(-20, -90, -10, -80),
+		)
 		self.assertEqual(self._points(), 160)
 		entries = ledger_entries(partial.doctype, partial.name)
 		self.assertEqual(sum(row.debit for row in entries), sum(row.credit for row in entries))
@@ -232,6 +253,25 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		invoice.save()
 		self.assertIsNone(invoice.loyalty_program)
 
+	def test_collection_factor_is_the_amount_spent_for_one_point(self):
+		program = self._loyalty_program(
+			collection_rules=[{"tier_name": "Base", "collection_factor": 7, "min_spent": 0}]
+		)
+		invoice = self._loyalty_invoice(program).submit()
+
+		# As ERPNext: 180 / 7, part points dropped.
+		entry = frappe.get_all(
+			"Books Loyalty Point Entry",
+			filters={"invoice": invoice.name},
+			fields=["loyalty_points", "invoice_type", "loyalty_program_tier"],
+		)
+		self.assertEqual([tuple(row.values()) for row in entry], [(25, "Books Sales Invoice", "Base")])
+
+	def test_a_program_is_named_by_its_name(self):
+		program = self._loyalty_program()
+
+		self.assertEqual(program.name, program.loyalty_program_name)
+
 	def _points(self):
 		return frappe.db.get_value("Books Customer", self.party.name, "loyalty_points")
 
@@ -252,6 +292,7 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"doctype": "Books Loyalty Point Entry",
 				"loyalty_program": program.name,
 				"customer": self.party.name,
+				"invoice_type": "Books Sales Invoice",
 				"invoice": invoice.name,
 				"loyalty_points": points,
 				"purchase_amount": points,
@@ -265,13 +306,13 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 		program = frappe.get_doc(
 			{
 				"doctype": "Books Loyalty Program",
-				"name": unique_name("Rewards"),
+				"loyalty_program_name": unique_name("Rewards"),
 				"from_date": add_days(nowdate(), -1),
 				"to_date": add_days(nowdate(), 30),
 				"conversion_factor": 0.5,
 				"expiry_duration": 30,
 				"expense_account": self.expense.name,
-				"collection_rules": [{"tier_name": "Base", "collection_factor": 1, "minimum_total_spent": 0}],
+				"collection_rules": [{"tier_name": "Base", "collection_factor": 1, "min_spent": 0}],
 				**values,
 			}
 		).insert()

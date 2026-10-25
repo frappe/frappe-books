@@ -67,10 +67,11 @@ test('a DocField max_value limits the number, and 0 sets no limit', () => {
 test('the server date defaults Now and Today give a new document the current date', async () => {
   await loadFrappeModels();
   for (const [schemaName, fieldname] of [
-    ['SalesInvoice', 'date'],
-    ['Payment', 'date'],
+    ['SalesInvoice', 'posting_date'],
+    ['Quotation', 'transaction_date'],
+    ['PaymentEntry', 'posting_date'],
     ['JournalEntry', 'posting_date'],
-    ['DeliveryNote', 'date'],
+    ['DeliveryNote', 'posting_date'],
   ]) {
     const before = Date.now();
     const date = newFrappeDoc(schemaName)[fieldname];
@@ -88,6 +89,9 @@ test('Frappe field types and links become Books field types and targets', () => 
     ['Attach', 'Attachment'],
     ['Code', 'Text'],
     ['Small Text', 'Text'],
+    ['Text Editor', 'Text'],
+    ['Percent', 'Float'],
+    ['Time', 'Data'],
     ['Autocomplete', 'AutoComplete'],
   ];
   for (const [fieldtype, booksFieldtype] of cases) {
@@ -120,7 +124,7 @@ test('option values come from the server and labels from the model', () => {
 test('a field set only once says so', () => {
   const unit = getField({
     fieldtype: 'Link',
-    options: 'Books Uom',
+    options: 'Books UOM',
     set_only_once: 1,
   });
   assert.equal(unit.setOnlyOnce, true);

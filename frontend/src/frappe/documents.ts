@@ -6,6 +6,7 @@ import { call } from 'src/web/api';
 import type { DocValues } from './api';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
+import { isAccessoryMode } from './mode';
 import { getNamingField } from './schema';
 import { toDocValues } from './values';
 
@@ -35,12 +36,27 @@ export function newFrappeDoc(
   return doc;
 }
 
-/** What the source DocType's server `mapper`, like an invoice's make_payment, builds from its document `sourceName`. */
+/**
+ * What the source DocType's server `mapper`, like an invoice's make_payment,
+ * builds from its document `sourceName`; in accessory mode, the ERPNext
+ * mapper the server names for it.
+ */
 export async function getMappedValues(
   sourceSchemaName: string,
   sourceName: string,
   mapper: string
 ): Promise<DocValues> {
+  if (isAccessoryMode()) {
+    return await call<DocValues>(
+      'frappe_books.accessory.mappers.make_mapped_doc',
+      {
+        source_doctype: getDocType(sourceSchemaName).doctype,
+        source_name: sourceName,
+        mapper,
+      }
+    );
+  }
+
   return await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
     method: `${getControllerModule(sourceSchemaName)}.${mapper}`,
     source_name: sourceName,
@@ -97,6 +113,22 @@ export async function getFrappeDoc(
   const { Model, schema } = getDocType(schemaName);
   const doc = new Model(schema, { name }, fyo) as FrappeDoc;
   await doc.load();
+  keep(doc);
+  return doc;
+}
+
+/** A saved document from `values` the server sent, kept open like a loaded one. */
+export async function openFrappeDoc(
+  schemaName: string,
+  values: DocValues
+): Promise<FrappeDoc> {
+  const { Model, schema } = getDocType(schemaName);
+  const doc = new Model(
+    schema,
+    { name: String(values.name) },
+    fyo
+  ) as FrappeDoc;
+  await doc.loadValues(values);
   keep(doc);
   return doc;
 }

@@ -1,0 +1,90 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "creation": "2026-10-24 20:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "charge_type",
+  "row_id",
+  "account_head",
+  "description",
+  "rate",
+  "tax_amount",
+  "total",
+  "set_by_item_tax_template"
+ ],
+ "fields": [
+  {
+   "default": "On Net Total",
+   "fieldname": "charge_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "On Net Total\nActual\nOn Previous Row Amount\nOn Previous Row Total",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:[\"On Previous Row Amount\", \"On Previous Row Total\"].includes(doc.charge_type)",
+   "fieldname": "row_id",
+   "fieldtype": "Data",
+   "label": "Reference Row #"
+  },
+  {
+   "fieldname": "account_head",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Account Head",
+   "link_filters": "[[\"Books Account\",\"is_group\",\"=\",0]]",
+   "options": "Books Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "depends_on": "eval:doc.charge_type != 'Actual'",
+   "fieldname": "rate",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Tax Rate"
+  },
+  {
+   "fieldname": "tax_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount"
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Total",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "set_by_item_tax_template",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Set by Item Tax Template",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-24 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe Books",
+ "name": "Books Sales Taxes and Charges",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

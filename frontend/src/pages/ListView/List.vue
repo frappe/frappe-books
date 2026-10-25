@@ -9,6 +9,7 @@
     :is-loading-more="isLoadingMore"
     :is-filtered="isFiltered"
     :can-create="canCreate"
+    :list-config="listConfig"
     :is-selection-mode="isSelectionMode"
     :selected-items="selectedItems"
     :refresh="updateData"
@@ -34,7 +35,9 @@
         @update:selection="updateSelection"
       >
         <FrappeListHeader class="sticky top-0 z-10 bg-surface-base">
-          <FrappeListHeaderCell class="justify-end pe-2">#</FrappeListHeaderCell>
+          <FrappeListHeaderCell class="justify-end pe-2"
+            >#</FrappeListHeaderCell
+          >
           <template v-for="column in columns" :key="column.label">
             <FrappeListHeaderCellSort
               v-if="isSortableField(schemaName, column.fieldname)"
@@ -112,16 +115,16 @@
     <EmptyState
       v-if="!isLoading && !total"
       class="my-auto py-16"
-      icon="lucide-inbox"
-      :title="t`No entries found`"
-      :description="canCreate ? t`Create one to get started.` : ''"
+      :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
+      :title="emptyState.title"
+      :description="emptyState.description"
     >
       <FrappeButton
-        v-if="canCreate"
+        v-if="canCreate && !isFiltered"
         class="mt-2"
         variant="solid"
         icon-left="lucide-plus"
-        :label="t`Make entry`"
+        :label="emptyState.createLabel"
         @click="$emit('makeNewDoc')"
       />
     </EmptyState>
@@ -143,6 +146,7 @@ import {
   ListRow as FrappeListRow,
   ListRows as FrappeListRows,
 } from 'frappe-ui/list';
+import { t } from 'fyo';
 import EmptyState from 'src/components/EmptyState.vue';
 import Paginator from 'src/components/Paginator.vue';
 import { isSortableField, type ListSort } from 'src/frappe/list';
@@ -155,6 +159,7 @@ import { PropType, defineComponent } from 'vue';
 import ListCell from './ListCell.vue';
 import {
   getColumnTrack,
+  getEmptyState,
   getListColumns,
   type ListColumn,
 } from './listColumns';
@@ -227,6 +232,13 @@ export default defineComponent({
     },
     isFiltered(): boolean {
       return this.activeFilters.length > 0 || this.orFilters.length > 0;
+    },
+    emptyState(): { title: string; description?: string; createLabel: string } {
+      return getEmptyState(this.listConfig, this.isFiltered, {
+        title: t`No entries found`,
+        description: this.canCreate ? t`Create one to get started.` : '',
+        createLabel: t`Make entry`,
+      });
     },
   },
   watch: {

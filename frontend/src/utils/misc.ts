@@ -1,6 +1,6 @@
 import { DocValue, DocValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
-import { reports } from 'reports/index';
+import { getReports, type ReportName } from 'reports/index';
 import type { Report } from 'reports/Report';
 import type { Filter } from 'src/frappe/api';
 import { newFrappeDoc } from 'src/frappe/documents';
@@ -31,7 +31,7 @@ export const docsPathMap: Record<string, string | undefined> = {
   [ModelNameEnum.Quotation]: 'books/sales-quotes',
   [ModelNameEnum.SalesInvoice]: 'books/sales-invoices',
   [ModelNameEnum.PurchaseInvoice]: 'books/purchase-invoices',
-  [ModelNameEnum.Payment]: 'books/payments',
+  [ModelNameEnum.PaymentEntry]: 'books/payments',
   [ModelNameEnum.JournalEntry]: 'books/journal-entries',
   [ModelNameEnum.LoyaltyProgram]: 'books/loyalty-program',
   [ModelNameEnum.PricingRule]: 'books/pricing-rule',
@@ -44,15 +44,18 @@ export const docsPathMap: Record<string, string | undefined> = {
   StockLedger: 'books/stock-ledger',
   StockBalance: 'books/stock-balance',
   [ModelNameEnum.Batch]: 'books/batches',
-  [ModelNameEnum.SerialNumber]: 'books/serial-number',
+  [ModelNameEnum.SerialNo]: 'books/serial-number',
 
   // Entries
   Entries: 'books',
   [ModelNameEnum.Customer]: 'books/party',
   [ModelNameEnum.Supplier]: 'books/party',
   [ModelNameEnum.Item]: 'books/items',
-  [ModelNameEnum.Tax]: 'books/taxes',
+  [ModelNameEnum.ItemTaxTemplate]: 'books/taxes',
+  [ModelNameEnum.SalesTaxesAndChargesTemplate]: 'books/taxes',
+  [ModelNameEnum.PurchaseTaxesAndChargesTemplate]: 'books/taxes',
   [ModelNameEnum.PriceList]: 'books/price-list',
+  [ModelNameEnum.ItemPrice]: 'books/price-list',
   [ModelNameEnum.PrintFormat]: 'books/print-templates',
 
   // Miscellaneous
@@ -100,7 +103,7 @@ export function getIsMac() {
 }
 
 export async function getReport(
-  name: keyof typeof reports,
+  name: ReportName,
   filters: Record<string, DocValue> = {}
 ) {
   const cachedReport = fyo.store.reports[name];
@@ -109,21 +112,15 @@ export async function getReport(
   }
 
   // Reactive, so refreshing the cached report updates the pages showing it.
-  const report = reactive(new reports[name](fyo)) as unknown as Report;
+  const ReportClass = getReports()[name];
+  if (!ReportClass) {
+    throw new Error(`No report ${name}`);
+  }
+
+  const report = reactive(new ReportClass(fyo)) as unknown as Report;
   await report.initialize(filters);
   fyo.store.reports[name] = report;
   return report;
-}
-
-/**
- * Ref filters pick one document, so they last only while a link sets them,
- * as do the dates its ledger link sets with them; cleared dates take defaults.
- */
-function getDocumentFilterResets(report: Report): Record<string, DocValue> {
-  const resets = { referenceType: 'All', referenceName: null };
-  return report.get('referenceName')
-    ? { ...resets, fromDate: null, toDate: null }
-    : resets;
 }
 
 /**
@@ -131,7 +128,7 @@ function getDocumentFilterResets(report: Report): Record<string, DocValue> {
  * again. Either way the server runs it once, with the filters set.
  */
 export async function showReport(
-  name: keyof typeof reports,
+  name: ReportName,
   filters: Record<string, DocValue> = {}
 ): Promise<Report> {
   const report = fyo.store.reports[name];
@@ -139,7 +136,7 @@ export async function showReport(
     return getReport(name, filters);
   }
 
-  await report.setFilters({ ...getDocumentFilterResets(report), ...filters });
+  await report.setFilters({ ...report.getDocumentFilterResets(), ...filters });
   await report.setReportData(undefined, true);
   return report;
 }

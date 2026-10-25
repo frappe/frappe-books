@@ -91,7 +91,7 @@ class IntegrationTestTopExpenses(IntegrationTestCase):
 class IntegrationTestDashboardPeriods(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.set_single_value(
-			"Books Accounting Settings", {"fiscal_year_start": "2026-04-01", "fiscal_year_end": "2027-03-31"}
+			"Books Accounting Settings", {"year_start_date": "2026-04-01", "year_end_date": "2027-03-31"}
 		)
 
 	def test_periods_end_today_and_start_on_the_first_of_a_month(self):
@@ -142,8 +142,8 @@ class IntegrationTestInvoiceDrillDown(IntegrationTestCase):
 				["docstatus", "in", [1, 2]],
 				["docstatus", "not in", [2]],
 				["outstanding_amount", operator, 0],
-				["date", ">=", summary["from_date"]],
-				["date", "<", summary["before_date"]],
+				["posting_date", ">=", summary["from_date"]],
+				["posting_date", "<", summary["before_date"]],
 			]
 			self.assertEqual(len(frappe.get_list("Books Sales Invoice", filters=filters)), count)
 
@@ -167,7 +167,7 @@ class IntegrationTestAccountBalances(IntegrationTestCase):
 def _post(account, debit, credit, date="2031-01-10"):
 	frappe.get_doc(
 		{
-			"doctype": "Books Ledger Entry",
+			"doctype": "Books GL Entry",
 			"posting_date": date,
 			"account": account.name,
 			"debit": debit,
@@ -177,11 +177,14 @@ def _post(account, debit, credit, date="2031-01-10"):
 
 
 def _invoice(date, total, outstanding, **values):
+	"""Insert a submitted invoice dated `date`, a date with an optional time."""
+	posting_date, _, posting_time = date.partition(" ")
 	frappe.get_doc(
 		{
 			"doctype": "Books Sales Invoice",
 			"name": frappe.generate_hash(),
-			"date": date,
+			"posting_date": posting_date,
+			"posting_time": posting_time or None,
 			"docstatus": 1,
 			"base_grand_total": total,
 			"outstanding_amount": outstanding,

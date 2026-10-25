@@ -4,13 +4,44 @@ import type {
   RenderData,
 } from 'fyo/model/types';
 import type { Field } from 'schemas/types';
+import { getDocType } from 'src/frappe/doctypes';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getFields, getSchema } from 'src/frappe/registry';
 import { isNumeric } from 'src/utils';
 import { fyo } from 'src/initFyo';
 
 export type ListColumn = ColumnConfig | Field;
 
-/** The list view's columns, or the name and quick edit fields without them. */
+/** What an empty list shows: the model's words, else `fallback`. */
+export function getEmptyState(
+  listConfig: ListViewSettings | undefined,
+  isFiltered: boolean,
+  fallback: { title: string; description?: string; createLabel: string }
+): { title: string; description?: string; createLabel: string } {
+  const own = listConfig?.emptyState;
+  if (!own) {
+    return fallback;
+  }
+
+  // A model's filtered title says it all, as the design's lists do.
+  if (isFiltered) {
+    return own.filteredTitle
+      ? { ...fallback, title: own.filteredTitle, description: undefined }
+      : fallback;
+  }
+
+  return {
+    title: own.title,
+    description: own.description,
+    createLabel: own.createLabel ?? fallback.createLabel,
+  };
+}
+
+/**
+ * The list view's columns, or the name and quick edit fields without them.
+ * Columns the DocType lacks are left out; an ERPNext DocType left with only
+ * its name shows its in_list_view fields.
+ */
 export function getListColumns(
   schemaName: string,
   listConfig?: ListViewSettings
@@ -21,9 +52,25 @@ export function getListColumns(
     columns = [...new Set(['name', ...columns])];
   }
 
-  return columns.flatMap((column): ListColumn[] =>
+  const shown = columns.flatMap((column): ListColumn[] =>
     typeof column === 'object' ? [column] : getFields(schemaName, [column])
   );
+  if (
+    !isAccessoryMode() ||
+    shown.some((column) => column.fieldname !== 'name')
+  ) {
+    return shown;
+  }
+
+  const { meta } = getDocType(schemaName);
+  const listed = meta.fields.filter((field) => field.in_list_view);
+  return [
+    ...shown,
+    ...getFields(
+      schemaName,
+      listed.map((f) => f.fieldname)
+    ),
+  ];
 }
 
 /** Fixed tracks for dates, numbers and badges; text shares what is left. */

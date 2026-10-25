@@ -4,7 +4,7 @@ export type FixtureAccount = {
   name: string;
   root_type: string;
   is_group: 0 | 1;
-  parent_books_account?: string;
+  parent_account?: string;
   account_type?: string;
 };
 
@@ -71,7 +71,7 @@ function previewAccount(
   document: Record<string, unknown>
 ) {
   const parent = accounts.find(
-    (account) => account.name === document.parent_books_account
+    (account) => account.name === document.parent_account
   );
   return {
     ...document,

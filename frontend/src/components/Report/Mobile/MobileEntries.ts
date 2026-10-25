@@ -65,7 +65,9 @@ export class MobileEntries {
 
   /** A signed number, or a debit or credit marked Dr or Cr. */
   getAmount(row: ReportRow) {
-    const amount = this.getCell(row, this.layout.amount);
+    const amounts = [this.layout.amount].flat();
+    const cells = amounts.map((fieldname) => this.getCell(row, fieldname));
+    const amount = cells.find(isNonZero) ?? cells[0];
     if (!this.layout.credit) {
       const isPositive = Number(amount?.rawValue) > 0;
       return `${isPositive ? '+' : ''}${amount?.value ?? ''}`;

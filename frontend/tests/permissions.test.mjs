@@ -52,10 +52,13 @@ test('without boot permissions nothing is restricted', () => {
 
 test('a saved document uses the rights the server returned for it', async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_write: ['Books Payment'], can_delete: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: {
+      can_write: ['Books Payment Entry'],
+      can_delete: ['Books Payment Entry'],
+    },
   };
-  const payment = await getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('PaymentEntry', 'PAY-0001');
   assert.equal(payment.canWrite, true);
   assert.equal(payment.canDelete, true);
 
@@ -66,13 +69,13 @@ test('a saved document uses the rights the server returned for it', async () => 
 
 test("a form loads the user's rights on its saved document from Frappe", async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_write: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: { can_write: ['Books Payment Entry'] },
   };
   const requests = stubFrappe(() => ({
     message: { permissions: { read: 1, write: 0 } },
   }));
-  const payment = await getSaved('Payment', 'PAY-0002');
+  const payment = await getSaved('PaymentEntry', 'PAY-0002');
 
   await loadDocPermissions(payment);
 
@@ -81,7 +84,7 @@ test("a form loads the user's rights on its saved document from Frappe", async (
     '/api/method/frappe.client.get_doc_permissions'
   );
   assert.deepEqual(requests[0].body, {
-    doctype: 'Books Payment',
+    doctype: 'Books Payment Entry',
     docname: 'PAY-0002',
   });
   assert.equal(payment.canWrite, false);
@@ -89,10 +92,10 @@ test("a form loads the user's rights on its saved document from Frappe", async (
 
 test('printing a document needs the print permission', async () => {
   fyo.store.permissions = {
-    doctypes: { Payment: 'Books Payment' },
-    user: { can_read: ['Books Payment'] },
+    doctypes: { PaymentEntry: 'Books Payment Entry' },
+    user: { can_read: ['Books Payment Entry'] },
   };
-  const payment = await getSaved('Payment', 'PAY-0001');
+  const payment = await getSaved('PaymentEntry', 'PAY-0001');
   assert.equal(payment.can('print'), false);
 
   payment.docPermissions = { read: 1, print: 1 };
@@ -102,9 +105,17 @@ test('printing a document needs the print permission', async () => {
 test('the import wizard offers only the schemas the user may import', () => {
   fyo.store.permissions = {
     doctypes: { Customer: 'Books Customer', Tax: 'Books Tax' },
-    user: { can_import: ['Books Customer'] },
+    user: { can_import: ['Books Customer'], can_create: ['Data Import'] },
   };
   assert.deepEqual(getImportableSchemaNames(fyo), ['Customer']);
+});
+
+test('the import wizard offers nothing to who cannot make a Data Import', () => {
+  fyo.store.permissions = {
+    doctypes: { Customer: 'Books Customer' },
+    user: { can_import: ['Books Customer'], can_create: [] },
+  };
+  assert.deepEqual(getImportableSchemaNames(fyo), []);
 });
 
 test('export granted only to owners exports only the user’s documents', () => {
@@ -172,11 +183,11 @@ test('Setup lists Number Series for a user who can read them', () => {
     fyo.store.permissions = {
       doctypes: {
         NumberSeries: 'Books Number Series',
-        AccountingSettings: 'Books Accounting Settings',
+        SystemSettings: 'Books System Settings',
       },
       user: {
         can_read: canRead ? ['Books Number Series'] : [],
-        can_write: ['Books Accounting Settings'],
+        can_write: ['Books System Settings'],
       },
     };
     const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
@@ -185,6 +196,26 @@ test('Setup lists Number Series for a user who can read them', () => {
 
   assert.ok(setupItems(true).includes('Number Series'));
   assert.ok(!setupItems(false).includes('Number Series'));
+});
+
+test('Setup lists the taxes and charges templates the user can read', () => {
+  fyo.store.permissions = {
+    doctypes: {
+      SalesTaxesAndChargesTemplate: 'Books Sales Taxes and Charges Template',
+      PurchaseTaxesAndChargesTemplate:
+        'Books Purchase Taxes and Charges Template',
+      SystemSettings: 'Books System Settings',
+    },
+    user: {
+      can_read: ['Books Sales Taxes and Charges Template'],
+      can_write: ['Books System Settings'],
+    },
+  };
+  const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
+  const labels = setup.items.map(({ label }) => label);
+
+  assert.ok(labels.includes('Sales Taxes and Charges Template'));
+  assert.ok(!labels.includes('Purchase Taxes and Charges Template'));
 });
 
 test('the search palette offers only the lists and reports the user can open', () => {
@@ -249,16 +280,16 @@ test('a submitted document links only to the ledgers the user may open', () => {
 });
 
 test("a row's field levels follow its parent's permissions", async () => {
-  const account = (fields) =>
-    fields.find(({ fieldname }) => fieldname === 'account');
+  const findField = (fields, name) =>
+    fields.find(({ fieldname }) => fieldname === name);
   window.frappe.boot.user.roles = ['Books User'];
 
   try {
     await loadFrappeModels();
     const invoice = getDocType('SalesInvoice');
     for (const field of [
-      account(invoice.schema.fields),
-      account(invoice.tables.items.schema.fields),
+      findField(invoice.schema.fields, 'debit_to'),
+      findField(invoice.tables.items.schema.fields, 'income_account'),
     ]) {
       assert.equal(field.hidden, true);
       assert.equal(field.required, undefined);

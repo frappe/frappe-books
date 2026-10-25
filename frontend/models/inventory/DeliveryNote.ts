@@ -22,8 +22,6 @@ export class DeliveryNote extends StockTransfer {
   };
   static override partyField = 'customer';
   static override rowModels = { items: DeliveryNoteItem };
-  static override invoiceSchemaName = ModelNameEnum.SalesInvoice;
-  static override invoiceMapper = 'make_delivery_note';
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -31,7 +29,7 @@ export class DeliveryNote extends StockTransfer {
         'name',
         getDocStatusListColumn(),
         'customer',
-        'date',
+        'posting_date',
         'grand_total',
       ],
     };

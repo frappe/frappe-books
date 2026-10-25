@@ -11,19 +11,36 @@ import {
 
 const {
   canApplyCoupon,
+  getCouponName,
   canRedeemLoyalty,
   isCouponOffered,
   isLoyaltyOffered,
   isPriceListOffered,
 } = posDiscounts;
 
-/** Held sales as the server saved them, with what their previews filled. */
+/** Held sales as the server saved them, and the points their customers can redeem. */
 const heldSales = {
-  'SINV-1001': { customer: 'Asha', loyalty_program: 'Gold', points: 40 },
-  'SINV-1002': { customer: 'Ravi', loyalty_program: null, points: 0 },
+  'SINV-1001': { customer: 'Asha', loyalty_program: 'Gold' },
+  'SINV-1002': { customer: 'Ravi', loyalty_program: null },
 };
+const points = { Asha: 40, Ravi: 0 };
 
-await loadFrappeModels(frappeModels, ({ path }) => {
+/** Coupons by name, as ERPNext names them, with the codes cashiers type. */
+const coupons = [{ name: 'Diwali Offer', coupon_code: 'DIWALIOF' }];
+
+await loadFrappeModels(frappeModels, ({ path, body }) => {
+  if (
+    path.endsWith('frappe.client.get_list') &&
+    body.doctype === 'Books Coupon Code'
+  ) {
+    const [[, , code]] = body.filters;
+    return { message: coupons.filter((coupon) => coupon.coupon_code === code) };
+  }
+
+  if (path.endsWith('.get_loyalty_program_details_with_points')) {
+    return { message: { loyalty_points: points[body.customer] } };
+  }
+
   const name = decodeURIComponent(path).split('/').pop();
   const held = heldSales[name];
   return held ? { data: toSavedSale(name, held) } : { data: [] };
@@ -32,32 +49,31 @@ await loadFrappeModels(frappeModels, ({ path }) => {
 beforeEach(() => {
   fyo.singles.AccountingSettings = {
     enable_coupon_code: true,
-    enable_loyalty_program: true,
+    enable_loyalty_point_program: true,
   };
 });
 
-function toSavedSale(name, { customer, loyalty_program, points }) {
+function toSavedSale(name, { customer, loyalty_program }) {
   return {
     name,
     docstatus: 0,
     is_pos: 1,
     customer,
     loyalty_program,
-    available_loyalty_points: points,
-    items: [{ name: `${name}-1`, item: 'Pen', quantity: 1 }],
+    items: [{ name: `${name}-1`, item_code: 'Pen', qty: 1 }],
   };
 }
 
-/** A sale of a Pen to Asha, whose program has 40 points left. */
-function makeSale(values = {}) {
+/** A sale of a Pen to Asha, whose program has `availableLoyaltyPoints`, 40 unless given, left. */
+function makeSale({ availableLoyaltyPoints = 40, ...values } = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,
     customer: 'Asha',
     loyalty_program: 'Gold',
-    available_loyalty_points: 40,
-    items: [{ item: 'Pen', quantity: 1 }],
+    items: [{ item_code: 'Pen', qty: 1 }],
     ...values,
   });
+  sale.availableLoyaltyPoints = availableLoyaltyPoints;
   return sale;
 }
 
@@ -66,9 +82,10 @@ const getGates = (sale) => [canApplyCoupon(sale), canRedeemLoyalty(sale)];
 test("a reopened held sale shows its own customer's points", async () => {
   const asha = await getFrappeDoc('SalesInvoice', 'SINV-1001');
   const ravi = await getFrappeDoc('SalesInvoice', 'SINV-1002');
+  await Promise.all([asha.loadLoyaltyPoints(), ravi.loadLoyaltyPoints()]);
 
   assert.deepEqual(
-    [asha.loyalty_program, asha.available_loyalty_points],
+    [asha.loyalty_program, asha.availableLoyaltyPoints],
     ['Gold', 40]
   );
   assert.equal(canRedeemLoyalty(asha), true);
@@ -82,7 +99,10 @@ test('coupons and loyalty need an open sale with items and a customer', () => {
   assert.deepEqual(getGates(makeSale({ items: [] })), [false, false]);
   assert.deepEqual(getGates(makeSale({ customer: '' })), [false, false]);
   // The actions stay on offer, so their toasts can say what is missing.
-  assert.deepEqual(getOffers(makeSale({ items: [], customer: '' })), [true, true]);
+  assert.deepEqual(getOffers(makeSale({ items: [], customer: '' })), [
+    true,
+    true,
+  ]);
 
   const submitted = makeSale();
   submitted.docstatus = 1;
@@ -105,16 +125,21 @@ test('each gate follows its own feature', () => {
   fyo.singles.AccountingSettings = { enable_coupon_code: true };
   assert.deepEqual(getGates(makeSale()), [true, false]);
 
-  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };
   assert.deepEqual(getGates(makeSale()), [false, true]);
 });
 
 test('loyalty also needs points to redeem on a sale, not a return', () => {
-  const noPoints = makeSale({ available_loyalty_points: 0 });
+  const noPoints = makeSale({ availableLoyaltyPoints: 0 });
   const noProgram = makeSale({ loyalty_program: null });
   const refund = makeSale({ return_against: 'SINV-0900' });
 
   for (const sale of [noPoints, noProgram, refund]) {
     assert.deepEqual(getGates(sale), [true, false]);
   }
+});
+
+test('a typed coupon code finds its coupon; a picked coupon name stays', async () => {
+  assert.equal(await getCouponName('DIWALIOF'), 'Diwali Offer');
+  assert.equal(await getCouponName('Diwali Offer'), 'Diwali Offer');
 });

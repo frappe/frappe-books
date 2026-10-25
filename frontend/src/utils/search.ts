@@ -1,14 +1,11 @@
+import type { Feature } from 'fyo/utils/features';
 import { Fyo, t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
-import { reports } from 'reports';
+import { getReports } from 'reports';
 import { OptionField } from 'schemas/types';
 import type { DocValues } from 'src/frappe/api';
-import {
-  getAllSchemaNames,
-  getField,
-  getSchema,
-} from 'src/frappe/registry';
+import { getAllSchemaNames, getField, getSchema } from 'src/frappe/registry';
 import {
   getSearchables,
   searchDocuments,
@@ -47,7 +44,6 @@ interface RecentSearchItem extends Omit<SearchItem, 'group'> {
 
 export type SearchItems = (DocSearchItem | SearchItem | RecentSearchItem)[];
 
-
 interface SearchFilters {
   groupFilters: Record<SearchGroup, boolean>;
   skipTransactions: boolean;
@@ -66,7 +62,7 @@ export function getGroupLabelMap() {
 }
 
 function getCreateList(fyo: Fyo): SearchItem[] {
-  const hasInventory = fyo.singles.AccountingSettings?.enable_inventory;
+  const hasInventory = fyo.isFeatureOn('enable_inventory');
   const formEditCreateList = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
@@ -91,12 +87,12 @@ function getCreateList(fyo: Fyo): SearchItem[] {
   const filteredCreateList = [
     {
       label: t`Sales Payment`,
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       create: createFilters.SalesPayments,
     },
     {
       label: t`Purchase Payment`,
-      schemaName: ModelNameEnum.Payment,
+      schemaName: ModelNameEnum.PaymentEntry,
       create: createFilters.PurchasePayments,
     },
   ].map(({ label, create, schemaName }) => {
@@ -116,70 +112,65 @@ function getCreateList(fyo: Fyo): SearchItem[] {
 
 function getReportList(fyo: Fyo): SearchItem[] {
   const hasGstin = !!fyo.singles?.AccountingSettings?.gstin;
-  const hasInventory = !!fyo.singles?.AccountingSettings?.enable_inventory;
-  const reportNames = Object.keys(reports) as (keyof typeof reports)[];
-  return reportNames
-    .filter((r) => {
-      const report = reports[r];
-      if (report.isInventory && !hasInventory) {
+  const hasInventory = fyo.isFeatureOn('enable_inventory');
+  return Object.entries(getReports())
+    .filter(([, report]) => {
+      if (!report || (report.isInventory && !hasInventory)) {
         return false;
       }
 
-      if (report.title.startsWith('GST') && !hasGstin) {
-        return false;
-      }
-      return true;
+      return !report.title.startsWith('GST') || hasGstin;
     })
-    .map((r) => {
-      const report = reports[r];
-      return {
-        label: report.title,
-        route: `/report/${r}`,
-        group: 'Report',
-      } as SearchItem;
-    })
+    .map(
+      ([name, report]) =>
+        ({
+          label: report!.title,
+          route: `/report/${name}`,
+          group: 'Report',
+        }) as SearchItem
+    )
     .filter((item) => canOpen(item.route!));
 }
 
 /** Schemas of the features that are turned off, whose lists are not offered. */
 function getSwitchedOffSchemaNames(fyo: Fyo): string[] {
-  const accounting = fyo.singles.AccountingSettings;
-  const inventory = fyo.singles.InventorySettings;
-  const features: [boolean | undefined, ModelNameEnum[]][] = [
+  const features: [Feature, ModelNameEnum[]][] = [
     [
-      accounting?.enable_inventory,
+      'enable_inventory',
       [
         ModelNameEnum.StockEntry,
         ModelNameEnum.DeliveryNote,
         ModelNameEnum.PurchaseReceipt,
-        ModelNameEnum.Location,
+        ModelNameEnum.Warehouse,
         ModelNameEnum.StockLedgerEntry,
       ],
     ],
-    [accounting?.enable_price_list, [ModelNameEnum.PriceList]],
-    [accounting?.enable_pricing_rule, [ModelNameEnum.PricingRule]],
-    [accounting?.enable_coupon_code, [ModelNameEnum.CouponCode]],
-    [accounting?.enable_lead, [ModelNameEnum.Lead]],
+    ['enable_price_list', [ModelNameEnum.PriceList, ModelNameEnum.ItemPrice]],
+    ['enable_pricing_rule', [ModelNameEnum.PricingRule]],
+    ['enable_coupon_code', [ModelNameEnum.CouponCode]],
+    ['enable_lead', [ModelNameEnum.Lead]],
     [
-      accounting?.enable_loyalty_program,
+      'enable_loyalty_point_program',
       [ModelNameEnum.LoyaltyProgram, ModelNameEnum.LoyaltyPointEntry],
     ],
-    [accounting?.enableitem_group, [ModelNameEnum.ItemGroup]],
-    [accounting?.enable_form_customization, [ModelNameEnum.CustomForm]],
-    [inventory?.enable_batches, [ModelNameEnum.Batch]],
-    [inventory?.enable_serial_number, [ModelNameEnum.SerialNumber]],
+    ['enable_item_group', [ModelNameEnum.ItemGroup]],
+    ['enable_form_customization', [ModelNameEnum.CustomForm]],
+    ['enable_batches', [ModelNameEnum.Batch]],
+    ['enable_serial_number', [ModelNameEnum.SerialNo]],
     [
-      inventory?.enable_point_of_sale,
+      'enable_point_of_sale',
       [
         ModelNameEnum.POSProfile,
-        ModelNameEnum.POSOpeningShift,
-        ModelNameEnum.POSClosingShift,
+        ModelNameEnum.POSOpeningEntry,
+        ModelNameEnum.POSClosingEntry,
         ModelNameEnum.ItemEnquiry,
       ],
     ],
   ];
 
-  return features.filter(([isOn]) => !isOn).flatMap(([, names]) => names);
+  return features
+    .filter(([feature]) => !fyo.isFeatureOn(feature))
+    .flatMap(([, names]) => names);
 }
 
 function getListViewList(fyo: Fyo): SearchItem[] {
@@ -187,7 +178,10 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   const standardLists = getAllSchemaNames()
     .filter((s) => !switchedOff.includes(s))
     .map((s) => getSchema(s))
-    .filter((s) => s && !s.isChild && !s.isSingle)
+    // Settings edit the one company; it has no list.
+    .filter(
+      (s) => s && !s.isChild && !s.isSingle && s.name !== ModelNameEnum.Company
+    )
     .map(
       (s) =>
         ({
@@ -200,12 +194,12 @@ function getListViewList(fyo: Fyo): SearchItem[] {
   const filteredLists = [
     {
       label: t`Sales Payment`,
-      route: `/list/Payment/${t`Sales Payment`}`,
+      route: `/list/PaymentEntry/${t`Sales Payment`}`,
       filters: routeFilters.SalesPayments,
     },
     {
       label: t`Purchase Payment`,
-      route: `/list/Payment/${t`Purchase Payment`}`,
+      route: `/list/PaymentEntry/${t`Purchase Payment`}`,
       filters: routeFilters.PurchasePayments,
     },
   ].map((i) => {

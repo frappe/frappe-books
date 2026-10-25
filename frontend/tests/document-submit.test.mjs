@@ -25,8 +25,19 @@ class Entry extends FrappeDoc {
   static presentation = { label: 'Entry' };
 }
 
-registerFrappeModels({ Entry });
-stubFrappe(() => ({ message: { metas: [entryMeta], placements: {} } }));
+// A POS shift's entry, which its form submits as it saves.
+class Shift extends FrappeDoc {
+  static doctype = 'Books Shift';
+  static presentation = { label: 'Shift' };
+  static submitsOnInsert = true;
+}
+
+const shiftMeta = { ...entryMeta, name: 'Books Shift' };
+
+registerFrappeModels({ Entry, Shift });
+stubFrappe(() => ({
+  message: { metas: [entryMeta, shiftMeta], placements: {} },
+}));
 await loadFrappeDocTypes();
 
 /** A saved draft, and a server whose submit `respond` answers; returns the methods it ran. */
@@ -130,4 +141,35 @@ test('a failed submission callback cannot turn a posted document into a failed s
   assert.equal(notified, true);
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].action, 'submit');
+});
+
+test('a new shift offers Submit only, which saves it and then submits it', async () => {
+  const shift = newFrappeDoc('Shift', { name: 'SHIFT-0001', amount: 5 });
+  assert.equal(shift.canSave, false);
+  assert.equal(shift.canSubmit, true);
+
+  const calls = [];
+  stubFrappe(({ method, path, body }) => {
+    if (body.method === 'submit') {
+      calls.push(['submit', body.document.name]);
+      return { docs: [{ ...body.document, docstatus: 1 }] };
+    }
+
+    calls.push([method, path]);
+    return { data: { ...body, modified: MODIFIED, docstatus: 0 } };
+  });
+  await shift.submit();
+
+  assert.deepEqual(calls, [
+    ['POST', '/api/v2/document/Books Shift'],
+    ['submit', 'SHIFT-0001'],
+  ]);
+  assert.equal(shift.submitted, true);
+
+  // A saved draft of the same model saves and submits as any other.
+  const draft = newFrappeDoc('Shift', { name: 'SHIFT-0002', amount: 5 });
+  await loadSaved(draft, { modified: MODIFIED, docstatus: 0 });
+  await draft.set('amount', 6);
+  assert.equal(draft.canSave, true);
+  assert.equal(draft.canSubmit, false);
 });

@@ -6,7 +6,7 @@
       <FrappeSidebarHeader
         data-testid="company-name"
         :title="companyName"
-        :subtitle="userName"
+        :subtitle="subtitle"
         :logo="companyLogo || undefined"
         :menu-items="menuItems"
       />
@@ -88,7 +88,7 @@ import { usePhoneSidebar } from './usePhoneSidebar';
 /** The desktop sidebar on a phone: account menu and every page. */
 const isOpen = defineModel<boolean>('open', { required: true });
 
-const { companyName, companyLogo, userName } = useCompanyIdentity();
+const { companyName, companyLogo, subtitle } = useCompanyIdentity();
 const menuItems = computed(() => getAppMenuItems());
 const { groups, active } = usePhoneSidebar();
 const openGroup = ref('');

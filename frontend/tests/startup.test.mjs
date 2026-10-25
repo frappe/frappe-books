@@ -28,10 +28,12 @@ test('startup loads every schema in one request, translated for a non-English la
   );
   assert.deepEqual(
     requests[0].body.doctypes,
-    Object.values(frappeModels).map(({ doctype }) => doctype)
+    Object.values(frappeModels)
+      .map(({ doctype }) => doctype)
+      .filter(Boolean)
   );
   const date = getSchema('SalesInvoice').fields.find(
-    (field) => field.fieldname === 'date'
+    (field) => field.fieldname === 'posting_date'
   );
   assert.equal(date.label, 'Datum');
   assert.equal(getSchema('SalesInvoiceItem').isChild, true);

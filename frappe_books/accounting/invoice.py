@@ -9,11 +9,14 @@ from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
-from frappe_books.accounting.party import PartyDocumentMixin
+from frappe_books.accounting.party import PartyDocumentMixin, party_account
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
+from frappe_books.accounting.taxes import calculate_taxes, set_taxes
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
+from frappe_books.company import company_value
 from frappe_books.currency import get_exchange_rate
+from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults, item_tax_templates
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
@@ -36,19 +39,28 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	is_purchase: bool
 	# The party's ledger account type, or None for a quote, which posts nothing.
 	party_account_type: str | None
-	# The item field that holds a row's income or expense account.
-	item_account_field: str
+	# The field that holds the party's ledger account, or None for a quote.
+	party_account_field: str | None
+	# The item and row field that holds a row's income or expense account; a quote's rows have none.
+	item_account_field: str | None
+	# The document's date field.
+	date_field = "posting_date"
 	# The party fields that fill an invoice's defaults.
-	party_default_fields = ("currency", "default_account")
+	party_default_fields = ("default_currency",)
 
 	def before_validate(self):
 		set_default_terms(self)
 		self.calculate()
 
+	@property
+	def document_date(self):
+		return self.get(self.date_field)
+
 	def calculate(self, drop_invalid_coupons=False):
-		"""Fill defaults, apply pricing and set the totals, without writing anything."""
+		"""Fill defaults, apply pricing and set the taxes and totals, without writing anything."""
 		returns.set_quantity_signs(self.items, bool(self.get("return_against")))
 		self.set_prices(drop_invalid_coupons)
+		set_taxes(self)
 		calculate_invoice(self)
 
 	def set_prices(self, drop_invalid_coupons=False):
@@ -64,31 +76,28 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	def populate_party_defaults(self):
 		"""Bill in the party's currency to its ledger, and return the party's defaults."""
 		party = _party_defaults(self)
-		_populate_currency(self, party.currency)
+		_populate_currency(self, party.default_currency)
 		if party and self.party_account_type:
-			self.account = self.get("account") or _party_account(self, party.default_account)
+			account = self.get(self.party_account_field) or _party_account(
+				self, party_account(self.party_type, self.party)
+			)
+			self.set(self.party_account_field, account)
 		return party
 
 	def populate_rows(self, rows):
 		"""Fill the rows' units, item details, accounts and standard rates."""
 		populate_units(rows)
-		items = _item_details({row.item for row in rows if row.item})
+		items = _item_details({row.item_code for row in rows if row.item_code}, self.document_date)
 		rates = pricing.standard_rates(self) if items else {}
 		for row in rows:
-			if row.item in items:
-				_populate_row(self, row, items[row.item], rates)
+			if row.item_code in items:
+				_populate_row(self, row, items[row.item_code], rates)
 
-	def deduct_redemption(self, total):
-		"""Return the total less what redeemed loyalty points pay; only sales redeem them."""
-		return total
+	def set_loyalty_amount(self):
+		"""Set what redeemed loyalty points pay; only sales redeem them."""
 
 	def validate(self):
 		validate_invoice(self)
-
-	@property
-	def total_discount(self):
-		"""Item discounts, as a virtual field."""
-		return sum_decimal(row_discount(self, row) for row in self.items)
 
 	@frappe.whitelist()
 	def preview(self, check_coupons: bool = False):
@@ -105,7 +114,7 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 
 INVOICE_FEATURES = {
 	"return_against": "enable_invoice_returns",
-	"coupons": "enable_coupon_code",
+	"coupon_code": "enable_coupon_code",
 	"is_pos": "enable_point_of_sale",
 }
 
@@ -120,6 +129,7 @@ class PostingInvoiceController(InvoiceController):
 		self.dont_update_if_missing.extend(self.follow_up_fields)
 
 	def calculate(self, drop_invalid_coupons=False):
+		self.is_return = int(bool(self.return_against))
 		super().calculate(drop_invalid_coupons)
 		self.set_follow_up_defaults()
 
@@ -143,7 +153,7 @@ class PostingInvoiceController(InvoiceController):
 	def validate(self):
 		super().validate()
 		self.create_batches()
-		validate_batches([{"item": row.item, "batch": row.batch} for row in self.items])
+		validate_batches([{"item_code": row.item_code, "batch_no": row.batch_no} for row in self.items])
 		validate_sale_batch_stock(self)
 
 	def create_batches(self):
@@ -152,10 +162,12 @@ class PostingInvoiceController(InvoiceController):
 	def get_ledger_posting(self):
 		"""Return the invoice's ledger entries, not yet posted."""
 		posting = InvoicePosting(self)
-		posting.on_party_side(self.account, self.grand_total, self.party)
-		for row in (*self.items, *self.taxes):
-			posting.on_item_side(row.account, row.amount)
-		discount = sum_decimal(row_discount(self, row) for row in self.items)
+		posting.on_party_side(self.get(self.party_account_field), self.grand_total, self.party)
+		for row in self.items:
+			posting.on_item_side(row.get(self.item_account_field), gross_amount(self, row))
+		for tax in self.taxes:
+			posting.on_item_side(tax.account_head, tax.tax_amount)
+		discount = item_discount(self)
 		if discount:
 			posting.on_party_side(_discount_account(), discount)
 		return posting
@@ -177,7 +189,7 @@ class PostingInvoiceController(InvoiceController):
 	def pay_outstanding_amount(self):
 		payment = map_invoice_payment(self.doctype, self.name)
 		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
-		payment.reference_id = self.name
+		payment.reference_no = self.name
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)
@@ -210,22 +222,12 @@ class PostingInvoiceController(InvoiceController):
 		"""Delete the cancelled stock transfers and payments made for this invoice, with the user's rights."""
 		invoice_transfer.delete_cancelled_transfers(self)
 		payments = frappe.get_all(
-			"Books Payment For",
-			filters={"reference_type": self.doctype, "reference_name": self.name, "docstatus": 2},
+			"Books Payment Entry Reference",
+			filters={"reference_doctype": self.doctype, "reference_name": self.name, "docstatus": 2},
 			pluck="parent",
 		)
 		for name in set(payments):
-			frappe.delete_doc("Books Payment", name)
-
-
-class InvoiceItemController(Document):
-	"""A quote or invoice row, priced per stock unit."""
-
-	@property
-	def transfer_rate(self):
-		"""The rate per transfer unit, as a virtual field, to show next to the transfer quantity."""
-		currency = getattr(getattr(self, "parent_doc", None), "currency", None)
-		return rounded(as_decimal(self.rate) * as_decimal(self.unit_conversion_factor or 1), currency)
+			frappe.delete_doc("Books Payment Entry", name)
 
 
 @frappe.whitelist()
@@ -235,62 +237,79 @@ def get_payments_to_cancel(doctype: str, name: str) -> list[dict]:
 	Other submitted documents that link to the invoice, like returns, still block its cancellation.
 	"""
 	linked = linked_with.get_submitted_linked_docs(doctype, name)
-	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment"]
+	return [doc for doc in linked["docs"] if doc["doctype"] == "Books Payment Entry"]
 
 
 def calculate_invoice(invoice):
-	original = invoice.get("return_against") and frappe.get_doc(invoice.doctype, invoice.return_against)
-	if original:
-		returns.share_fixed_row_discounts(invoice, original)
-	taxes = {}
+	"""Price each row, then set the taxes and the totals."""
 	for row in invoice.items:
-		_calculate_row(invoice, row, taxes)
-	invoice.set("taxes", list(taxes.values()))
-	_calculate_totals(invoice)
-
-
-def _calculate_row(invoice, row, taxes):
-	currency = invoice.get("currency")
-	row.amount = rounded(as_decimal(row.rate) * as_decimal(row.quantity), currency)
-	discount = _item_discount(row, row.amount, currency)
-	tax_base = row.amount if invoice.discount_after_tax else row.amount - discount
-	row_tax = _add_row_taxes(row, tax_base, taxes, currency)
-	if invoice.discount_after_tax:
-		row.item_taxed_total = row.amount + row_tax
-		row.item_discounted_total = row.item_taxed_total - _item_discount(row, row.item_taxed_total, currency)
-	else:
-		row.item_discounted_total = row.amount - discount
-		row.item_taxed_total = row.item_discounted_total + row_tax
-
-
-def _add_row_taxes(row, base, taxes, currency):
-	row_tax = as_decimal(0)
-	for detail in _tax_details(row.tax):
-		amount = rounded(base * as_decimal(detail.rate) / 100, currency)
-		tax = taxes.setdefault(
-			detail.account, {"account": detail.account, "rate": detail.rate, "amount": as_decimal(0)}
-		)
-		tax["amount"] += amount
-		row_tax += amount
-	return row_tax
-
-
-def _calculate_totals(invoice):
-	currency = invoice.get("currency")
+		_calculate_row(invoice, row)
 	invoice.net_total = sum_decimal(row.amount for row in invoice.items)
-	grand_total = invoice.deduct_redemption(
-		invoice.net_total + sum_decimal(tax.amount for tax in invoice.taxes) - invoice.total_discount
-	)
+	calculation = calculate_taxes(invoice)
+	discount = _after_tax_discount(invoice, calculation) if invoice.discount_after_tax else 0
+	_calculate_totals(invoice, discount)
+
+
+def _calculate_row(invoice, row):
+	"""ERPNext's row: the rate is the price list rate less the discount per unit, and the amount is
+	the rate times the quantity. Discounts after tax leave the rate at the price list rate."""
+	currency = invoice.get("currency")
+	price = as_decimal(row.price_list_rate)
+	percentage = as_decimal(row.discount_percentage)
+	if percentage and not invoice.discount_after_tax:
+		row.discount_amount = rounded(price * percentage / 100, currency)
+	discount = 0 if invoice.discount_after_tax else _unit_discount(row, price)
+	rate = price - discount
+	row.rate = row.net_rate = rounded(rate, currency)
+	row.amount = row.net_amount = rounded(rate * as_decimal(row.qty), currency)
+	row.stock_uom_rate = rounded(rate / as_decimal(row.conversion_factor or 1), currency)
+
+
+def _unit_discount(row, price):
+	"""A percentage discounts the price list rate; without one, the discount amount is per unit."""
+	percentage = as_decimal(row.discount_percentage)
+	return price * percentage / 100 if percentage else as_decimal(row.discount_amount)
+
+
+def _after_tax_discount(invoice, calculation):
+	"""Discounts after tax come off each row's taxed total; a percentage one is stored per unit too."""
+	return sum_decimal(_after_tax_row_discount(invoice, row, calculation) for row in invoice.items)
+
+
+def _after_tax_row_discount(invoice, row, calculation):
+	currency = invoice.get("currency")
+	taxed = calculation.taxed_total(row)
+	quantity = abs(as_decimal(row.qty))
+	percentage = as_decimal(row.discount_percentage)
+	if percentage:
+		discount = abs(taxed) * percentage / 100
+		row.discount_amount = rounded(discount / quantity, currency) if quantity else 0
+	else:
+		discount = as_decimal(row.discount_amount) * quantity
+	return rounded(-discount if taxed < 0 else discount, currency)
+
+
+def _calculate_totals(invoice, discount):
+	currency = invoice.get("currency")
+	grand_total = invoice.net_total + as_decimal(invoice.total_taxes_and_charges) - discount
 	invoice.grand_total = rounded(grand_total, currency)
-	invoice.base_grand_total = rounded(invoice.grand_total * as_decimal(invoice.exchange_rate or 1))
-	if invoice.docstatus == 0:
+	invoice.base_grand_total = rounded(invoice.grand_total * as_decimal(invoice.conversion_rate or 1))
+	invoice.set_loyalty_amount()
+	if invoice.party_account_type and invoice.docstatus == 0:
 		settlement.open_balance(invoice)
 
 
-def row_discount(invoice, row):
-	"""Return the item discount of a calculated row, signed like its amount."""
-	undiscounted = row.item_taxed_total if invoice.discount_after_tax else row.amount
-	return as_decimal(undiscounted) - as_decimal(row.item_discounted_total)
+def gross_amount(invoice, row):
+	"""The row's amount before its discount: its income or expense, as the discount posts on its own."""
+	if invoice.discount_after_tax:
+		return as_decimal(row.amount)
+	return rounded(as_decimal(row.price_list_rate) * as_decimal(row.qty), invoice.get("currency"))
+
+
+def item_discount(invoice):
+	"""The invoice's item discounts, before or after tax, signed like its total."""
+	gross = sum_decimal(gross_amount(invoice, row) for row in invoice.items)
+	return gross + as_decimal(invoice.total_taxes_and_charges) - as_decimal(invoice.grand_total)
 
 
 def validate_invoice(invoice):
@@ -298,15 +317,15 @@ def validate_invoice(invoice):
 		frappe.throw(_("At least one invoice item is required."))
 	_validate_features(invoice)
 	if invoice.party_account_type:
-		validate_account(invoice, "account", (invoice.party_account_type,))
+		validate_account(invoice, invoice.party_account_field, (invoice.party_account_type,))
 	pricing.validate_price_list(invoice)
-	if as_decimal(invoice.exchange_rate) <= 0:
+	if as_decimal(invoice.conversion_rate) <= 0:
 		frappe.throw(
 			_("Set an exchange rate from {0} to {1} above zero.").format(invoice.currency, company_currency())
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
-	validate_hsn_codes(invoice.items)
+	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
 
@@ -317,35 +336,36 @@ def _validate_features(invoice):
 	if invoice.party_type == "Books Lead":
 		require_feature("enable_lead")
 	if _has_manual_discount(invoice):
-		require_feature("enable_discounting")
+		require_feature("enable_discounts_and_margin")
 
 
 def _has_manual_discount(invoice):
 	"""Pricing rules discount rows under their own switch; other row discounts need discounting."""
 	return any(
-		as_decimal(row.item_discount_percent) or as_decimal(row.item_discount_amount)
+		as_decimal(row.discount_percentage) or as_decimal(row.discount_amount)
 		for row in invoice.items
-		if not row.get("pricing_rule")
+		if not row.get("pricing_rules")
 	)
 
 
 def _validate_row(invoice, row):
-	if not row.item:
+	if not row.item_code:
 		frappe.throw(_("Every invoice row requires an item."))
-	quantity = as_decimal(row.quantity)
-	if quantity == 0:
+	if as_decimal(row.qty) == 0:
 		frappe.throw(_("Item quantity cannot be zero."))
-	if as_decimal(row.rate) < 0:
+	if as_decimal(row.price_list_rate) < 0:
 		frappe.throw(_("Item rate cannot be negative."))
-	_validate_row_discount(row)
+	_validate_row_discount(invoice, row)
 
 
-def _validate_row_discount(row):
-	if row.set_item_discount_amount:
-		if not 0 <= as_decimal(row.item_discount_amount) <= abs(as_decimal(row.amount)):
-			frappe.throw(_("Item discount amount cannot exceed the row amount."))
-	elif not 0 <= as_decimal(row.item_discount_percent) <= 100:
+def _validate_row_discount(invoice, row):
+	if not 0 <= as_decimal(row.discount_percentage) <= 100:
 		frappe.throw(_("Item discount percent must be between 0 and 100."))
+	discount = as_decimal(row.discount_amount)
+	# A discount after tax is a share of the taxed amount, which can be more than the rate.
+	limit = None if invoice.discount_after_tax else as_decimal(row.price_list_rate)
+	if discount < 0 or (limit is not None and discount > limit):
+		frappe.throw(_("Item discount amount cannot exceed the row rate."))
 
 
 class InvoicePosting(LedgerPosting):
@@ -356,16 +376,16 @@ class InvoicePosting(LedgerPosting):
 
 	def __init__(self, invoice):
 		super().__init__(invoice)
-		self.exchange_rate = as_decimal(invoice.exchange_rate or 1)
+		self.exchange_rate = as_decimal(invoice.conversion_rate or 1)
 		self.is_party_credited = invoice.is_purchase != bool(invoice.get("return_against"))
 
 	def on_party_side(self, account, amount, party=None):
 		"""Post an invoice-currency amount on the party's side, as the discount is."""
 		self.add_entry(account, amount, party, credit=self.is_party_credited)
 
-	def on_item_side(self, account, amount):
+	def on_item_side(self, account, amount, party=None):
 		"""Post an invoice-currency amount on the side of the items and taxes."""
-		self.add_entry(account, amount, None, credit=not self.is_party_credited)
+		self.add_entry(account, amount, party, credit=not self.is_party_credited)
 
 	def add_entry(self, account, amount, party, credit):
 		base_amount = abs(as_decimal(amount)) * self.exchange_rate
@@ -373,9 +393,9 @@ class InvoicePosting(LedgerPosting):
 
 
 def _discount_account():
-	account = frappe.db.get_single_value("Books Accounting Settings", "discount_account")
+	account = company_value("default_discount_account")
 	if not account:
-		frappe.throw(_("Set a discount account in Books Accounting Settings."))
+		frappe.throw(_("Set a discount account in Books Company."))
 	return account
 
 
@@ -384,8 +404,8 @@ def _populate_pos_defaults(invoice):
 	if not invoice.get("is_pos"):
 		return
 	invoice.set(invoice.party_field, invoice.party or pos_customer())
-	invoice.account = invoice.get("account") or frappe.db.get_single_value(
-		"Books Pos Settings", "default_account"
+	invoice.debit_to = invoice.get("debit_to") or frappe.db.get_single_value(
+		"Books POS Settings", "default_account"
 	)
 
 
@@ -410,69 +430,38 @@ def _populate_currency(invoice, party_currency):
 	company = company_currency()
 	invoice.currency = party_currency or company
 	if invoice.currency == company:
-		invoice.exchange_rate = 1
-	elif not invoice.get("exchange_rate"):
-		invoice.exchange_rate = get_exchange_rate(invoice.currency, company, invoice.date)
+		invoice.conversion_rate = 1
+	elif not invoice.get("conversion_rate"):
+		invoice.conversion_rate = get_exchange_rate(invoice.currency, company, invoice.document_date)
 
 
 def _populate_row(invoice, row, item, rates):
-	for fieldname in ("item_code", "description", "unit", "hsn_code"):
+	row.item_name = item.item_name
+	for fieldname in ("description", "gst_hsn_code"):
 		if not row.get(fieldname):
 			row.set(fieldname, item.get(fieldname))
-	# A tax left out follows the item; an empty one sent, as a cleared tax, stays empty.
-	if row.get("tax") is None:
-		row.tax = item.tax
-	_populate_rate_from_transfer_rate(row)
-	if not row.rate and not (row.is_manual_rate or row.get("is_free_item")):
-		row.rate = pricing.standard_rate(invoice, row, rates)
-	if not row.account:
-		row.account = item.get(invoice.item_account_field)
-	# The Qty column shows the quantity in the transfer unit.
-	row.qty = row.transfer_quantity
+	# A template left out follows the item; an empty one sent, as a cleared one, stays empty.
+	if row.get("item_tax_template") is None:
+		row.item_tax_template = item.item_tax_template
+	if not row.price_list_rate and not (row.is_manual_rate or row.get("is_free_item")):
+		row.price_list_rate = pricing.standard_rate(invoice, row, rates)
+	account_field = invoice.item_account_field
+	if account_field and not row.get(account_field):
+		row.set(account_field, item.get(account_field))
 
 
-def _populate_rate_from_transfer_rate(row):
-	"""Take a manual rate sent only per transfer unit, as /books sends an edited one, per stock unit.
-
-	A sent rate wins over the virtual `transfer_rate`, which `row.get` reads as sent.
-	"""
-	transfer_rate = row.get("transfer_rate")
-	if row.is_manual_rate and row.get("rate") is None and transfer_rate is not None:
-		row.rate = as_decimal(transfer_rate) / as_decimal(row.unit_conversion_factor or 1)
-
-
-def _item_details(names):
+def _item_details(names, date):
+	"""The row values each item gives, under the row's fieldnames, for an invoice dated `date`."""
 	if not names:
 		return {}
 	rows = frappe.get_all(
 		"Books Item",
 		filters={"name": ["in", sorted(names)]},
-		fields=[
-			"name",
-			"item_code",
-			"description",
-			"unit",
-			"tax",
-			"item_group.tax as group_tax",
-			"hsn_code",
-			"income_account",
-			"expense_account",
-		],
+		fields=["name", "item_name", "description", "item_group", "gst_hsn_code"],
 	)
+	defaults = company_item_defaults(names)
+	templates = item_tax_templates(rows, date)
 	for row in rows:
-		row.tax = row.tax or row.group_tax
+		row.item_tax_template = templates[row.name]
+		row.update(defaults.get(row.name, {}))
 	return {row.name: row for row in rows}
-
-
-def _tax_details(tax_name):
-	if not tax_name:
-		return []
-	return frappe.get_cached_doc("Books Tax", tax_name).details
-
-
-def _item_discount(row, amount, currency):
-	if row.set_item_discount_amount:
-		discount = as_decimal(row.item_discount_amount)
-	else:
-		discount = abs(amount) * as_decimal(row.item_discount_percent) / 100
-	return rounded(-discount if amount < 0 else discount, currency)

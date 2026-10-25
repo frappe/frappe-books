@@ -10,11 +10,13 @@
   "loyalty_program",
   "loyalty_program_tier",
   "customer",
+  "invoice_type",
   "invoice",
   "loyalty_points",
   "purchase_amount",
   "expiry_date",
-  "posting_date"
+  "posting_date",
+  "company"
  ],
  "fields": [
   {
@@ -43,11 +45,19 @@
    "search_index": 1
   },
   {
-   "fieldname": "invoice",
+   "fieldname": "invoice_type",
    "fieldtype": "Link",
+   "label": "Invoice Type",
+   "options": "DocType",
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "invoice",
+   "fieldtype": "Dynamic Link",
    "in_list_view": 1,
    "label": "Invoice",
-   "options": "Books Sales Invoice",
+   "options": "invoice_type",
    "read_only": 1,
    "reqd": 1,
    "search_index": 1
@@ -77,12 +87,19 @@
    "fieldtype": "Date",
    "label": "Posting Date",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Loyalty Point Entry",

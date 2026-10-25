@@ -17,11 +17,13 @@ let hasCustomers = false;
 test.beforeEach(async ({ page }) => {
   if (hasCustomers) return;
   await insertDocument(page, 'Books Customer', {
-    name: customer,
-    phone: '98765 43210',
-    email: `${run}@example.com`,
+    customer_name: customer,
+    mobile_no: '98765 43210',
+    email_id: `${run}@example.com`,
   });
-  await insertDocument(page, 'Books Customer', { name: otherCustomer });
+  await insertDocument(page, 'Books Customer', {
+    customer_name: otherCustomer,
+  });
   hasCustomers = true;
 });
 
@@ -54,10 +56,11 @@ test('selected items start a new sales invoice', async ({ page }) => {
   const items = [`Phone Item A ${run}`, `Phone Item B ${run}`];
   for (const name of items) {
     await insertDocument(page, 'Books Item', {
-      name,
-      rate: 100,
-      income_account: 'Sales',
-      expense_account: 'Cost of Goods Sold',
+      item_code: name,
+      standard_rate: 100,
+      item_defaults: [
+        { income_account: 'Sales', expense_account: 'Cost of Goods Sold' },
+      ],
     });
   }
   await page.goto('/books/list/Item');
@@ -98,7 +101,7 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Filter by' })
-    .getByRole('button', { name: /^Phone/ })
+    .getByRole('button', { name: /^Mobile No/ })
     .tap();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   await sheet.getByPlaceholder('Value').fill('98765');
@@ -109,19 +112,20 @@ test('a filter chip narrows the list until it is removed', async ({ page }) => {
   await expect(rows(page)).toContainText(customer);
   await expect(page.getByRole('button', { name: 'Filters (1)' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Remove filter Phone' }).tap();
+  await page.getByRole('button', { name: 'Remove filter Mobile No' }).tap();
   await expect(rows(page)).toHaveCount(2);
   await expect(
     page.getByRole('button', { name: 'Filters', exact: true })
   ).toBeVisible();
 });
 
+// POS shifts open on a date and time; invoices and payments post on a date.
 test('date filters use the native picker', async ({ page }) => {
-  await page.goto('/books/list/SalesInvoice');
+  await page.goto('/books/list/POSOpeningEntry');
   await page.getByRole('button', { name: 'Filters', exact: true }).tap();
   await page
     .getByRole('dialog', { name: 'Filter by' })
-    .getByRole('button', { name: /^Date/ })
+    .getByRole('button', { name: /^Period Start Date/ })
     .tap();
   const sheet = page.getByRole('dialog', { name: 'Filters' });
   const value = sheet.getByLabel('Value');

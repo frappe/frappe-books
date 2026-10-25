@@ -10,8 +10,8 @@ import { Report } from './Report';
 import { canExportReport } from './serverReport';
 import { ColumnField, ExportExtension, ReportCell } from './types';
 
-// Reports hold reference types as doctypes; files name them by schema, e.g. `SalesInvoice`.
-const REFERENCE_FIELDNAMES = ['reference_type', 'referenceType'];
+// Reports hold reference types, as columns and filters, as doctypes; files name them by schema, e.g. `SalesInvoice`.
+const REFERENCE_FIELDNAMES = ['voucher_type', 'voucherType'];
 
 interface JSONExport {
   columns: { fieldname: string; label: string }[];
@@ -79,7 +79,7 @@ export function getJsonData(report: Report): string {
 
   const columns = report.columns;
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.currency_precision as number) ?? 2;
 
   /**
    * Set columns as list of fieldname, label
@@ -145,7 +145,7 @@ export function getCsvData(report: Report): string {
 
 function convertReportToCSVMatrix(report: Report): unknown[][] {
   const displayPrecision =
-    (report.fyo.singles.SystemSettings?.display_precision as number) ?? 2;
+    (report.fyo.singles.SystemSettings?.currency_precision as number) ?? 2;
   const reportData = report.reportData;
   const columns = report.columns;
 

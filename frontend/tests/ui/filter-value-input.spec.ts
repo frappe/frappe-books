@@ -12,7 +12,7 @@ const cases = [
   [
     'JournalEntry',
     'Entry Type',
-    'entry_type',
+    'voucher_type',
     [
       'Journal Entry',
       'Bank Entry',
@@ -33,21 +33,28 @@ const cases = [
     'Status',
     'status',
     [
-      'Saved',
+      'Draft',
       'Unpaid',
       'Partly Paid',
       'Paid',
       'Return',
-      'Return Issued',
+      'Credit Note Issued',
       'Cancelled',
     ],
   ],
-  ['JournalEntry', 'Status', 'status', ['Saved', 'Submitted', 'Cancelled']],
   [
     'DeliveryNote',
     'Status',
     'status',
-    ['Saved', 'Submitted', 'Return', 'Return Issued', 'Cancelled'],
+    [
+      'Draft',
+      'To Bill',
+      'Partially Billed',
+      'Completed',
+      'Return',
+      'Return Issued',
+      'Cancelled',
+    ],
   ],
 ] as const;
 
@@ -56,7 +63,7 @@ for (const [schema, label, field, options] of cases) {
     page,
   }) => {
     // The narrowest desktop window; phones get the filter sheet instead.
-    if (schema === 'JournalEntry' && field === 'entry_type')
+    if (schema === 'JournalEntry' && field === 'voucher_type')
       await page.setViewportSize({ width: 768, height: 560 });
     await openField(page, schema, label);
     const value = page.getByRole('combobox', { name: 'Value', exact: true });
@@ -66,7 +73,7 @@ for (const [schema, label, field, options] of cases) {
     ).toHaveText('Is');
     await value.click();
     await expect(page.getByRole('option')).toHaveText([...options]);
-    if (schema === 'JournalEntry' && field === 'entry_type') {
+    if (schema === 'JournalEntry' && field === 'voucher_type') {
       const menu = page.getByRole('listbox');
       await expect(menu).toBeInViewport();
       const bounds = (await menu.boundingBox())!;
@@ -85,9 +92,7 @@ for (const [schema, label, field, options] of cases) {
     ).toBeVisible();
     await expect(page.getByRole('listbox')).toBeHidden();
     await page.getByRole('button', { name: 'Apply', exact: true }).click();
-    expect(await appliedFilters(page)).toEqual([
-      [field, '=', options.at(-1)],
-    ]);
+    expect(await appliedFilters(page)).toEqual([[field, '=', options.at(-1)]]);
     await page
       .getByRole('button', { name: '1 filter applied', exact: true })
       .click();
@@ -125,30 +130,31 @@ for (const condition of ['Is', 'Contains']) {
 test('changing Select fields resets choices and supports keyboard selection', async ({
   page,
 }) => {
-  await openField(page, 'JournalEntry', 'Entry Type');
-  await setValue(page, 'Bank Entry');
-  await choose(page, 'Field', 'Status');
+  await openField(page, 'Item', 'Type');
+  await setValue(page, 'Service');
+  await choose(page, 'Field', 'Custom Choice');
   const value = page.getByRole('combobox', { name: 'Value', exact: true });
   await expect(value).toHaveText('Select a value');
   await value.press('Enter');
   await expect(page.getByRole('option')).toHaveText([
-    'Saved',
-    'Submitted',
-    'Cancelled',
+    'First label',
+    'Second label',
   ]);
   await page
-    .getByRole('option', { name: 'Saved', exact: true })
+    .getByRole('option', { name: 'First label', exact: true })
     .press('ArrowDown');
   await expect(
-    page.getByRole('option', { name: 'Submitted', exact: true })
+    page.getByRole('option', { name: 'Second label', exact: true })
   ).toBeFocused();
   await page.keyboard.press('Enter');
-  await expect(value).toHaveText('Submitted');
+  await expect(value).toHaveText('Second label');
   await expect(
     page.getByRole('region', { name: 'Filters', exact: true })
   ).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
-  expect(await appliedFilters(page)).toEqual([['status', '=', 'Submitted']]);
+  expect(await appliedFilters(page)).toEqual([
+    ['customChoice', '=', 'code-two'],
+  ]);
 });
 
 test('Link filters offer records, search by name, clear, and use text for Contains', async ({
@@ -191,7 +197,7 @@ test('Link field changes load the correct records and lookup errors are visible'
 }) => {
   await openField(page, 'Item', 'Item Group');
   await setValue(page, 'ItemGroup-001');
-  await choose(page, 'Field', 'Unit Type');
+  await choose(page, 'Field', 'Default Unit of Measure');
   const input = page.getByRole('combobox', { name: 'Value', exact: true });
   await input.click();
   await expect(page.getByRole('option')).toHaveText(['UOM-001', 'UOM-002']);

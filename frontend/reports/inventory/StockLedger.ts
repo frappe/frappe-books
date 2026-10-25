@@ -12,41 +12,41 @@ export class StockLedger extends Report {
   static phoneLayout: PhoneLayout = {
     type: 'entries',
     date: 'date',
-    title: 'item',
-    amount: 'quantity',
-    meta: ['location', 'reference_name'],
-    balance: 'balance_quantity',
-    chips: ['fromDate', 'toDate', 'item', 'location'],
+    title: 'item_code',
+    amount: 'actual_qty',
+    meta: ['warehouse', 'voucher_no'],
+    balance: 'qty_after_transaction',
+    chips: ['fromDate', 'toDate', 'itemCode', 'warehouse'],
   };
   static isInventory = true;
 
   usePagination = true;
 
-  item?: string;
-  location?: string;
-  batch?: string;
+  itemCode?: string;
+  warehouse?: string;
+  batchNo?: string;
   serialNumber?: string;
   fromDate?: string;
   toDate?: string;
   ascending?: boolean;
   /** The doctype of the entries' documents, or `All`. */
-  referenceType?: string = 'All';
-  referenceName?: string;
+  voucherType?: string = 'All';
+  voucherNo?: string;
 
-  groupBy: 'none' | 'item' | 'location' | 'reference_name' = 'none';
+  groupBy: 'none' | 'item_code' | 'warehouse' | 'voucher_no' = 'none';
 
   /** Columns coloured green or red; `null` colours by the sign of the value. */
   colouredColumns: Record<string, 'red' | 'green' | null> = {
-    quantity: null,
-    value_change: null,
+    actual_qty: null,
+    stock_value_difference: null,
   };
 
   get hasBatches(): boolean {
-    return !!this.fyo.singles.InventorySettings?.enable_batches;
+    return this.fyo.isFeatureOn('enable_batches');
   }
 
   get hasSerialNumbers(): boolean {
-    return !!this.fyo.singles.InventorySettings?.enable_serial_number;
+    return this.fyo.isFeatureOn('enable_serial_number');
   }
 
   async setDefaultFilters() {
@@ -84,30 +84,30 @@ export class StockLedger extends Report {
           { label: t`Purchase Receipt`, value: 'Books Purchase Receipt' },
         ],
         label: t`Ref Type`,
-        fieldname: 'referenceType',
+        fieldname: 'voucherType',
         placeholder: t`Ref Type`,
       },
       {
         fieldtype: 'DynamicLink',
         label: t`Ref Name`,
-        references: 'referenceType',
+        references: 'voucherType',
         placeholder: t`Ref Name`,
         emptyMessage: t`Change Ref Type`,
-        fieldname: 'referenceName',
+        fieldname: 'voucherNo',
       },
       {
         fieldtype: 'Link',
         target: 'Item',
         placeholder: t`Item`,
         label: t`Item`,
-        fieldname: 'item',
+        fieldname: 'itemCode',
       },
       {
         fieldtype: 'Link',
-        target: 'Location',
-        placeholder: t`Location`,
-        label: t`Location`,
-        fieldname: 'location',
+        target: 'Warehouse',
+        placeholder: t`Warehouse`,
+        label: t`Warehouse`,
+        fieldname: 'warehouse',
       },
       ...(this.hasBatches
         ? ([
@@ -116,7 +116,7 @@ export class StockLedger extends Report {
               target: 'Batch',
               placeholder: t`Batch`,
               label: t`Batch`,
-              fieldname: 'batch',
+              fieldname: 'batchNo',
             },
           ] as Field[])
         : []),
@@ -138,9 +138,9 @@ export class StockLedger extends Report {
         fieldname: 'groupBy',
         options: [
           { label: t`None`, value: 'none' },
-          { label: t`Item`, value: 'item' },
-          { label: t`Location`, value: 'location' },
-          { label: t`Reference`, value: 'reference_name' },
+          { label: t`Item`, value: 'item_code' },
+          { label: t`Warehouse`, value: 'warehouse' },
+          { label: t`Reference`, value: 'voucher_no' },
         ],
       },
       {

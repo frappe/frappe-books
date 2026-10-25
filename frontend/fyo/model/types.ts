@@ -7,11 +7,13 @@ import type { Filter } from 'src/frappe/api';
 import type { RouteLocationRaw, Router } from 'vue-router';
 import type { FrappeDoc } from 'src/frappe/document';
 import type { AccountingSettings } from 'models/baseModels/AccountingSettings/AccountingSettings';
+import type { Company } from 'models/baseModels/Company/Company';
 import type { GetStarted } from 'models/baseModels/GetStarted/GetStarted';
 import type { Defaults } from 'models/baseModels/Defaults/Defaults';
 import type { PrintSettings } from 'models/baseModels/PrintSettings/PrintSettings';
 import type { InventorySettings } from 'models/inventory/InventorySettings';
 import type { Misc } from 'models/baseModels/Misc';
+import type { ERPNextSettings } from 'models/baseModels/ERPNextSettings/ERPNextSettings';
 import type { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 
 /**
@@ -45,11 +47,14 @@ export interface DocumentActionWarning {
 export interface SinglesMap {
   SystemSettings?: SystemSettings;
   AccountingSettings?: AccountingSettings;
+  /** The one Books Company, which Settings edits with the settings singles. */
+  Company?: Company;
   InventorySettings?: InventorySettings;
   POSSettings?: POSSettings;
   PrintSettings?: PrintSettings;
   Defaults?: Defaults;
   Misc?: Misc;
+  ERPNextSettings?: ERPNextSettings;
   GetStarted?: GetStarted;
   [key: string]: FrappeDoc | undefined;
 }
@@ -89,14 +94,48 @@ export type ColumnConfig = {
   label: string;
   fieldtype: FieldType;
   fieldname: string;
-  badge?: (doc: RenderData) => BadgeData;
+  badge?: (doc: RenderData) => BadgeData | undefined;
   display?: (value: unknown, fyo: Fyo) => string;
 };
 
 export type ListViewColumn = string | ColumnConfig;
+
+/** Records of another schema that link a saved document, which its form lists read only. */
+export interface LinkedRecords {
+  schemaName: string;
+  /** The records' field that holds the document's name. */
+  linkField: string;
+  label: string;
+  columns: ListViewColumn[];
+  addLabel: string;
+  emptyMessage: string;
+  /** A from and to date pair that a phone row shows as one range. */
+  dateRange?: [string, string];
+  /** The records link to documents by their `links` rows, as Frappe's Addresses do, so `linkField` is `links`. */
+  dynamicLink?: boolean;
+}
+/** What an empty list says, where it says more than "No entries found". */
+export interface ListEmptyState {
+  title: string;
+  description?: string;
+  createLabel?: string;
+  /** The title when filters leave no rows. */
+  filteredTitle?: string;
+}
+
+/** A bar of filters above a list: a search box and one Link field's records. */
+export interface ListFilterBar {
+  searchPlaceholder: string;
+  linkField: string;
+  /** What the Link filter says while it shows every record, e.g. "All price lists". */
+  allLabel: string;
+}
+
 export interface ListViewSettings {
   formRoute?: (name: string) => RouteLocationRaw;
   columns?: ListViewColumn[];
+  emptyState?: ListEmptyState;
+  filterBar?: ListFilterBar;
 }
 
 export interface TreeViewSettings {

@@ -14,24 +14,29 @@ class BooksStockLedgerEntry(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		balance_quantity: DF.Float
-		balance_value: DF.Currency
-		batch: DF.Link | None
-		date: DF.Datetime | None
-		item: DF.Link | None
-		location: DF.Link | None
-		name: DF.Int | None
-		quantity: DF.Float
-		rate: DF.Currency
-		reference_name: DF.DynamicLink | None
-		reference_type: DF.Link | None
-		serial_number: DF.Link | None
+		actual_qty: DF.Float
+		batch_no: DF.Link | None
+		company: DF.Link | None
+		incoming_rate: DF.Currency
+		is_cancelled: DF.Check
+		item_code: DF.Link | None
+		posting_date: DF.Date | None
+		posting_datetime: DF.Datetime | None
+		posting_time: DF.Time | None
+		qty_after_transaction: DF.Float
+		serial_no: DF.Link | None
 		stock_queue: DF.LongText | None
-		value_change: DF.Currency
+		stock_value: DF.Currency
+		stock_value_difference: DF.Currency
+		voucher_no: DF.DynamicLink | None
+		voucher_type: DF.Link | None
+		warehouse: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Stock Ledger Entry"
 
 
 def on_doctype_update():
-	frappe.db.add_index("Books Stock Ledger Entry", ["item", "location", "batch", "date"])
+	frappe.db.add_index(
+		"Books Stock Ledger Entry", ["item_code", "warehouse", "batch_no", "posting_datetime"]
+	)

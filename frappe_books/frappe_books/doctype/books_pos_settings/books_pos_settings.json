@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "inventory",
+  "warehouse",
   "pos_profile",
   "cash_account",
   "write_off_account",
@@ -20,9 +20,9 @@
   "item_weight_digits",
   "default_section_break_13",
   "item_visibility",
-  "can_change_rate",
+  "allow_rate_change",
   "hide_unavailable_items",
-  "can_edit_discount",
+  "allow_discount_change",
   "ignore_pricing_rule"
  ],
  "fields": [
@@ -32,16 +32,16 @@
    "label": "Default"
   },
   {
-   "fieldname": "inventory",
+   "fieldname": "warehouse",
    "fieldtype": "Link",
-   "label": "Inventory",
-   "options": "Books Location"
+   "label": "Warehouse",
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "pos_profile",
    "fieldtype": "Link",
    "label": "POS Profile",
-   "options": "Books Pos Profile"
+   "options": "Books POS Profile"
   },
   {
    "fieldname": "cash_account",
@@ -120,9 +120,9 @@
   },
   {
    "default": "0",
-   "fieldname": "can_change_rate",
+   "fieldname": "allow_rate_change",
    "fieldtype": "Check",
-   "label": "Can Change Rate"
+   "label": "Allow User to Edit Rate"
   },
   {
    "default": "0",
@@ -132,9 +132,9 @@
   },
   {
    "default": "0",
-   "fieldname": "can_edit_discount",
+   "fieldname": "allow_discount_change",
    "fieldtype": "Check",
-   "label": "Can Change Discount"
+   "label": "Allow User to Edit Discount"
   },
   {
    "default": "0",
@@ -147,10 +147,10 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Pos Settings",
+ "name": "Books POS Settings",
  "owner": "Administrator",
  "permissions": [
   {

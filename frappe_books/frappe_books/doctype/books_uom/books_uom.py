@@ -5,7 +5,7 @@
 from frappe.model.document import Document
 
 
-class BooksUom(Document):
+class BooksUOM(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -14,7 +14,8 @@ class BooksUom(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		is_whole: DF.Check
+		must_be_whole_number: DF.Check
+		uom_name: DF.Data
 	# end: auto-generated types
 
-	_DOCTYPE_NAME = "Books Uom"
+	_DOCTYPE_NAME = "Books UOM"

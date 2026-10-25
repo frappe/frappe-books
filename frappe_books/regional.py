@@ -66,34 +66,29 @@ def ensure_regional_records(country):
 	}.items():
 		for rate in rates:
 			name = f"{tax_type}-{rate}"
-			if frappe.db.exists("Books Tax", name):
+			if frappe.db.exists("Books Item Tax Template", name):
 				continue
 			frappe.get_doc(
 				{
-					"doctype": "Books Tax",
-					"name": name,
-					"details": _tax_details(tax_type, rate),
+					"doctype": "Books Item Tax Template",
+					"title": name,
+					"taxes": _tax_details(tax_type, rate),
 				}
 			).insert(ignore_permissions=True)
 
 
-def populate_address(address):
-	address.address_display = ", ".join(
-		str(value)
-		for value in (
-			address.address_line1,
-			address.address_line2,
-			address.city,
-			address.state,
-			address.country,
-			address.postal_code,
+def ensure_address_template(country):
+	"""Frappe renders addresses by the default Address Template, which a site without ERPNext lacks."""
+	if not frappe.db.exists("Address Template", {"is_default": 1}):
+		frappe.get_doc({"doctype": "Address Template", "country": country, "is_default": 1}).insert(
+			ignore_permissions=True
 		)
-		if value
-	)
+
+
+def gst_state(address):
+	"""The GST state of an address: its state, when it is an Indian one."""
 	if address.country == "India" and address.state in INDIAN_STATES.values():
-		address.pos = address.state
-	elif address.get("pos"):
-		address.pos = None
+		return address.state
 
 
 def validate_gstin(gstin):
@@ -103,9 +98,9 @@ def validate_gstin(gstin):
 	return gstin
 
 
-def validate_hsn_codes(docs):
+def validate_hsn_codes(docs, fieldname="hsn_code"):
 	"""HSN/SAC is India's GST code, so only an Indian company's codes are checked."""
-	codes = [str(doc.hsn_code) for doc in docs if doc.get("hsn_code")]
+	codes = [str(doc.get(fieldname)) for doc in docs if doc.get(fieldname)]
 	invalid = [code for code in codes if not HSN_CODE_PATTERN.fullmatch(code)]
 	if invalid and company_country() == "India":
 		frappe.throw(_("HSN/SAC code must contain between 4 and 8 digits."))
@@ -114,7 +109,7 @@ def validate_hsn_codes(docs):
 def _tax_details(tax_type, rate):
 	if tax_type == "GST":
 		return [
-			{"account": "CGST", "rate": rate / 2},
-			{"account": "SGST", "rate": rate / 2},
+			{"tax_type": "CGST", "tax_rate": rate / 2},
+			{"tax_type": "SGST", "tax_rate": rate / 2},
 		]
-	return [{"account": tax_type.split("-")[0], "rate": rate}]
+	return [{"tax_type": tax_type.split("-")[0], "tax_rate": rate}]

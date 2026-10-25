@@ -1,7 +1,17 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <FrappeButton v-if="fyo.can('Account', 'create')" @click="addRootGroup">{{
+      <template v-if="company" #left>
+        <FrappeBadge theme="gray" variant="subtle">{{ company }}</FrappeBadge>
+      </template>
+      <template #mobile-prefix>
+        <FrappePageHeaderBackButton
+          class="rtl-rotate-180"
+          :label="t`Back`"
+          fallback-route="/"
+        />
+      </template>
+      <FrappeButton v-if="canEditTree" @click="addRootGroup">{{
         t`Add root group`
       }}</FrappeButton>
       <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
@@ -9,8 +19,53 @@
         t`Collapse`
       }}</FrappeButton>
     </PageHeader>
+    <div v-if="error" class="px-4 pt-4 sm:px-5">
+      <FrappeAlert theme="red" :title="error" />
+    </div>
+    <EmptyState
+      v-else-if="root && !accounts.length"
+      class="flex-1"
+      :title="t`No accounts`"
+      icon="lucide-folder-tree"
+    />
+    <!-- Phones (accessory mode only): 44px rows for touch; a tap expands or collapses a group. -->
+    <ul
+      v-else-if="root && isMobile"
+      class="pb-6 pt-1"
+      :aria-label="t`Chart of Accounts`"
+    >
+      <li v-for="{ account, depth } in visibleRows" :key="account.name">
+        <button
+          type="button"
+          class="flex h-11 w-full items-center gap-1.5 pe-4 text-start active:bg-surface-gray-2"
+          :style="{ paddingInlineStart: `${16 + depth * 16}px` }"
+          :aria-expanded="
+            account.children.length ? isExpanded(account) : undefined
+          "
+          @click="onClick(account)"
+        >
+          <span
+            class="size-4 shrink-0 text-ink-gray-5 transition-transform rtl-rotate-180"
+            :class="[
+              account.children.length ? 'lucide-chevron-right' : '',
+              isExpanded(account) ? 'rotate-90' : '',
+            ]"
+            aria-hidden="true"
+          />
+          <span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">
+            {{ accountLabel(account.name) }}
+          </span>
+          <span
+            v-if="showsBalance(account)"
+            class="shrink-0 text-sm tabular-nums text-ink-gray-5"
+          >
+            {{ getBalanceString(account) }}
+          </span>
+        </button>
+      </li>
+    </ul>
     <FrappeScrollArea
-      v-if="root"
+      v-else-if="root"
       class="min-h-0 flex-1"
       viewport-class="px-3 pt-4 pb-10 sm:px-5"
     >
@@ -26,7 +81,7 @@
         <template #item-prefix="{ node }">
           <span
             class="size-4 shrink-0"
-            :class="getAccountIconName(!!node.is_group, String(node.name))"
+            :class="getAccountIconName(node as AccountItem)"
             aria-hidden="true"
           />
         </template>
@@ -70,7 +125,7 @@
               </FrappeDropdown>
             </div>
             <span
-              v-if="canReadLedger && !node.is_group"
+              v-if="showsBalance(node as AccountItem)"
               class="min-w-24 text-end text-base tabular-nums text-ink-gray-7"
               >{{ getBalanceString(node as AccountItem) }}</span
             >
@@ -78,7 +133,7 @@
         </template>
       </FrappeTree>
     </FrappeScrollArea>
-    <div v-else class="px-3 pt-4 sm:px-5" aria-busy="true">
+    <div v-else-if="!error" class="px-3 pt-4 sm:px-5" aria-busy="true">
       <div
         v-for="width in ['w-56', 'w-40', 'w-48', 'w-36', 'w-44']"
         :key="width"
@@ -116,6 +171,8 @@
 <script lang="ts">
 import { t } from 'fyo';
 import {
+  Alert as FrappeAlert,
+  Badge as FrappeBadge,
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
   ScrollArea as FrappeScrollArea,
@@ -126,10 +183,14 @@ import {
   type DropdownOptions,
   type TreeExposed,
   Button as FrappeButton,
+  PageHeaderBackButton as FrappePageHeaderBackButton,
 } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import { getDocType } from 'src/frappe/doctypes';
 import { getLinkLabel } from 'src/frappe/link';
+import { getAccessoryCompany, isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -143,12 +204,14 @@ import { AccountRootType, AccountType } from 'models/baseModels/Account/types';
 import { TreeViewSettings } from 'fyo/model/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { showDialog } from 'src/utils/interactive';
+import { serverHtmlToText } from 'src/utils/serverHtml';
+import { isMobile } from 'src/utils/viewport';
 
 type AccountItem = {
   [key: string]: unknown;
   label: string;
   name: string;
-  parent_books_account: string;
+  parent_account: string;
   root_type: AccountRootType;
   account_type: AccountType;
   is_group?: number;
@@ -161,22 +224,42 @@ type AccKey = 'addingAccount' | 'addingGroupAccount';
 
 const ACCOUNT_FIELDS = [
   'name',
-  'parent_books_account',
+  'parent_account',
   'is_group',
   'root_type',
   'account_type',
 ];
 
+// A root account's icon, by its root type, as both charts name their roots differently.
 const rootAccountIcons: Record<string, string> = {
-  'Application of Funds (Assets)': 'lucide-landmark',
-  Expenses: 'lucide-receipt-indian-rupee',
+  Asset: 'lucide-landmark',
+  Expense: 'lucide-receipt-indian-rupee',
   Income: 'lucide-coins',
-  'Source of Funds (Liabilities)': 'lucide-hand-coins',
+  Liability: 'lucide-hand-coins',
 };
+
+// ERPNext's order of the root types, as its balance sheet lists them.
+const ROOT_TYPES = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
+
+function sortRoots(roots: AccountItem[]): AccountItem[] {
+  const rank = (root: AccountItem) => ROOT_TYPES.indexOf(root.root_type);
+  return roots.sort((a, b) => rank(a) - rank(b));
+}
+
+/** The first root and its first group, which accessory mode opens at first. */
+function getFirstBranch(roots: AccountItem[]): string[] {
+  const root = roots[0];
+  const group = root?.children.find((child) => child.children.length);
+  return [root?.name, group?.name].filter((name): name is string => !!name);
+}
 
 export default defineComponent({
   components: {
+    EmptyState,
+    FrappeAlert,
+    FrappeBadge,
     FrappeButton,
+    FrappePageHeaderBackButton,
     PageHeader,
     FrappeScrollArea,
     FrappeSkeleton,
@@ -197,12 +280,39 @@ export default defineComponent({
       balances: {} as Record<string, number>,
       creditRootTypes: [] as string[],
       settings: null as null | TreeViewSettings,
+      error: '',
+    };
+  },
+  setup() {
+    // Accessory mode shows the ERPNext tree of its company, read only.
+    const isAccessory = isAccessoryMode();
+    return {
+      isMobile,
+      isAccessory,
+      company: isAccessory ? getAccessoryCompany() : undefined,
     };
   },
   computed: {
     /** Balances total the ledger. */
     canReadLedger(): boolean {
-      return fyo.can(ModelNameEnum.AccountingLedgerEntry, 'read');
+      return fyo.can(ModelNameEnum.GLEntry, 'read');
+    },
+    canEditTree(): boolean {
+      return !this.isAccessory && fyo.can(ModelNameEnum.Account, 'create');
+    },
+    /** Accounts a phone lists: each open group's children under it, indented by depth. */
+    visibleRows(): { account: AccountItem; depth: number }[] {
+      const rows: { account: AccountItem; depth: number }[] = [];
+      const add = (nodes: AccountItem[], depth: number) => {
+        for (const account of nodes) {
+          rows.push({ account, depth });
+          if (this.isExpanded(account)) {
+            add(account.children, depth + 1);
+          }
+        }
+      };
+      add(this.accounts, 0);
+      return rows;
     },
     isAllExpanded(): boolean {
       return this.getGroups(this.accounts).every((account) =>
@@ -235,12 +345,17 @@ export default defineComponent({
     },
   },
   async activated() {
-    await this.fetchAccounts();
-    if (this.canReadLedger) {
-      await this.setBalances();
-    }
-
     docsPathRef.value = docsPathMap.ChartOfAccounts!;
+    try {
+      await Promise.all([
+        this.fetchAccounts(),
+        this.canReadLedger ? this.setBalances() : undefined,
+      ]);
+    } catch (error) {
+      this.error = serverHtmlToText(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   },
   deactivated() {
     docsPathRef.value = '';
@@ -251,6 +366,10 @@ export default defineComponent({
     },
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
+      if (this.isAccessory) {
+        return actions;
+      }
+
       if (account.is_group && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
@@ -264,7 +383,7 @@ export default defineComponent({
         );
       }
 
-      if (account.parent_books_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
+      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
         label: account.is_group ? t`Delete group` : t`Delete account`,
         theme: 'red',
         onClick: () => this.deleteAccount(account),
@@ -286,9 +405,24 @@ export default defineComponent({
       );
       this.expandedAccounts = expanded ? [...others, account.name] : others;
     },
+    /** Accessory mode also totals each group's accounts. */
+    showsBalance(account: AccountItem): boolean {
+      return this.canReadLedger && (!account.is_group || this.isAccessory);
+    },
+    getBalance(account: AccountItem): number {
+      const own = this.balances[account.name] ?? 0;
+      if (!this.isAccessory) {
+        return own;
+      }
+
+      return account.children.reduce(
+        (total, child) => total + this.getBalance(child),
+        own
+      );
+    },
     getBalanceString(account: AccountItem) {
       const isCredit = this.creditRootTypes.includes(account.root_type);
-      const balance = this.balances[account.name] ?? 0;
+      const balance = this.getBalance(account);
       return `${fyo.format(balance, 'Currency')} ${isCredit ? t`Cr.` : t`Dr.`}`;
     },
     /** Balances are signed on the server by the side each root type keeps. */
@@ -310,10 +444,16 @@ export default defineComponent({
         children: [],
       }));
       const byName = new Map(nodes.map((node) => [node.name, node]));
-      this.accounts = [];
+      const roots: AccountItem[] = [];
       for (const node of nodes) {
-        const parent = byName.get(node.parent_books_account);
-        (parent?.children ?? this.accounts).push(node);
+        const parent = byName.get(node.parent_account);
+        (parent?.children ?? roots).push(node);
+      }
+
+      const isFirstLoad = !this.root;
+      this.accounts = this.isAccessory ? sortRoots(roots) : roots;
+      if (this.isAccessory && isFirstLoad) {
+        this.expandedAccounts = getFirstBranch(this.accounts);
       }
 
       // Set last: the tree shows once its accounts are in.
@@ -367,7 +507,7 @@ export default defineComponent({
       await openQuickEdit({ doc });
     },
     async canDeleteAccount(account: AccountItem) {
-      if (!account.parent_books_account) {
+      if (!account.parent_account) {
         await showDialog({
           type: 'error',
           title: t`Cannot delete account`,
@@ -452,7 +592,7 @@ export default defineComponent({
     },
     async getChildren(parent: string): Promise<AccountItem[]> {
       const children = await this.getAccounts([
-        ['parent_books_account', '=', parent],
+        ['parent_account', '=', parent],
       ]);
       return children.map((child) => ({
         ...child,
@@ -460,13 +600,15 @@ export default defineComponent({
         addingGroupAccount: false,
       }));
     },
-    /** Every account the filters match, by name, labelled in the user's language. */
+    /** Every account the filters match, by name (accessory mode: the company's, in tree order), labelled in the user's language. */
     async getAccounts(filters: string[][] = []): Promise<AccountItem[]> {
       const accounts = await call<AccountItem[]>('frappe.client.get_list', {
-        doctype: 'Books Account',
+        doctype: getDocType(ModelNameEnum.Account).doctype,
         fields: ACCOUNT_FIELDS,
-        filters,
-        order_by: 'name asc',
+        filters: this.isAccessory
+          ? [...filters, ['company', '=', this.company ?? '']]
+          : filters,
+        order_by: this.isAccessory ? 'lft asc' : 'name asc',
         limit_page_length: 0,
       });
       return accounts.map((account) => ({
@@ -507,7 +649,7 @@ export default defineComponent({
         const { name, root_type, account_type } = parentAccount;
         await doc.set({
           account_name: accountName,
-          parent_books_account: name,
+          parent_account: name,
           root_type,
           account_type,
           is_group: isGroup,
@@ -529,10 +671,11 @@ export default defineComponent({
         fyo.reportDocumentActionWarning(doc, 'save', [error]);
       }
     },
-    getAccountIconName(isGroup: boolean, name?: string): string {
-      return (
-        (name && rootAccountIcons[name]) || (isGroup ? 'lucide-folder' : 'lucide-circle')
-      );
+    getAccountIconName(account: AccountItem): string {
+      const rootIcon = account.parent_account
+        ? undefined
+        : rootAccountIcons[account.root_type];
+      return rootIcon ?? (account.is_group ? 'lucide-folder' : 'lucide-circle');
     },
     getGroups(accounts: AccountItem[]): AccountItem[] {
       return accounts.flatMap((account) => [

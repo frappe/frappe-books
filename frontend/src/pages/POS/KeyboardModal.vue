@@ -2,7 +2,7 @@
   <Modal
     :open-modal="modalStatus"
     :title="fieldLabel"
-    :subtitle="selectedItemRow?.item ?? ''"
+    :subtitle="selectedItemRow?.item_code ?? ''"
     @closemodal="closeKeyboardModal"
   >
     <NumericKeypad
@@ -80,7 +80,7 @@ export default defineComponent({
       );
     },
     allowNegative(): boolean {
-      const isQuantity = ['quantity', 'transfer_quantity'].includes(
+      const isQuantity = ['stock_qty', 'qty'].includes(
         this.selectedItemField
       );
       return isQuantity && !!this.selectedItemRow?.isReturn;
@@ -149,7 +149,7 @@ export default defineComponent({
         return null;
       }
 
-      if (this.selectedItemField === 'item_discount_percent' && value > 100) {
+      if (this.selectedItemField === 'discount_percentage' && value > 100) {
         this.validationError = this.t`Discount percent cannot be greater than 100.`;
         return null;
       }

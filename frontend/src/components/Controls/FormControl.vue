@@ -14,8 +14,14 @@ import DynamicLink from './DynamicLink.vue';
 import Float from './Float.vue';
 import Int from './Int.vue';
 import Link from './Link.vue';
+import MultiSelectList from './MultiSelectList.vue';
+import LinkCard from './LinkCard.vue';
+import Percent from './Percent.vue';
 import Select from './Select.vue';
+import TableMultiSelect from './TableMultiSelect.vue';
 import Text from './Text.vue';
+import TextEditor from './TextEditor.vue';
+import Time from './Time.vue';
 
 const components = {
   AttachImage,
@@ -34,6 +40,16 @@ const components = {
   Attachment,
   Currency,
   Text,
+};
+
+// Accessory mode's controls of ERPNext field types and report filters, by `df.control`.
+const controls = {
+  TextEditor,
+  TableMultiSelect,
+  MultiSelectList,
+  Time,
+  Percent,
+  ReadOnly: Data,
 };
 
 export default {
@@ -57,12 +73,15 @@ export default {
     },
   },
   render() {
-    const fieldtype = this.$attrs.df.fieldtype;
-    const component = components[fieldtype] ?? Data;
+    const { fieldtype, control, card } = this.$attrs.df;
+    const component = card
+      ? LinkCard
+      : (controls[control] ?? components[fieldtype] ?? Data);
 
     return h(component, {
       ...(fieldtype === 'Check' ? { layout: 'field' } : {}),
       ...this.$attrs,
+      ...(control === 'ReadOnly' ? { readOnly: true } : {}),
       ref: 'control',
     });
   },

@@ -11,17 +11,31 @@
         size="sm"
         variant="outline"
         dual-pane
-        :model-value="dateRange"
+        :class="{
+          '[&_[data-slot=control]]:border-outline-red-3': isMissing(item),
+        }"
+        :model-value="getDateRange(item)"
         :placeholder="t`Date range`"
-        :required="item.from.required || item.to.required"
+        :required="isRequired(item)"
         :format="getRangeFormat()"
         :disabled="loading"
-        @update:model-value="setDateRange"
+        @update:model-value="(range) => setDateRange(item, range)"
       >
         <template #prefix>
           <span
             class="lucide-calendar-range size-4 text-ink-gray-5"
             aria-hidden="true"
+          />
+        </template>
+        <template
+          v-if="report.marksRequired && isRequired(item)"
+          #suffix="{ open, setOpen }"
+        >
+          <span class="text-base text-ink-red-5" aria-hidden="true">*</span>
+          <span
+            data-slot="chevron"
+            class="lucide-chevron-down size-4 cursor-pointer"
+            @mousedown.prevent="setOpen(!open)"
           />
         </template>
         <template #actions="{ setRange, close }">
@@ -57,6 +71,7 @@
         :show-label="item.field.fieldtype === 'Check'"
         :inline-label="item.field.fieldtype !== 'Check'"
         :trigger-button="isLinkField(item.field) || undefined"
+        :required-mark="report.marksRequired"
         :placeholder="t`All`"
         :layout="item.field.fieldtype === 'Check' ? 'inline' : undefined"
         :value="report.get(item.field.fieldname)"
@@ -80,27 +95,41 @@ import type { Field } from 'schemas/types';
 import { getDatePickerFormat } from 'src/components/Controls/datePickerFormat';
 import FormControl from 'src/components/Controls/FormControl.vue';
 import { isNumeric } from 'src/utils';
-import { fyo } from 'src/initFyo';
 import { computed } from 'vue';
-import { getDateRangePresets, getFilterItems } from './filterToolbar';
+import {
+  getDateRangePresets,
+  getFilterItems,
+  type FilterItem,
+} from './filterToolbar';
 
 const props = defineProps<{ report: Report; loading: boolean }>();
 
-const items = computed(() => getFilterItems(props.report.filters));
+type DateRangeItem = Extract<FilterItem, { type: 'dateRange' }>;
 
-const dateRange = computed<DateRangeValue>(() => {
-  const from = props.report.get('fromDate');
-  const to = props.report.get('toDate');
-  return typeof from === 'string' && typeof to === 'string' ? [from, to] : [];
-});
+const items = computed(() =>
+  getFilterItems(props.report.filters, props.report.tabFilters)
+);
 
-/** Read on each open, so they follow today and the fiscal year settings. */
+function getDateRange({ from, to }: DateRangeItem): DateRangeValue {
+  const fromDate = props.report.get(from.fieldname);
+  const toDate = props.report.get(to.fieldname);
+  return typeof fromDate === 'string' && typeof toDate === 'string'
+    ? [fromDate, toDate]
+    : [];
+}
+
+function isRequired({ from, to }: DateRangeItem): boolean {
+  return !!(from.required || to.required);
+}
+
+/** A required range left empty, which keeps the report from running. */
+function isMissing(item: DateRangeItem): boolean {
+  return isRequired(item) && !getDateRange(item).length;
+}
+
+/** Read on each open, so they follow today and the report's fiscal year. */
 function getPresets() {
-  const settings = fyo.singles.AccountingSettings;
-  return getDateRangePresets({
-    start: settings?.fiscal_year_start,
-    end: settings?.fiscal_year_end,
-  });
+  return getDateRangePresets(props.report.getFiscalYear());
 }
 
 /** frappe-ui reads the range back from its text, split at commas, on close. */
@@ -114,7 +143,11 @@ function isLinkField(field: Field): boolean {
 }
 
 function getWidthClass(field: Field): string {
-  if (['Select', 'Check'].includes(field.fieldtype) || isLinkField(field)) {
+  const isPill =
+    ['Select', 'Check'].includes(field.fieldtype) ||
+    isLinkField(field) ||
+    field.control === 'MultiSelectList';
+  if (isPill) {
     return '';
   }
 
@@ -134,10 +167,10 @@ async function setFilter(field: Field, value: DocValue) {
  * Both dates change in one tick, so the picker never shows half a range,
  * and the report runs once.
  */
-async function setDateRange([from, to]: DateRangeValue) {
+async function setDateRange(item: DateRangeItem, [from, to]: DateRangeValue) {
   await Promise.all([
-    props.report.set('fromDate', toLocalDate(from), false),
-    props.report.set('toDate', toLocalDate(to), false),
+    props.report.set(item.from.fieldname, toLocalDate(from), false),
+    props.report.set(item.to.fieldname, toLocalDate(to), false),
   ]);
   await props.report.updateData();
 }

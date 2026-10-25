@@ -1,0 +1,306 @@
+{
+ "actions": [],
+ "allow_bulk_edit": 1,
+ "allow_import": 1,
+ "creation": "2026-08-27 22:09:39.969788",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "amended_from",
+  "default_section_break_1",
+  "naming_series",
+  "payment_type",
+  "posting_date",
+  "party_type",
+  "party",
+  "mode_of_payment",
+  "paid_from",
+  "paid_to",
+  "paid_amount",
+  "received_amount",
+  "reference_no",
+  "reference_date",
+  "clearance_date",
+  "deductions",
+  "total_allocated_amount",
+  "unallocated_amount",
+  "realised_taxes",
+  "references_section_break",
+  "references",
+  "status",
+  "company"
+ ],
+ "fields": [
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Books Payment Entry",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "default_section_break_1",
+   "fieldtype": "Section Break",
+   "label": "Default"
+  },
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Number Series",
+   "options": "Books Number Series",
+   "reqd": 1,
+   "set_only_once": 1
+  },
+  {
+   "fieldname": "payment_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Type",
+   "options": "\nReceive\nPay\nInternal Transfer",
+   "placeholder": "Payment Type",
+   "reqd": 1
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "Posting Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "party_type",
+   "fieldtype": "Link",
+   "label": "Party Type",
+   "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Books Customer\",\"Books Supplier\"]]]",
+   "options": "DocType",
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "mandatory_depends_on": "eval:doc.payment_type != \"Internal Transfer\""
+  },
+  {
+   "fieldname": "party",
+   "fieldtype": "Dynamic Link",
+   "in_list_view": 1,
+   "label": "Party",
+   "options": "party_type",
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "mandatory_depends_on": "eval:doc.payment_type != \"Internal Transfer\""
+  },
+  {
+   "default": "Cash",
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "label": "Mode of Payment",
+   "options": "Books Mode of Payment",
+   "placeholder": "Mode of Payment",
+   "reqd": 1
+  },
+  {
+   "fieldname": "paid_from",
+   "fieldtype": "Link",
+   "label": "Account Paid From",
+   "options": "Books Account",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "paid_to",
+   "fieldtype": "Link",
+   "label": "Account Paid To",
+   "options": "Books Account",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "paid_amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Paid Amount",
+   "reqd": 1
+  },
+  {
+   "fieldname": "received_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Received Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_no",
+   "fieldtype": "Data",
+   "label": "Cheque/Reference No",
+   "placeholder": "Cheque/Reference No"
+  },
+  {
+   "fieldname": "reference_date",
+   "fieldtype": "Date",
+   "label": "Cheque/Reference Date",
+   "placeholder": "Cheque/Reference Date"
+  },
+  {
+   "fieldname": "clearance_date",
+   "fieldtype": "Date",
+   "label": "Clearance Date",
+   "placeholder": "Clearance Date"
+  },
+  {
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\"",
+   "fieldname": "deductions",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Payment Deductions or Loss",
+   "options": "Books Payment Entry Deduction"
+  },
+  {
+   "fieldname": "total_allocated_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Total Allocated Amount",
+   "read_only": 1
+  },
+  {
+   "fieldname": "unallocated_amount",
+   "fieldtype": "Currency",
+   "hidden": 1,
+   "label": "Unallocated Amount",
+   "read_only": 1
+  },
+  {
+   "depends_on": "realised_taxes",
+   "fieldname": "realised_taxes",
+   "fieldtype": "Table",
+   "label": "Taxes",
+   "options": "Books Realised Tax",
+   "read_only": 1
+  },
+  {
+   "fieldname": "references_section_break",
+   "fieldtype": "Section Break",
+   "label": "References",
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\""
+  },
+  {
+   "depends_on": "eval:doc.payment_type != \"Internal Transfer\" && (!doc.docstatus || doc.references.length)",
+   "fieldname": "references",
+   "fieldtype": "Table",
+   "label": "Payment References",
+   "options": "Books Payment Entry Reference"
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Draft\nSubmitted\nCancelled",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-24 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe Books",
+ "name": "Books Payment Entry",
+ "naming_rule": "By script",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "import": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Books Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Books User",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "permlevel": 1,
+   "read": 1,
+   "role": "Books Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "rows_threshold_for_grid_search": 20,
+ "search_fields": "party, payment_type",
+ "sort_field": "posting_date",
+ "sort_order": "DESC",
+ "states": [
+  {
+   "color": "Gray",
+   "title": "Draft"
+  },
+  {
+   "color": "Green",
+   "title": "Submitted"
+  },
+  {
+   "color": "Red",
+   "title": "Cancelled"
+  }
+ ],
+ "track_changes": 1
+}

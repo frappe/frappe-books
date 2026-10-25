@@ -60,7 +60,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           icon: 'lucide-percent',
           fieldname: 'taxes_added',
           description: t`Set up your tax templates for your sales or purchase transactions`,
-          action: () => routeTo('/list/Tax'),
+          action: () => routeTo('/list/ItemTaxTemplate'),
           documentation:
             'https://docs.frappe.io/books/create-initial-entries#add-taxes',
         },
@@ -74,8 +74,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           label: t`Add items`,
           icon: 'lucide-box',
           description: t`Add products or services that you sell to your customers`,
-          action: () =>
-            routeTo('/list/Item'),
+          action: () => routeTo('/list/Item'),
           fieldname: 'sales_item_created',
           documentation:
             'https://docs.frappe.io/books/create-initial-entries#add-sales-items',
@@ -109,8 +108,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           label: t`Add items`,
           icon: 'lucide-box',
           description: t`Add products or services that you buy from your suppliers`,
-          action: () =>
-            routeTo('/list/Item'),
+          action: () => routeTo('/list/Item'),
           fieldname: 'purchase_item_created',
         },
         {

@@ -17,7 +17,7 @@ function bootWithExport(canExport) {
     frappe: {
       boot: {
         allowed_reports: {
-          'Books General Ledger': { ref_doctype: 'Books Ledger Entry' },
+          'Books General Ledger': { ref_doctype: 'Books GL Entry' },
           'Books GSTR-1': { ref_doctype: 'Books Sales Invoice' },
         },
         user: { can_export: canExport },
@@ -30,7 +30,7 @@ test('reports offer CSV and JSON only when their doctype can be exported', async
   const fyo = await makeFyo();
   const labels = (report) => report.getActions().map((action) => action.label);
 
-  bootWithExport(['Books Ledger Entry']);
+  bootWithExport(['Books GL Entry']);
   assert.deepEqual(labels(new GeneralLedger(fyo)), ['CSV', 'JSON']);
   assert.deepEqual(labels(new GSTR1(fyo)), []);
 
@@ -41,7 +41,7 @@ test('reports offer CSV and JSON only when their doctype can be exported', async
 
 test('CSV and JSON give quantities to the float precision, amounts to the display precision', async () => {
   const fyo = await makeFyo();
-  fyo.singles.SystemSettings.display_precision = 0;
+  fyo.singles.SystemSettings.currency_precision = 0;
   globalThis.window = {
     frappe: { boot: { sysdefaults: { float_precision: '3' } } },
   };

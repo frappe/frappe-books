@@ -38,6 +38,20 @@
 
     <MobileReportSkeleton v-if="loading" v-bind="skeleton" />
     <EmptyState
+      v-else-if="report.missingFilter"
+      class="flex-1 pb-28 pt-8"
+      icon="lucide-filter"
+      :title="t`Set ${report.missingFilter.label} to run this report`"
+      :description="t`Filters marked * are required by ERPNext`"
+    />
+    <EmptyState
+      v-else-if="report.error"
+      class="flex-1 pb-28 pt-8"
+      icon="lucide-triangle-alert"
+      :title="t`Report could not be run`"
+      :description="report.error"
+    />
+    <EmptyState
       v-else-if="isEmpty"
       class="flex-1 pb-28 pt-8"
       :icon="filters.hasChanges ? 'lucide-search-x' : 'lucide-inbox'"
@@ -54,21 +68,24 @@
         @click="emit('clear-filters')"
       />
     </EmptyState>
-    <MobileReportTree
-      v-else-if="tree"
-      :rows="treeRows"
-      :values="valueColumns"
-      :label-header="report.columns[tree.headerIndex]?.label ?? ''"
-      :grouped="!!tree.layout.groupBy"
-      :icon="tree.layout.icon"
-      :scroll="isScrollable"
-      @open="openDetail"
-    />
-    <MobileReportEntries
-      v-else-if="entries"
-      :entries="entries"
-      @open="openDetail"
-    />
+    <template v-else>
+      <ReportExtras :report="report" phone class="px-4 pt-3" />
+      <MobileReportTree
+        v-if="tree"
+        :rows="treeRows"
+        :values="valueColumns"
+        :label-header="report.columns[tree.headerIndex]?.label ?? ''"
+        :grouped="!!tree.layout.groupBy"
+        :icon="tree.layout.icon"
+        :scroll="isScrollable"
+        @open="openDetail"
+      />
+      <MobileReportEntries
+        v-else-if="entries"
+        :entries="entries"
+        @open="openDetail"
+      />
+    </template>
 
     <MobileReportDetail
       v-model:open="detailOpen"
@@ -97,6 +114,7 @@ import MobileOptionsSheet from 'src/mobile/MobileOptionsSheet.vue';
 import { computed, ref } from 'vue';
 import { MobileEntries } from './MobileEntries';
 import { MobileFilters, type FilterValues } from './MobileFilters';
+import ReportExtras from '../ReportExtras.vue';
 import MobileReportDetail from './MobileReportDetail.vue';
 import MobileReportEntries from './MobileReportEntries.vue';
 import MobileReportSkeleton from './MobileReportSkeleton.vue';

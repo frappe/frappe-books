@@ -7,11 +7,11 @@
 <script setup lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
-import { fyo } from 'src/initFyo';
 import { getButtonTextColor } from 'src/utils/button';
+import { getPOSPreference } from 'src/utils/posSetup';
 import { computed, mergeProps } from 'vue';
 
-/** A POS button in the colour the POS profile, else Books Defaults, sets for its action. */
+/** A POS button in the colour the POS profile, else the POS preferences, set for its action. */
 defineOptions({ inheritAttrs: false });
 
 const props = defineProps<{
@@ -26,10 +26,9 @@ const themeByColour: Record<string, 'green' | 'red'> = {
 };
 
 const colourProps = computed(() => {
+  const fieldname = `${props.action}_button_colour`;
   const colour = String(
-    props.profile?.[`${props.action}_button_colour`] ||
-      fyo.singles.Defaults?.get(`${props.action}_button_colour`) ||
-      ''
+    props.profile?.[fieldname] || getPOSPreference(fieldname) || ''
   ).toLowerCase();
   if (!colour) {
     return {};

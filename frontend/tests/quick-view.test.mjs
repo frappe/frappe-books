@@ -23,7 +23,9 @@ stubFrappe(({ path, body }) => {
   }
 
   const books = getBooksMeta(body.doctypes);
-  const payment = books.metas.find(({ name }) => name === 'Books Payment');
+  const payment = books.metas.find(
+    ({ name }) => name === 'Books Payment Entry'
+  );
   payment.fields = [note, ...payment.fields];
   return { message: books };
 });
@@ -42,9 +44,9 @@ for (const [schemaName, fields] of Object.entries(previousForms.quickViews)) {
 }
 
 test('custom fields follow the fields a quick view names', () => {
-  const fields = getQuickViewFields('Payment').map(
+  const fields = getQuickViewFields('PaymentEntry').map(
     ({ fieldname }) => fieldname
   );
   assert.equal(fields.at(-1), 'custom_books_note');
-  assert.equal(fields[0], 'number_series');
+  assert.equal(fields[0], 'naming_series');
 });

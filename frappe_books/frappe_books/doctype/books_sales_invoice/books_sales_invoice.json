@@ -8,53 +8,52 @@
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
-  "number_series",
+  "naming_series",
   "customer",
-  "account",
-  "date",
+  "debit_to",
+  "posting_date",
+  "posting_time",
   "status",
-  "price_list",
+  "selling_price_list",
+  "is_return",
   "items_section_break_7",
   "items",
-  "net_total",
-  "tax_and_totals_section_break_10",
-  "total_discount",
+  "taxes_section",
+  "taxes_and_charges",
   "taxes",
-  "loyalty_points_amount",
+  "totals_section",
+  "net_total",
+  "total_taxes_and_charges",
+  "loyalty_amount",
   "base_grand_total",
   "grand_total",
   "currency",
-  "exchange_rate",
+  "conversion_rate",
   "outstanding_section_break_24",
   "outstanding_amount",
   "stock_not_transferred",
   "references_section_break_27",
   "terms",
-  "attachment",
-  "is_returned",
   "is_fully_returned",
-  "back_reference",
   "return_against",
   "coupons_section_break_35",
-  "coupons",
-  "references_section_break_37",
-  "quotation",
+  "coupon_code",
   "loyalty_points_redemption_section_break_39",
   "loyalty_program",
-  "available_loyalty_points",
   "redeem_loyalty_points",
   "loyalty_points",
   "is_pos",
-  "is_pricing_rule_applied",
   "payments_section_break",
   "payments",
   "references_section_break_46",
-  "pricing_rule_detail",
+  "pricing_rules",
+  "item_wise_tax_details",
   "amended_from",
   "settings_tab_break_20",
   "discount_after_tax",
   "make_auto_payment",
-  "make_auto_stock_transfer"
+  "make_auto_stock_transfer",
+  "company"
  ],
  "fields": [
   {
@@ -63,7 +62,7 @@
    "label": "Default"
   },
   {
-   "fieldname": "number_series",
+   "fieldname": "naming_series",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Number Series",
@@ -81,24 +80,34 @@
    "search_index": 1
   },
   {
-   "fieldname": "account",
+   "fieldname": "debit_to",
    "fieldtype": "Link",
    "in_list_view": 1,
-   "label": "Account",
+   "label": "Debit To",
    "options": "Books Account",
    "permlevel": 1,
    "reqd": 1
   },
   {
-   "default": "Now",
-   "fieldname": "date",
-   "fieldtype": "Datetime",
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
    "in_list_view": 1,
    "label": "Date",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
-   "default": "Saved",
+   "default": "Now",
+   "fieldname": "posting_time",
+   "fieldtype": "Time",
+   "hidden": 1,
+   "label": "Posting Time",
+   "no_copy": 1,
+   "print_hide": 1
+  },
+  {
+   "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
    "hidden": 1,
@@ -106,16 +115,26 @@
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
-   "options": "Saved\nUnpaid\nPartly Paid\nPaid\nReturn\nReturn Issued\nCancelled",
+   "options": "Draft\nUnpaid\nPartly Paid\nPaid\nReturn\nCredit Note Issued\nCancelled",
    "print_hide": 1,
    "read_only": 1,
    "search_index": 1
   },
   {
-   "fieldname": "price_list",
+   "fieldname": "selling_price_list",
    "fieldtype": "Link",
    "label": "Price List",
    "options": "Books Price List"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_return",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Is Return (Credit Note)",
+   "no_copy": 1,
+   "print_hide": 1,
+   "read_only": 1
   },
   {
    "fieldname": "items_section_break_7",
@@ -130,42 +149,50 @@
    "reqd": 1
   },
   {
+   "fieldname": "taxes_section",
+   "fieldtype": "Section Break",
+   "label": "Taxes"
+  },
+  {
+   "fieldname": "taxes_and_charges",
+   "fieldtype": "Link",
+   "label": "Sales Taxes and Charges Template",
+   "options": "Books Sales Taxes and Charges Template",
+   "print_hide": 1
+  },
+  {
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Sales Taxes and Charges",
+   "options": "Books Sales Taxes and Charges"
+  },
+  {
+   "fieldname": "totals_section",
+   "fieldtype": "Section Break",
+   "label": "Totals"
+  },
+  {
    "fieldname": "net_total",
    "fieldtype": "Currency",
    "label": "Net Total",
    "read_only": 1
   },
   {
-   "fieldname": "tax_and_totals_section_break_10",
-   "fieldtype": "Section Break",
-   "label": "Tax and Totals"
-  },
-  {
-   "depends_on": "total_discount",
-   "fieldname": "total_discount",
+   "fieldname": "total_taxes_and_charges",
    "fieldtype": "Currency",
-   "is_virtual": 1,
-   "label": "Discount",
+   "label": "Total Taxes and Charges",
    "read_only": 1
   },
   {
-   "depends_on": "taxes",
-   "fieldname": "taxes",
-   "fieldtype": "Table",
-   "label": "Taxes",
-   "options": "Books Tax Summary",
-   "read_only": 1
-  },
-  {
-   "depends_on": "loyalty_points_amount",
-   "fieldname": "loyalty_points_amount",
+   "depends_on": "loyalty_amount",
+   "fieldname": "loyalty_amount",
    "fieldtype": "Currency",
-   "is_virtual": 1,
-   "label": "Loyalty Points Redeemed",
+   "label": "Loyalty Amount",
+   "no_copy": 1,
    "read_only": 1
   },
   {
-   "depends_on": "eval:doc.exchange_rate != 1 && doc.base_grand_total",
+   "depends_on": "eval:doc.conversion_rate != 1 && doc.base_grand_total",
    "fieldname": "base_grand_total",
    "fieldtype": "Currency",
    "label": "Base Grand Total",
@@ -181,12 +208,12 @@
    "fieldname": "currency",
    "fieldtype": "Link",
    "hidden": 1,
-   "label": "Customer Currency",
+   "label": "Currency",
    "options": "Currency",
    "read_only": 1
   },
   {
-   "fieldname": "exchange_rate",
+   "fieldname": "conversion_rate",
    "fieldtype": "Float",
    "hidden": 1,
    "label": "Exchange Rate",
@@ -219,24 +246,9 @@
   {
    "depends_on": "eval:doc.terms || !doc.docstatus",
    "fieldname": "terms",
-   "fieldtype": "Text",
+   "fieldtype": "Text Editor",
    "label": "Notes",
    "placeholder": "Add invoice terms"
-  },
-  {
-   "depends_on": "eval:doc.attachment || !doc.docstatus",
-   "fieldname": "attachment",
-   "fieldtype": "Attach",
-   "label": "Attachment",
-   "placeholder": "Add attachment"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_returned",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is Returned",
-   "no_copy": 1
   },
   {
    "default": "0",
@@ -245,14 +257,6 @@
    "hidden": 1,
    "label": "Is Fully Returned",
    "no_copy": 1
-  },
-  {
-   "depends_on": "back_reference",
-   "fieldname": "back_reference",
-   "fieldtype": "Link",
-   "label": "Back Reference",
-   "no_copy": 1,
-   "options": "Books Delivery Note"
   },
   {
    "depends_on": "eval:!doc.docstatus || doc.return_against",
@@ -268,23 +272,11 @@
    "label": "Coupons"
   },
   {
-   "depends_on": "eval:doc.docstatus != 1 || doc.coupons.length",
-   "fieldname": "coupons",
-   "fieldtype": "Table",
-   "label": "Coupons",
-   "options": "Books Applied Coupon Codes"
-  },
-  {
-   "fieldname": "references_section_break_37",
-   "fieldtype": "Section Break",
-   "label": "References"
-  },
-  {
-   "depends_on": "quotation",
-   "fieldname": "quotation",
+   "depends_on": "eval:doc.docstatus != 1 || doc.coupon_code",
+   "fieldname": "coupon_code",
    "fieldtype": "Link",
-   "label": "Quotation",
-   "options": "Books Quotation"
+   "label": "Coupon Code",
+   "options": "Books Coupon Code"
   },
   {
    "fieldname": "loyalty_points_redemption_section_break_39",
@@ -300,15 +292,8 @@
    "read_only": 1
   },
   {
-   "depends_on": "eval:doc.loyalty_program && !doc.return_against",
-   "fieldname": "available_loyalty_points",
-   "fieldtype": "Int",
-   "label": "Available Loyalty Points",
-   "read_only": 1
-  },
-  {
    "default": "0",
-   "depends_on": "eval:doc.loyalty_program && !doc.return_against && doc.available_loyalty_points > 0",
+   "depends_on": "eval:doc.loyalty_program && !doc.return_against",
    "fieldname": "redeem_loyalty_points",
    "fieldtype": "Check",
    "label": "Redeem Loyalty Points"
@@ -325,13 +310,6 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "Is Pos"
-  },
-  {
-   "default": "0",
-   "fieldname": "is_pricing_rule_applied",
-   "fieldtype": "Check",
-   "hidden": 1,
-   "label": "Is Pricing Rule Applied"
   },
   {
    "fieldname": "payments_section_break",
@@ -353,12 +331,21 @@
    "label": "References"
   },
   {
-   "depends_on": "pricing_rule_detail",
-   "fieldname": "pricing_rule_detail",
+   "depends_on": "pricing_rules",
+   "fieldname": "pricing_rules",
    "fieldtype": "Table",
    "label": "Pricing Rule Detail",
    "options": "Books Pricing Rule Detail",
    "read_only": 1
+  },
+  {
+   "fieldname": "item_wise_tax_details",
+   "fieldtype": "Table",
+   "hidden": 1,
+   "label": "Item Wise Tax Details",
+   "no_copy": 1,
+   "options": "Books Item Wise Tax Detail",
+   "print_hide": 1
   },
   {
    "fieldname": "amended_from",
@@ -395,13 +382,20 @@
    "fieldname": "make_auto_stock_transfer",
    "fieldtype": "Check",
    "label": "Make Delivery Note On Submit"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",
@@ -469,12 +463,12 @@
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
  "search_fields": "customer",
- "sort_field": "creation",
+ "sort_field": "posting_date",
  "sort_order": "DESC",
  "states": [
   {
-   "color": "Blue",
-   "title": "Saved"
+   "color": "Gray",
+   "title": "Draft"
   },
   {
    "color": "Orange",
@@ -494,7 +488,7 @@
   },
   {
    "color": "Gray",
-   "title": "Return Issued"
+   "title": "Credit Note Issued"
   },
   {
    "color": "Red",

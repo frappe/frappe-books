@@ -8,11 +8,16 @@
     />
     <MobileTableRows
       :rows="value"
-      :fields="tableFields"
+      :fields="mobileTableFields"
+      :detail-field="mobileRowDetail"
+      :labelled-fields="mobileLabelledFields"
       :can-add="canAddRemoveRows"
       :title="title"
+      :empty-message="df.emptyMessage"
+      :block="mobileBlock"
       @edit="(row) => $emit('editrow', row)"
       @add="addRowAndEdit"
+      @row-change="(field, value) => $emit('row-change', field, value, df)"
     />
   </div>
   <div v-else-if="tableFields?.length" class="min-w-0">
@@ -84,8 +89,7 @@
         <div
           v-if="value"
           :class="{
-            'overflow-x-hidden overflow-y-auto':
-              rowsOverflow,
+            'overflow-x-hidden overflow-y-auto': rowsOverflow,
             'overscroll-contain': rowsOverflow,
           }"
           :style="{ 'max-height': maxHeight }"
@@ -104,6 +108,15 @@
           />
         </div>
 
+        <FrappeListRow
+          v-if="df.emptyMessage && !value?.length"
+          class="min-h-12 text-ink-gray-5"
+        >
+          <FrappeListCell class="px-3" style="grid-column: 1 / -1">
+            {{ df.emptyMessage }}
+          </FrappeListCell>
+        </FrappeListRow>
+
         <!-- Add Row and Row Count -->
         <FrappeListRow
           v-if="canAddRemoveRows"
@@ -111,7 +124,10 @@
           @click="addRow"
         >
           <FrappeListCell class="justify-center">
-            <span class="lucide-plus size-4 text-ink-gray-5" aria-hidden="true" />
+            <span
+              class="lucide-plus size-4 text-ink-gray-5"
+              aria-hidden="true"
+            />
           </FrappeListCell>
           <FrappeListCell
             class="justify-between px-2"
@@ -269,9 +285,39 @@ export default {
     cellPaddingClass() {
       return this.size === 'small' ? 'px-2' : 'px-3';
     },
+    /** The field's own columns, else its rows' schema's. */
+    ownColumns() {
+      return this.df.tableFields ? this.df : getSchema(this.df.target);
+    },
     tableFields() {
-      const fieldnames = getSchema(this.df.target)?.tableFields ?? [];
-      return getFields(this.df.target, fieldnames);
+      return getFields(this.df.target, this.ownColumns?.tableFields ?? []);
+    },
+    mobileTableFields() {
+      const fieldnames = this.ownColumns?.mobileTableFields;
+      return fieldnames
+        ? getFields(this.df.target, fieldnames)
+        : this.tableFields;
+    },
+    mobileRowDetail() {
+      const fieldname = this.ownColumns?.mobileRowDetail;
+      return fieldname ? getFields(this.df.target, [fieldname])[0] : undefined;
+    },
+    mobileLabelledFields() {
+      return getSchema(this.df.target)?.mobileLabelledFields ?? [];
+    },
+    /** The fields of a phone table whose rows show as blocks; see `MobileBlock`. */
+    mobileBlock() {
+      const block = getSchema(this.df.target)?.mobileBlock;
+      if (!block) {
+        return undefined;
+      }
+
+      const [title, result, ...fields] = getFields(this.df.target, [
+        block.title,
+        block.result,
+        ...block.fields,
+      ]);
+      return { title, result, fields };
     },
   },
   methods: {

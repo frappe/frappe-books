@@ -2,30 +2,39 @@ import frappe
 from frappe.api.v2 import run_doc_method
 from frappe.permissions import add_permission, update_permission_property
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, now_datetime, nowdate, set_request
+from frappe.utils import add_days, nowdate, set_request
 
 from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
 	make_customer,
 	make_item,
+	make_price_list,
 	make_tax,
+	set_company_value,
 	unique_name,
 )
 
-COMPARED_FIELDS = ("net_total", "grand_total", "base_grand_total", "outstanding_amount", "total_discount")
+COMPARED_FIELDS = (
+	"net_total",
+	"total_taxes_and_charges",
+	"grand_total",
+	"base_grand_total",
+	"outstanding_amount",
+)
 COMPARED_ROW_FIELDS = (
-	"item",
+	"item_code",
+	"price_list_rate",
 	"rate",
 	"amount",
-	"tax",
-	"account",
-	"item_discount_percent",
-	"item_discounted_total",
-	"item_taxed_total",
-	"pricing_rule",
+	"item_tax_template",
+	"income_account",
+	"discount_percentage",
+	"discount_amount",
+	"pricing_rules",
 	"is_free_item",
 )
+TAX_FIELDS = ("charge_type", "account_head", "rate", "tax_amount", "total")
 NO_ROLE_USER = "books-preview-no-role@example.com"
 CREATOR = "books-preview-creator@example.com"
 
@@ -37,12 +46,14 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		self.income = make_account("Preview Sales", root_type="Income", account_type="Income Account")
 		self.expense = make_account("Preview Expense", root_type="Expense", account_type="Expense Account")
 		tax_account = make_account("Preview Tax", root_type="Liability", account_type="Tax")
+		set_company_value("default_discount_account", self.expense.name)
 		frappe.db.set_single_value(
-			"Books Accounting Settings",
-			{"discount_account": self.expense.name, "enable_pricing_rule": 1, "enable_price_list": 1},
+			"Books Accounting Settings", {"enable_pricing_rule": 1, "enable_price_list": 1}
 		)
 		self.party = make_customer(self.receivable.name)
-		self.item = make_item(self.income.name, self.expense.name, make_tax(tax_account.name).name, rate=100)
+		self.item = make_item(
+			self.income.name, self.expense.name, make_tax(tax_account.name).name, standard_rate=100
+		)
 		self.values = self._invoice_values()
 
 	def test_preview_matches_the_saved_calculation(self):
@@ -51,14 +62,12 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 		for field in COMPARED_FIELDS:
 			self.assertEqual(preview[field], saved[field], field)
-		self.assertEqual(
-			_rows(preview["taxes"], ("account", "rate", "amount")),
-			_rows(saved["taxes"], ("account", "rate", "amount")),
-		)
+		self.assertEqual(_rows(preview["taxes"], TAX_FIELDS), _rows(saved["taxes"], TAX_FIELDS))
 		self.assertEqual(
 			_rows(preview["items"], COMPARED_ROW_FIELDS), _rows(saved["items"], COMPARED_ROW_FIELDS)
 		)
-		self.assertEqual(preview["items"][0]["rate"], 80)
+		# The price list's 80, less the coupon's 25%.
+		self.assertEqual((preview["items"][0]["price_list_rate"], preview["items"][0]["rate"]), (80, 60))
 		self.assertTrue(preview["items"][-1]["is_free_item"])
 
 	def test_preview_keeps_client_row_names(self):
@@ -78,15 +87,14 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def test_preview_recalculates_an_edited_draft_without_saving_it(self):
 		saved = _insert(self.values)
-		# /books leaves the quantities that follow an edited quantity for the server to fill.
-		row = {
-			key: value for key, value in saved["items"][0].items() if key not in ("qty", "transfer_quantity")
-		}
-		edited = {**saved, "items": [{**row, "quantity": 4}]}
+		# /books leaves the quantity that follows an edited one for the server to fill.
+		row = {key: value for key, value in saved["items"][0].items() if key != "qty"}
+		edited = {**saved, "items": [{**row, "stock_qty": 4}]}
 
 		preview = _preview(edited)
 
-		self.assertEqual(preview["net_total"], 320)
+		# Four at 80 less the coupon's 25%.
+		self.assertEqual(preview["net_total"], 240)
 		self.assertEqual(
 			frappe.db.get_value("Books Sales Invoice", saved["name"], "net_total"), saved["net_total"]
 		)
@@ -127,23 +135,24 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 		invoice.preview()
 
 		self.assertEqual(
-			invoice.number_series,
+			invoice.naming_series,
 			frappe.db.get_single_value("Books Defaults", "sales_invoice_number_series") or "SINV-",
 		)
 		self.assertEqual((invoice.terms, invoice.make_auto_payment), ("Pay in 30 days", 1))
 
 	def test_a_row_tax_left_out_follows_the_item_and_a_cleared_one_stays_cleared(self):
-		row = {"item": self.item.name, "quantity": 1}
-		values = {"customer": self.party.name, "date": str(now_datetime()), "items": [row]}
-		self.assertEqual(_preview(values)["items"][0]["tax"], self.item.tax)
+		row = {"item_code": self.item.name, "qty": 1}
+		values = {"customer": self.party.name, "posting_date": nowdate(), "items": [row]}
+		template = self.item.taxes[0].item_tax_template
+		self.assertEqual(_preview(values)["items"][0]["item_tax_template"], template)
 
-		cleared = {**values, "items": [{**row, "tax": ""}]}
+		cleared = {**values, "items": [{**row, "item_tax_template": ""}]}
 		saved = _insert(cleared)
-		self.assertFalse(_preview(cleared)["items"][0].get("tax"))
-		self.assertFalse(saved["items"][0].get("tax"))
+		self.assertFalse(_preview(cleared)["items"][0].get("item_tax_template"))
+		self.assertFalse(saved["items"][0].get("item_tax_template"))
 		self.assertEqual((saved["grand_total"], saved["taxes"]), (100, []))
 		resaved = frappe.get_doc("Books Sales Invoice", saved["name"]).save()
-		self.assertFalse(resaved.items[0].tax)
+		self.assertFalse(resaved.items[0].item_tax_template)
 
 	def test_only_whitelisted_methods_run(self):
 		with self.assertRaisesRegex(frappe.PermissionError, "not whitelisted"):
@@ -151,25 +160,17 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 
 	def _invoice_values(self):
 		free_item = make_item(self.income.name, self.expense.name)
-		bundle_item = make_item(self.income.name, self.expense.name, rate=50)
-		price_list = frappe.get_doc(
-			{
-				"doctype": "Books Price List",
-				"name": unique_name("Preview Prices"),
-				"is_enabled": 1,
-				"is_sales": 1,
-				"price_list_item": [{"item": self.item.name, "unit": "Unit", "rate": 80}],
-			}
-		).insert()
+		bundle_item = make_item(self.income.name, self.expense.name, standard_rate=50)
+		price_list = make_price_list((self.item.name, "Unit", 80))
 		coupon_rule = self._pricing_rule(
-			self.item, is_coupon_code_based=1, price_discount_type="percentage", discount_percentage=25
+			self.item, coupon_code_based=1, rate_or_discount="Discount Percentage", discount_percentage=25
 		)
 		self._pricing_rule(
 			bundle_item,
-			discount_type="Product Discount",
+			price_or_product_discount="Product",
 			free_item=free_item.name,
-			free_item_quantity=1,
-			free_item_unit="Unit",
+			free_qty=1,
+			free_item_uom="Unit",
 		)
 		coupon = frappe.get_doc(
 			{
@@ -177,17 +178,17 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 				"coupon_name": frappe.generate_hash(length=8),
 				"pricing_rule": coupon_rule.name,
 				"valid_from": add_days(nowdate(), -1),
-				"valid_to": add_days(nowdate(), 1),
+				"valid_upto": add_days(nowdate(), 1),
 			}
 		).insert()
 		return {
 			"customer": self.party.name,
-			"date": str(now_datetime()),
-			"price_list": price_list.name,
-			"coupons": [{"coupons": coupon.name}],
+			"posting_date": nowdate(),
+			"selling_price_list": price_list.name,
+			"coupon_code": coupon.name,
 			"items": [
-				{"name": "client-row-1", "item": self.item.name, "quantity": 2},
-				{"name": "client-row-2", "item": bundle_item.name, "quantity": 1},
+				{"name": "client-row-1", "item_code": self.item.name, "qty": 2},
+				{"name": "client-row-2", "item_code": bundle_item.name, "qty": 1},
 			],
 		}
 
@@ -196,8 +197,8 @@ class IntegrationTestInvoicePreview(IntegrationTestCase):
 			{
 				"doctype": "Books Pricing Rule",
 				"title": unique_name("Preview Rule"),
-				"applied_items": [{"item": item.name, "unit": "Unit"}],
-				"discount_type": "Price Discount",
+				"items": [{"item_code": item.name, "uom": "Unit"}],
+				"price_or_product_discount": "Price",
 				"priority": "10",
 				**values,
 			}

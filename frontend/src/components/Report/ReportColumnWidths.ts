@@ -12,7 +12,7 @@ export class ReportColumnWidths extends ColumnWidths {
 
   get(column: ColumnField) {
     const minimum =
-      column.fieldname === 'item' || column.fieldtype === 'Datetime'
+      column.fieldname === 'item_code' || column.fieldtype === 'Datetime'
         ? 15
         : column.fieldtype === 'Date'
           ? 10

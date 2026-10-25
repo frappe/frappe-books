@@ -1,6 +1,8 @@
 import frappe
 from frappe import _
 
+from frappe_books.company import default_company
+
 PARTY_ACCOUNT_TYPES = {"Books Customer": "Receivable", "Books Supplier": "Payable"}
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
 
@@ -28,6 +30,14 @@ def validate_account(doc, fieldname, account_types=(), root_types=()):
 def validate_payment_account(doc, fieldname, method_type):
 	"""Cash methods take cash accounts; other methods cash or bank, as the Books payment form offers."""
 	validate_account(doc, fieldname, ("Cash",) if method_type == "Cash" else PAYMENT_ACCOUNT_TYPES)
+
+
+def mode_of_payment_account(mode_of_payment) -> str | None:
+	"""The mode's default account for the one company, if it has one."""
+	if not mode_of_payment:
+		return None
+	filters = {"parenttype": "Books Mode of Payment", "parent": mode_of_payment, "company": default_company()}
+	return frappe.db.get_value("Books Mode of Payment Account", filters, "default_account")
 
 
 def validate_party_account(doc, fieldname, party_type):

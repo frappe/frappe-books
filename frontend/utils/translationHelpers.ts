@@ -8,6 +8,7 @@ export const schemaTranslateables = [
   'placeholder',
   'section',
   'tab',
+  'emptyMessage',
 ];
 
 export function getIndexFormat(inp: string | string[] | unknown) {

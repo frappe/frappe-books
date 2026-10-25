@@ -26,14 +26,18 @@ async function mount() {
   report.getDefaultFilters = async () => ({});
   report.runReport = async () => ({
     columns: [
-      toColumnField({ fieldname: 'item', label: 'Item', fieldtype: 'Link' }),
+      toColumnField({
+        fieldname: 'item_code',
+        label: 'Item',
+        fieldtype: 'Link',
+      }),
       toColumnField({
         fieldname: 'balance_quantity',
         label: 'Balance Qty.',
         fieldtype: 'Float',
       }),
     ],
-    rows: [{ item: 'Wireless Keyboard', balance_quantity: 1 }],
+    rows: [{ item_code: 'Wireless Keyboard', balance_quantity: 1 }],
   });
   await report.initialize();
   const reportPage = {

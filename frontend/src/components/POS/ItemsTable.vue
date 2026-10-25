@@ -19,12 +19,12 @@
           <template #default="{ item: row, value }">
             <FrappeListRow
               :value="value"
-              :aria-label="t`Add ${row.name}`"
+              :aria-label="t`Add ${row.itemName}`"
               @click="$emit('addItem', row)"
             >
               <FrappeListCell>
-                <span class="truncate text-base text-ink-gray-8" :title="row.name">
-                  {{ row.name }}
+                <span class="truncate text-base text-ink-gray-8" :title="row.itemName">
+                  {{ row.itemName }}
                 </span>
               </FrappeListCell>
               <FrappeListCell>

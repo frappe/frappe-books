@@ -3,17 +3,37 @@ import { call } from 'src/web/api';
 import { downloadFile } from './browser';
 import type { PrintHints, PrintHTML } from './printFormats';
 
+/** The print formats, default first, and letter heads accessory mode offers for a doctype. */
+export interface PrintOptions {
+  print_formats: string[];
+  letter_heads: string[];
+  default_letter_head: string | null;
+}
+
 /** A saved document printed with a saved print format. */
 export async function getPrintHTML(
   doctype: string,
   name: string,
-  printFormat: string
+  printFormat: string,
+  letterHead?: string
 ): Promise<PrintHTML> {
   return await call<PrintHTML>('frappe.www.printview.get_html_and_style', {
     doc: doctype,
     name,
     print_format: printFormat,
+    ...getLetterHeadArgs(letterHead),
   });
+}
+
+/** ERPNext's print formats and letter heads for the document; a POS invoice's POS Profile format comes first. */
+export async function getPrintOptions(
+  doctype: string,
+  name: string
+): Promise<PrintOptions> {
+  return await call<PrintOptions>(
+    'frappe_books.accessory.printing.get_print_options',
+    { doctype, name }
+  );
 }
 
 /** A saved document printed with unsaved print format HTML and CSS. */
@@ -42,9 +62,10 @@ export async function getPrintHints(doctype: string): Promise<PrintHints> {
 export async function downloadPDF(
   doctype: string,
   name: string,
-  printFormat: string
+  printFormat: string,
+  letterHead?: string
 ): Promise<void> {
-  const pdf = await getPDF(doctype, name, printFormat);
+  const pdf = await getPDF(doctype, name, printFormat, letterHead);
   downloadFile(new Uint8Array(await pdf.arrayBuffer()), pdf.name, pdf.type);
 }
 
@@ -52,9 +73,15 @@ export async function downloadPDF(
 export async function getPDF(
   doctype: string,
   name: string,
-  printFormat: string
+  printFormat: string,
+  letterHead?: string
 ): Promise<File> {
-  const params = new URLSearchParams({ doctype, name, format: printFormat });
+  const params = new URLSearchParams({
+    doctype,
+    name,
+    format: printFormat,
+    ...getLetterHeadArgs(letterHead),
+  });
   const response = await fetch(
     `/api/method/frappe.utils.print_format.download_pdf?${params.toString()}`
   );
@@ -85,15 +112,26 @@ export function canSharePDF(): boolean {
 export function openPrintView(
   doctype: string,
   name: string,
-  printFormat: string
+  printFormat: string,
+  letterHead?: string
 ): boolean {
   const params = new URLSearchParams({
     doctype,
     name,
     format: printFormat,
+    ...getLetterHeadArgs(letterHead),
     trigger_print: '1',
   });
   return !!window.open(`/printview?${params.toString()}`, '_blank');
+}
+
+/** No letter head leaves it to Print Settings; '' prints none. */
+function getLetterHeadArgs(letterHead?: string): Record<string, string> {
+  if (letterHead === undefined) {
+    return {};
+  }
+
+  return letterHead ? { letterhead: letterHead } : { no_letterhead: '1' };
 }
 
 async function getPDFFile(response: Response, name: string): Promise<File> {

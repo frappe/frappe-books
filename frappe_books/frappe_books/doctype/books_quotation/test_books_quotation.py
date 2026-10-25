@@ -19,16 +19,16 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 				"doctype": "Books Quotation",
 				"quotation_to": "Books Customer",
 				"party_name": party.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "account": income.name, "rate": 25, "quantity": 2}],
+				"transaction_date": frappe.utils.nowdate(),
+				"items": [{"item_code": item.name, "price_list_rate": 25, "qty": 2}],
 			}
 		).insert()
 		quote.submit()
 
-		self.assertEqual(quote.grand_total, 50)
+		self.assertEqual((quote.grand_total, quote.status), (50, "Open"))
 		self.assertFalse(
 			frappe.db.exists(
-				"Books Ledger Entry",
+				"Books GL Entry",
 				{"voucher_type": quote.doctype, "voucher_no": quote.name},
 			)
 		)
@@ -37,14 +37,14 @@ class IntegrationTestBooksQuotation(IntegrationTestCase):
 		income = make_account("Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Expense", root_type="Expense", account_type="Expense Account")
 		item = make_item(income.name, expense.name)
-		lead = frappe.get_doc({"doctype": "Books Lead", "name": unique_name("Lead")}).insert()
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		frappe.get_doc(
 			{
 				"doctype": "Books Quotation",
 				"quotation_to": "Books Lead",
 				"party_name": lead.name,
-				"date": frappe.utils.now_datetime(),
-				"items": [{"item": item.name, "account": income.name, "rate": 25, "quantity": 2}],
+				"transaction_date": frappe.utils.nowdate(),
+				"items": [{"item_code": item.name, "price_list_rate": 25, "qty": 2}],
 			}
 		).insert().submit()
 

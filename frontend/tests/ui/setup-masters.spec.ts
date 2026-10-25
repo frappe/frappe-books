@@ -6,12 +6,12 @@ useBooksSession();
 
 test('a new tax template saves its detail rows', async ({ page }) => {
   const name = `Form Tax ${Date.now()}`;
-  await openNewEntry(page, 'Tax');
+  await openNewEntry(page, 'ItemTaxTemplate');
   await page
-    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .getByRole('textbox', { name: 'Title (required)', exact: true })
     .fill(name);
   await page.getByText('Add row', { exact: true }).click();
-  const account = page.getByRole('combobox', { name: 'Tax Invoice Account' });
+  const account = page.getByRole('combobox', { name: 'Tax', exact: true });
   await account.fill('CGST');
   await page.getByRole('option', { name: 'CGST', exact: true }).click();
   await page.getByPlaceholder('0%').fill('9');
@@ -20,36 +20,47 @@ test('a new tax template saves its detail rows', async ({ page }) => {
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/books/edit/Tax/${encodeURIComponent(name)}$`)
+    new RegExp(`/books/edit/ItemTaxTemplate/${encodeURIComponent(name)}$`)
   );
   const response = await page.request.get(
-    `/api/v2/document/Books Tax/${encodeURIComponent(name)}`
+    `/api/v2/document/Books Item Tax Template/${encodeURIComponent(name)}`
   );
   const { data } = await response.json();
-  expect(data.details.map(({ account, rate }) => [account, rate])).toEqual([
-    ['CGST', 9],
-  ]);
+  expect(
+    data.taxes.map(({ tax_type, tax_rate }) => [tax_type, tax_rate])
+  ).toEqual([['CGST', 9]]);
 });
 
-test('a new payment method saves with its account', async ({ page }) => {
-  const name = `Form Method ${Date.now()}`;
-  await openNewEntry(page, 'PaymentMethod');
+test('a new mode of payment saves with its account', async ({ page }) => {
+  const name = `Form Mode ${Date.now()}`;
+  await openNewEntry(page, 'ModeOfPayment');
 
   await page
-    .getByRole('textbox', { name: 'Name (required)', exact: true })
+    .getByRole('textbox', { name: 'Mode of Payment (required)', exact: true })
     .fill(name);
   await page
     .getByRole('combobox', { name: 'Type (required)', exact: true })
     .click();
   await page.getByRole('option', { name: 'Bank', exact: true }).click();
-  const account = page.getByRole('combobox', { name: 'Account', exact: true });
+  await page.getByText('Add row', { exact: true }).click();
+  const account = page.getByRole('combobox', {
+    name: 'Default Account',
+    exact: true,
+  });
   await account.fill('UI Test Bank');
   await page.getByRole('option', { name: 'UI Test Bank', exact: true }).click();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/books/edit/PaymentMethod/${encodeURIComponent(name)}$`)
+    new RegExp(`/books/edit/ModeOfPayment/${encodeURIComponent(name)}$`)
+  );
+  const response = await page.request.get(
+    `/api/v2/document/Books Mode of Payment/${encodeURIComponent(name)}`
+  );
+  const { data } = await response.json();
+  expect(data.accounts.map(({ default_account }) => default_account)).toEqual(
+    ['UI Test Bank']
   );
 });
 

@@ -5,38 +5,51 @@
   >
     <PageHeader :title="isMobile ? name : t`Print view`">
       <SelectControl
-        v-if="templateList.length"
+        v-for="picker in pickers"
+        :key="picker.title"
         :df="{
           fieldtype: 'Select',
-          fieldname: 'templateName',
-          label: t`Template Name`,
-          options: templateList.map((n) => ({ label: n, value: n })),
+          fieldname: picker.title,
+          label: picker.name,
+          options: picker.options,
         }"
         size="small"
         class="w-40"
         :border="true"
-        :value="templateName ?? ''"
-        @change="onTemplateNameChange"
+        :value="picker.value ?? ''"
+        @change="(value: string | null) => picker.select(value ?? '')"
       />
-      <DropdownWithActions :actions="actions" :label="t`More`" />
+      <DropdownWithActions
+        v-if="!isAccessory"
+        :actions="actions"
+        :label="t`More`"
+      />
       <template v-if="doc?.can('print')">
-        <FrappeButton @click="savePDF()">
+        <FrappeButton :disabled="isAccessory && !canPrint" @click="savePDF()">
           {{ t`Save as PDF` }}
         </FrappeButton>
-        <FrappeButton variant="solid" @click="openPrintDialog()">
+        <FrappeButton
+          variant="solid"
+          :disabled="isAccessory && !canPrint"
+          @click="openPrintDialog()"
+        >
           {{ t`Print` }}
         </FrappeButton>
       </template>
     </PageHeader>
 
     <div
-      v-if="isMobile && templateList.length"
-      class="sticky top-0 z-10 bg-surface-base px-4 py-3"
+      v-if="isMobile && pickers.length"
+      class="sticky top-0 z-10 flex flex-col gap-2 bg-surface-base px-4 py-3"
     >
-      <MobilePrintTemplatePicker
-        :model-value="templateName"
-        :templates="templateList"
-        @update:model-value="onTemplateNameChange"
+      <MobilePrintPicker
+        v-for="picker in pickers"
+        :key="picker.title"
+        :label="picker.label"
+        :title="picker.title"
+        :options="picker.options"
+        :model-value="picker.value"
+        @update:model-value="picker.select"
       />
     </div>
 
@@ -46,6 +59,13 @@
       icon="lucide-printer"
       :title="helperMessage"
     />
+    <EmptyState
+      v-else-if="printError"
+      class="flex-1"
+      icon="lucide-printer"
+      :title="t`Preview could not be loaded`"
+      :description="printError"
+    />
     <!-- Template Display Area -->
     <FrappeScrollArea
       v-else
@@ -54,15 +74,24 @@
       viewport-class="p-4 pb-10"
     >
       <!-- Template Container -->
-      <div :class="isMobile ? 'relative w-max min-w-full' : ''">
+      <div :class="isMobile ? 'relative w-max min-w-full' : 'relative'">
+        <!-- While loading: the previous preview faded, else an empty sheet -->
         <PrintSheet
-          v-if="printDocument"
+          v-if="printDocument || isLoading"
           class="mx-auto shadow-sm border"
-          :document="printDocument"
+          :class="{ 'opacity-[.45]': isLoading }"
+          :document="printDocument ?? undefined"
           :scale="Math.max(scale * zoom, 0.1)"
           :width="pageSize.width"
           :height="pageSize.height"
         />
+        <div
+          v-if="isLoading"
+          class="absolute inset-x-0 top-[120px] mx-auto flex h-8 w-max items-center gap-2 rounded-lg bg-surface-base px-3 text-base text-ink-gray-7 shadow-md"
+        >
+          <FrappeSpinner class="size-3.5" />
+          {{ t`Loading preview…` }}
+        </div>
         <!-- Takes the touches the preview frame would swallow. -->
         <div
           v-if="isMobile"
@@ -81,7 +110,7 @@
           size="lg"
           icon="lucide-download"
           :label="t`Save as PDF`"
-          :disabled="!printDocument"
+          :disabled="!canPrint"
           @click="savePDF()"
         />
         <FrappeButton
@@ -90,7 +119,7 @@
           icon-left="lucide-share"
           :label="t`Share`"
           :loading="isSharing"
-          :disabled="!printDocument"
+          :disabled="!canPrint"
           @click="sharePDF()"
         />
       </template>
@@ -100,7 +129,7 @@
         size="lg"
         icon-left="lucide-download"
         :label="t`Save as PDF`"
-        :disabled="!printDocument"
+        :disabled="!canPrint"
         @click="savePDF()"
       />
       <FrappeButton
@@ -109,7 +138,7 @@
         variant="solid"
         icon-left="lucide-printer"
         :label="t`Print`"
-        :disabled="!printDocument"
+        :disabled="!canPrint"
         @click="openPrintDialog()"
       />
     </MobileFooter>
@@ -119,6 +148,7 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
+  Spinner as FrappeSpinner,
 } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import { t } from 'fyo';
@@ -134,14 +164,17 @@ import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getAllDocuments, getValue } from 'src/frappe/api';
+import { getServerMessages } from 'src/web/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { showToast } from 'src/utils/interactive';
 import {
   canSharePDF,
   downloadPDF,
   getPDF,
   getPrintHTML,
+  getPrintOptions,
   openPrintView,
 } from 'src/utils/printFormatApi';
 import {
@@ -154,9 +187,28 @@ import { showSidebar } from 'src/utils/refs';
 import { getFormRoute, openSettings, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { defineComponent } from 'vue';
-import MobilePrintTemplatePicker from './MobilePrintTemplatePicker.vue';
+import MobilePrintPicker from './MobilePrintPicker.vue';
 import { usePDFShare } from './pdfShare';
 import { usePinchZoom } from './pinchZoom';
+
+/** A print choice the header (desktop) or the sticky bar (phone) offers. */
+/** A choice of the print, as the desktop select and the phone sheet both take it. */
+type PickerOption = { label: string; value: string };
+
+interface PrintPicker {
+  /** What the desktop select is called. */
+  name: string;
+  /** The phone trigger's label and its sheet's title. */
+  label: string;
+  title: string;
+  options: PickerOption[];
+  value: string | null;
+  select: (value: string) => unknown;
+}
+
+function toOptions(names: string[]): PickerOption[] {
+  return names.map((name) => ({ label: name, value: name }));
+}
 
 export default defineComponent({
   name: 'PrintView',
@@ -164,12 +216,13 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeScrollArea,
+    FrappeSpinner,
     SelectControl,
     PrintSheet,
     DropdownWithActions,
     EmptyState,
     MobileFooter,
-    MobilePrintTemplatePicker,
+    MobilePrintPicker,
   },
   props: {
     schemaName: { type: String, required: true },
@@ -178,6 +231,7 @@ export default defineComponent({
   setup() {
     return {
       isMobile,
+      isAccessory: isAccessoryMode(),
       canShare: canSharePDF(),
       ...usePinchZoom(),
       ...usePDFShare(t`PDF ready. Tap Share again.`),
@@ -192,6 +246,10 @@ export default defineComponent({
       templateName: null,
       templateList: [],
       templateRequest: 0,
+      letterHead: undefined,
+      letterHeads: [],
+      isLoading: false,
+      printError: '',
     } as {
       doc: null | FrappeDoc;
       scale: number;
@@ -200,6 +258,11 @@ export default defineComponent({
       templateName: null | string;
       templateList: string[];
       templateRequest: number;
+      /** Accessory mode's pick, '' for none; standalone leaves it to Print Settings. */
+      letterHead: string | undefined;
+      letterHeads: string[];
+      isLoading: boolean;
+      printError: string;
     };
   },
   computed: {
@@ -219,6 +282,52 @@ export default defineComponent({
       }
 
       return '';
+    },
+    canPrint(): boolean {
+      return !!this.printDocument && !this.isLoading;
+    },
+    pickers(): PrintPicker[] {
+      if (this.isAccessory) {
+        return this.accessoryPickers;
+      }
+
+      if (!this.templateList.length) {
+        return [];
+      }
+
+      return [
+        {
+          name: this.t`Template Name`,
+          label: this.t`Template`,
+          title: this.t`Print Template`,
+          options: toOptions(this.templateList),
+          value: this.templateName,
+          select: this.onTemplateNameChange,
+        },
+      ];
+    },
+    accessoryPickers(): PrintPicker[] {
+      return [
+        {
+          name: this.t`Print format`,
+          label: this.t`Format`,
+          title: this.t`Print format`,
+          options: toOptions(this.templateList),
+          value: this.templateName,
+          select: this.setPrintFormat,
+        },
+        {
+          name: this.t`Letter head`,
+          label: this.t`Letter head`,
+          title: this.t`Letter head`,
+          options: [
+            { label: this.t`No letter head`, value: '' },
+            ...toOptions(this.letterHeads),
+          ],
+          value: this.letterHead ?? '',
+          select: this.setLetterHead,
+        },
+      ];
     },
     printDocument(): string | null {
       return this.print && getPrintDocument(this.print);
@@ -308,6 +417,11 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
+      if (this.isAccessory) {
+        await this.initializeAccessory();
+        return;
+      }
+
       // The hints wait for the doc, so they don't flash while the list loads.
       await this.setTemplateList();
       this.doc = await getFrappeDoc(this.schemaName, this.name);
@@ -315,6 +429,74 @@ export default defineComponent({
       if (!this.templateDoc && this.templateList.length) {
         await this.onTemplateNameChange(this.templateList[0]);
       }
+    },
+    /** ERPNext's print formats and letter heads, each preselected with its default. */
+    async initializeAccessory() {
+      const request = this.templateRequest;
+      this.isLoading = true;
+      this.setScale();
+      try {
+        const [options, doc] = await Promise.all([
+          getPrintOptions(this.doctype, this.name),
+          getFrappeDoc(this.schemaName, this.name),
+        ]);
+        if (request !== this.templateRequest) {
+          return;
+        }
+
+        this.doc = doc;
+        this.templateList = options.print_formats;
+        this.letterHeads = options.letter_heads;
+        this.templateName = options.print_formats[0];
+        this.letterHead = options.default_letter_head ?? '';
+        await this.loadPreview();
+      } catch (error) {
+        if (request === this.templateRequest) {
+          this.showPreviewError(error);
+        }
+      }
+    },
+    async setPrintFormat(value: string) {
+      if (value !== this.templateName) {
+        this.templateName = value;
+        await this.loadPreview();
+      }
+    },
+    async setLetterHead(value: string) {
+      if (value !== this.letterHead) {
+        this.letterHead = value;
+        await this.loadPreview();
+      }
+    },
+    /** ERPNext's preview of the picked format and letter head; the latest pick wins. */
+    async loadPreview() {
+      const request = ++this.templateRequest;
+      this.isLoading = true;
+      this.printError = '';
+      try {
+        const print = await getPrintHTML(
+          this.doctype,
+          this.name,
+          this.templateName!,
+          this.letterHead
+        );
+        if (request === this.templateRequest) {
+          this.print = print;
+          this.isLoading = false;
+          this.setScale();
+        }
+      } catch (error) {
+        if (request === this.templateRequest) {
+          this.showPreviewError(error);
+        }
+      }
+    },
+    showPreviewError(error: unknown) {
+      this.print = null;
+      this.isLoading = false;
+      this.printError = getServerMessages(error)
+        .map(({ message }) => message)
+        .join('\n');
     },
     setScale() {
       this.scale = 1;
@@ -332,6 +514,10 @@ export default defineComponent({
       this.print = null;
       this.templateList = [];
       this.templateDoc = null;
+      this.letterHead = undefined;
+      this.letterHeads = [];
+      this.isLoading = false;
+      this.printError = '';
       this.scale = 1;
       this.zoom = 1;
       this.clearKeptPDF();
@@ -385,22 +571,27 @@ export default defineComponent({
       }
 
       try {
-        await downloadPDF(this.doctype, this.name, this.templateName);
+        await downloadPDF(
+          this.doctype,
+          this.name,
+          this.templateName,
+          this.letterHead
+        );
       } catch (error) {
         await handleErrorWithDialog(error);
       }
     },
     /** Hands the PDF to the system share sheet, as messaging apps expect a file. */
     async sharePDF() {
-      const templateName = this.templateName;
+      const { templateName, letterHead } = this;
       if (!templateName) {
         return;
       }
 
       await this.share(
-        [this.doctype, this.name, templateName].join('/'),
+        [this.doctype, this.name, templateName, letterHead].join('/'),
         this.name,
-        () => getPDF(this.doctype, this.name, templateName)
+        () => getPDF(this.doctype, this.name, templateName, letterHead)
       );
     },
     openPrintDialog() {
@@ -408,7 +599,12 @@ export default defineComponent({
         return;
       }
 
-      const opened = openPrintView(this.doctype, this.name, this.templateName);
+      const opened = openPrintView(
+        this.doctype,
+        this.name,
+        this.templateName,
+        this.letterHead
+      );
       showToast(
         opened
           ? { message: this.t`Print dialog opened`, type: 'success' }
@@ -426,11 +622,7 @@ export default defineComponent({
         const posProfileName = this.fyo.singles.POSSettings?.pos_profile;
         const profileTemplate =
           posProfileName &&
-          (await getValue(
-            'Books Pos Profile',
-            posProfileName,
-            'pos_print_template'
-          ));
+          (await getValue('Books POS Profile', posProfileName, 'print_format'));
         if (profileTemplate) {
           templateName = profileTemplate;
         }

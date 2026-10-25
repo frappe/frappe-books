@@ -44,37 +44,43 @@ test('the Account form shows the fields, labels and placeholders it showed', () 
   assert.deepEqual(layout, [
     'account_name | Account Name | ',
     'root_type | Root Type | Root Type',
-    'parent_books_account | Parent Account | ',
+    'parent_account | Parent Account | ',
     'account_type | Account Type | Account Type',
     'is_group | Is Group | ',
   ]);
   assert.deepEqual(schema.quickEditFields, [
     'root_type',
-    'parent_books_account',
+    'parent_account',
     'account_type',
     'is_group',
   ]);
   assert.equal(field('name').label, 'Account Name');
   assert.equal(schema.create, false);
-  assert.equal(field('parent_books_account').create, false);
+  assert.equal(field('parent_account').create, false);
 });
 
 test('a ledger account needs a parent group; a root group does not', () => {
-  const parent = field('parent_books_account');
-  assert.equal(newAccount({ is_group: false }).getFieldState(parent).required, true);
-  assert.equal(newAccount({ is_group: true }).getFieldState(parent).required, false);
+  const parent = field('parent_account');
+  assert.equal(
+    newAccount({ is_group: false }).getFieldState(parent).required,
+    true
+  );
+  assert.equal(
+    newAccount({ is_group: true }).getFieldState(parent).required,
+    false
+  );
 });
 
 test('a saved account keeps its name, types, parent and group; a saved type stays', async () => {
   const account = await savedAccount({
     account_name: 'Petty Cash',
-    parent_books_account: 'Cash In Hand',
+    parent_account: 'Cash In Hand',
     root_type: 'Asset',
   });
   for (const fieldname of [
     'account_name',
     'root_type',
-    'parent_books_account',
+    'parent_account',
     'is_group',
   ]) {
     assert.equal(account.getFieldState(field(fieldname)).readOnly, true);
@@ -99,7 +105,7 @@ test('a child account takes its root type from its group, so it is read only', (
   const rootType = field('root_type');
   const root = newAccount({ is_group: true });
   assert.equal(root.getFieldState(rootType).readOnly, false);
-  const child = newAccount({ parent_books_account: 'Current Assets' });
+  const child = newAccount({ parent_account: 'Current Assets' });
   assert.equal(child.getFieldState(rootType).readOnly, true);
 });
 
@@ -108,16 +114,16 @@ test('a root account says it cannot be deleted before asking the server', async 
   await assert.rejects(root.beforeDelete(), /Root accounts cannot be deleted/);
   const child = newAccount({
     account_name: 'Cash',
-    parent_books_account: 'Assets',
+    parent_account: 'Assets',
   });
   await child.beforeDelete();
 });
 
 test('the parent picker offers groups of the account root type', () => {
-  const { parent_books_account } = Account.filters;
+  const { parent_account } = Account.filters;
   const groups = ['is_group', '=', 1];
-  assert.deepEqual(parent_books_account(newAccount({})), [groups]);
-  assert.deepEqual(parent_books_account(newAccount({ root_type: 'Income' })), [
+  assert.deepEqual(parent_account(newAccount({})), [groups]);
+  assert.deepEqual(parent_account(newAccount({ root_type: 'Income' })), [
     groups,
     ['root_type', '=', 'Income'],
   ]);
@@ -126,20 +132,28 @@ test('the parent picker offers groups of the account root type', () => {
 test('account links in other forms filter by Frappe fieldnames', async () => {
   const { PurchaseInvoice } = frappeModels;
   const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
-  const { Customer, AccountingSettings, InventorySettings, POSSettings } =
-    frappeModels;
+  const { Customer, Company, POSSettings } = frappeModels;
   const ledger = ['is_group', '=', 0];
   const customer = newFrappeDoc('Customer');
-  assert.deepEqual(await Customer.filters.default_account(customer), [
+  await customer.append('accounts');
+  const [row] = customer.accounts;
+  assert.deepEqual(await Customer.rowModels.accounts.filters.account(row), [
     ledger,
     ['account_type', '=', 'Receivable'],
   ]);
-  assert.deepEqual(await PurchaseInvoice.filters.account({ isSales: false }), [
+  assert.deepEqual(await PurchaseInvoice.filters.credit_to(), [
     ledger,
     ['account_type', '=', 'Payable'],
   ]);
+  // A tax row's account, as its DocField's link_filters say.
+  assert.deepEqual(
+    getSchema('SalesTaxesandCharges').fields.find(
+      (f) => f.fieldname === 'account_head'
+    ).linkFilters,
+    [ledger]
+  );
   assert.deepEqual(JournalEntryAccount.filters.account(), [ledger]);
-  assert.deepEqual(AccountingSettings.filters.discount_account(), [
+  assert.deepEqual(Company.filters.default_discount_account(), [
     ledger,
     ['root_type', '=', 'Income'],
   ]);
@@ -149,12 +163,12 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     defaults.find((f) => f.fieldname === 'sales_payment_account').linkFilters,
     [ledger, ['account_type', 'in', ['Cash', 'Bank']]]
   );
-  const taxRow = getSchema('TaxDetail').fields;
-  for (const fieldname of ['account', 'payment_account']) {
+  const taxRow = getSchema('ItemTaxTemplateDetail').fields;
+  for (const fieldname of ['tax_type', 'payment_account']) {
     const field = taxRow.find((f) => f.fieldname === fieldname);
     assert.deepEqual(field.linkFilters, [ledger], fieldname);
   }
-  assert.deepEqual(InventorySettings.filters.stock_in_hand(), [
+  assert.deepEqual(Company.filters.default_inventory_account(), [
     ledger,
     ['account_type', '=', 'Stock'],
   ]);
@@ -175,14 +189,14 @@ test('the account list shows its name, root type, group and parent', () => {
     'name',
     'root_type',
     'is_group',
-    'parent_books_account',
+    'parent_account',
   ]);
 });
 
 test('an account saves without the nested set Frappe keeps', async () => {
   const account = await savedAccount({
     account_name: 'Petty Cash',
-    parent_books_account: 'Cash In Hand',
+    parent_account: 'Cash In Hand',
   });
   const values = account.getFrappeValues();
   for (const fieldname of ['lft', 'rgt', 'old_parent']) {

@@ -14,6 +14,8 @@ import { getCustomizableForms } from './customizable';
  */
 export class CustomForm extends FrappeDoc {
   static override doctype = 'Books Custom Form';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation: Presentation = {
     label: 'Custom Form',
     nameField: { label: 'Form Type', fieldtype: 'AutoComplete' },

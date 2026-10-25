@@ -9,27 +9,27 @@ export class StockLedgerEntry extends FrappeDoc {
     nameField: { label: 'Entry No.' },
     fileFields: [
       'name',
-      'date',
-      'location',
-      'batch',
-      'serial_number',
-      'item',
-      'rate',
-      'quantity',
-      'reference_type',
-      'reference_name',
+      'posting_datetime',
+      'warehouse',
+      'batch_no',
+      'serial_no',
+      'item_code',
+      'incoming_rate',
+      'actual_qty',
+      'voucher_type',
+      'voucher_no',
     ],
   };
 
   static override getListViewSettings(): ListViewSettings {
     return {
       columns: [
-        'date',
-        'item',
-        'location',
-        'rate',
-        'quantity',
-        'reference_name',
+        'posting_datetime',
+        'item_code',
+        'warehouse',
+        'incoming_rate',
+        'actual_qty',
+        'voucher_no',
       ],
     };
   }

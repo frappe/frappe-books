@@ -10,9 +10,9 @@ import {
 
 const AVAILABILITY = '/api/method/frappe_books.inventory.availability';
 const stock = [
-  { item: 'Pen', batch: 'B1', quantity: 2 },
-  { item: 'Pen', batch: 'B2', quantity: 0 },
-  { item: 'Pen', batch: null, quantity: 5 },
+  { item_code: 'Pen', batch_no: 'B1', actual_qty: 2 },
+  { item_code: 'Pen', batch_no: 'B2', actual_qty: 0 },
+  { item_code: 'Pen', batch_no: null, actual_qty: 5 },
 ];
 
 /** A request for the stock ledger's sums by item and batch. */
@@ -40,22 +40,26 @@ function makeRow(values = {}) {
   fyo.singles.InventorySettings = { enable_batches: true };
   const invoice = newFrappeDoc('SalesInvoice', {
     ...values,
-    items: [{ item: 'Pen', quantity: 3 }],
+    items: [{ item_code: 'Pen', stock_qty: 3 }],
   });
   requests.length = 0;
   return invoice.items[0];
 }
 
-/** The locations the stock requests asked about. */
+/** The locations and items the stock requests asked about; each also leaves out cancelled entries. */
 function getStockLocations() {
   return requests
     .filter(isLedgerSum)
-    .map(({ body }) => body.filters.map(([, , value]) => value));
+    .map(({ body }) =>
+      body.filters
+        .filter(([fieldname]) => fieldname !== 'is_cancelled')
+        .map(([, , value]) => value)
+    );
 }
 
 test('sales batch choices are the batches in stock where the invoice ships from', async () => {
   const row = makeRow();
-  const filters = await row.constructor.filters.batch(row);
+  const filters = await row.constructor.filters.batch_no(row);
   assert.deepEqual(filters, [['name', 'in', ['B1']]]);
   assert.deepEqual(getStockLocations(), [['Stores', ['Pen']]]);
 });
@@ -64,7 +68,7 @@ test('a batch created from a sales row is a new batch of its item', async () => 
   const row = makeRow();
   const { filters, createFilters } = row.constructor;
   // As the Link control picks them.
-  const getValues = createFilters?.batch ?? filters.batch;
+  const getValues = createFilters?.batch_no ?? filters.batch_no;
   assert.deepEqual(getNewDocValues('Batch', await getValues(row)), {
     item: 'Pen',
   });
@@ -85,7 +89,7 @@ test('a POS row checks its batch at the POS location', async () => {
 
 test('returns may use any batch of the item and skip the stock check', async () => {
   const row = makeRow({ return_against: 'SINV-1' });
-  assert.deepEqual(await row.constructor.filters.batch(row), [
+  assert.deepEqual(await row.constructor.filters.batch_no(row), [
     ['item', '=', 'Pen'],
   ]);
   await row.validateBatchQuantity('B1', 30);
@@ -95,9 +99,9 @@ test('returns may use any batch of the item and skip the stock check', async () 
 test('a Qty in another unit checks its batch in stock units', async () => {
   const row = makeRow();
   Object.assign(row, {
-    batch: 'B1',
-    transfer_unit: 'Box',
-    unit_conversion_factor: 2,
+    batch_no: 'B1',
+    uom: 'Box',
+    conversion_factor: 2,
   });
   await assert.rejects(
     row.set('qty', 2),

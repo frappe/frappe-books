@@ -1,27 +1,28 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
-import re
+from collections import defaultdict
 
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.company import company_value, default_company
 from frappe_books.permissions import check_preview_permission
 from frappe_books.regional import validate_hsn_codes
-from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
+from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, item_series_pattern, validate_pattern
 from frappe_books.settings import require_features
 
 # Item fields the Books app offers only while their feature is on.
 ITEM_FEATURES = {
-	"track_item": "enable_inventory",
-	"has_batch": "enable_batches",
-	"has_serial_number": "enable_serial_number",
-	"uom_conversions": "enable_uom_conversions",
-	"item_group": "enableitem_group",
+	"is_stock_item": "enable_inventory",
+	"has_batch_no": "enable_batches",
+	"has_serial_no": "enable_serial_number",
+	"uoms": "enable_uom_conversions",
+	"item_group": "enable_item_group",
 }
 
 
@@ -34,43 +35,63 @@ class BooksItem(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from frappe_books.frappe_books.doctype.books_uom_conversion_item.books_uom_conversion_item import (
-			BooksUomConversionItem,
+		from frappe_books.frappe_books.doctype.books_item_barcode.books_item_barcode import BooksItemBarcode
+		from frappe_books.frappe_books.doctype.books_item_default.books_item_default import BooksItemDefault
+		from frappe_books.frappe_books.doctype.books_item_tax.books_item_tax import BooksItemTax
+		from frappe_books.frappe_books.doctype.books_uom_conversion_detail.books_uom_conversion_detail import (
+			BooksUOMConversionDetail,
 		)
 
-		barcode: DF.Data | None
-		batch_series: DF.Data | None
+		barcodes: DF.Table[BooksItemBarcode]
+		batch_number_series: DF.Data | None
+		create_new_batch: DF.Check
 		description: DF.Text | None
-		expense_account: DF.Link
-		has_batch: DF.Check
-		has_serial_number: DF.Check
-		hsn_code: DF.Data | None
+		gst_hsn_code: DF.Data | None
+		has_batch_no: DF.Check
+		has_serial_no: DF.Check
 		image: DF.AttachImage | None
-		income_account: DF.Link
-		item_code: DF.Data | None
+		is_stock_item: DF.Check
+		item_code: DF.Data
+		item_defaults: DF.Table[BooksItemDefault]
 		item_group: DF.Link | None
+		item_name: DF.Data | None
 		item_type: DF.Literal["Product", "Service"]
-		rate: DF.Currency
-		serial_number_series: DF.Data | None
-		tax: DF.Link | None
-		track_item: DF.Check
-		unit: DF.Link | None
-		uom_conversions: DF.Table[BooksUomConversionItem]
+		serial_no_series: DF.Data | None
+		standard_rate: DF.Currency
+		stock_uom: DF.Link | None
+		taxes: DF.Table[BooksItemTax]
+		uoms: DF.Table[BooksUOMConversionDetail]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item"
 
 	def before_validate(self):
+		# Named by its code, an item is titled by it too unless it has a name of its own.
+		self.item_name = self.item_name or self.item_code
 		for flag, fieldname in ITEM_SERIES.values():
-			series = (self.get(fieldname) or "").strip()
-			if self.get(flag) and series:
-				# A dash keeps the series prefix apart from its numbers.
-				self.set(fieldname, series if series.endswith("-") else f"{series}-")
+			if self.get(flag):
+				self.set(fieldname, item_series_pattern(self.get(fieldname)))
+		# A batch series makes the batches its receipts need, as ERPNext's switch says.
+		self.create_new_batch = int(bool(self.has_batch_no and self.batch_number_series))
+		self.sort_taxes()
 		self.set_missing_values()
 
+	def sort_taxes(self):
+		"""The newest Valid From first, as the form lists them; a row without a date goes last."""
+		# ISO dates sort as text; an empty one sorts last.
+		self.taxes.sort(key=lambda row: str(row.valid_from or ""), reverse=True)
+		for idx, row in enumerate(self.taxes, start=1):
+			row.idx = idx
+
 	def set_missing_values(self):
-		self.income_account = self.income_account or _default_income_account(self.item_type)
-		self.expense_account = self.expense_account or _default_expense_account(self.track_item)
+		"""The one company's row takes the chart's accounts for what it leaves empty."""
+		company = default_company()
+		for row in self.item_defaults:
+			row.company = row.company or company
+		row = self.get("item_defaults", {"company": company})
+		row = row[0] if row else self.append("item_defaults", {"company": company})
+		row.income_account = row.income_account or _default_income_account(self.item_type)
+		row.expense_account = row.expense_account or _default_expense_account(self.is_stock_item)
 
 	@frappe.whitelist()
 	def preview(self):
@@ -84,25 +105,24 @@ class BooksItem(Document):
 		require_features(self, ITEM_FEATURES)
 		self.validate_stock_settings()
 		self.validate_accounts()
-		validate_hsn_codes([self])
-		if self.barcode and not re.fullmatch(r"[0-9]{12}", self.barcode):
-			frappe.throw(_("Barcode must contain exactly 12 digits."))
+		validate_hsn_codes([self], "gst_hsn_code")
 		self.validate_unit_conversions()
 		self.validate_series()
+		self.validate_barcodes()
 
 	def validate_stock_settings(self):
-		if self.track_item and self.item_type != "Product":
+		if self.is_stock_item and self.item_type != "Product":
 			frappe.throw(_("Only products can track inventory."))
-		if self.has_serial_number and not self.track_item:
+		if self.has_serial_no and not self.is_stock_item:
 			frappe.throw(_("Only items that track inventory can have serial numbers."))
-		if self.has_batch and not self.track_item:
+		if self.has_batch_no and not self.is_stock_item:
 			frappe.throw(_("Only items that track inventory can have batches."))
 
 	def validate_unit_conversions(self):
-		units = [row.uom for row in self.uom_conversions]
+		units = [row.uom for row in self.uoms]
 		if len(units) != len(set(units)):
 			frappe.throw(_("Each unit can have only one conversion factor."))
-		if any(flt(row.conversion_factor) <= 0 for row in self.uom_conversions):
+		if any(flt(row.conversion_factor) <= 0 for row in self.uoms):
 			frappe.throw(_("Conversion factors must be greater than zero."))
 
 	def validate_series(self):
@@ -110,12 +130,36 @@ class BooksItem(Document):
 			if self.get(flag) and self.get(fieldname):
 				message = _("{0} cannot contain the following characters: {1}")
 				label = _(self.meta.get_label(fieldname))
-				validate_prefix(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
+				validate_pattern(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
+
+	def validate_barcodes(self):
+		"""A barcode names one item, as in ERPNext; checked before the database's unique index refuses it."""
+		barcodes = [row.barcode for row in self.barcodes if row.barcode]
+		if not barcodes:
+			return
+		if len(barcodes) != len(set(barcodes)):
+			frappe.throw(_("Each barcode can be used only once."), frappe.UniqueValidationError)
+		used = frappe.get_all(
+			"Books Item Barcode",
+			filters={"barcode": ["in", barcodes], "parent": ["!=", self.name]},
+			fields=["barcode", "parent"],
+			limit=1,
+		)
+		if used:
+			frappe.throw(
+				_("Barcode {0} already used in Item {1}").format(used[0].barcode, used[0].parent),
+				frappe.UniqueValidationError,
+			)
 
 	def validate_accounts(self):
-		"""A tracked item is bought into stock received but not billed, a liability."""
-		validate_account(self, "income_account", root_types=("Income",))
-		validate_account(self, "expense_account", root_types=("Liability" if self.track_item else "Expense",))
+		"""One row per company. A tracked item is bought into stock received but not billed, a liability."""
+		companies = [row.company for row in self.item_defaults]
+		if len(companies) != len(set(companies)):
+			frappe.throw(_("Cannot set multiple Item Defaults for a company."))
+		expense_root = "Liability" if self.is_stock_item else "Expense"
+		for row in self.item_defaults:
+			validate_account(row, "income_account", root_types=("Income",))
+			validate_account(row, "expense_account", root_types=(expense_root,))
 
 
 def _default_income_account(item_type):
@@ -124,11 +168,49 @@ def _default_income_account(item_type):
 	return account if frappe.db.exists("Books Account", account) else None
 
 
-def _default_expense_account(track_item):
+def _default_expense_account(is_stock_item):
 	"""Tracked items are bought into stock received but not billed, others into cost of goods sold."""
-	if track_item:
-		return frappe.db.get_single_value("Books Inventory Settings", "stock_received_but_not_billed")
+	if is_stock_item:
+		return company_value("stock_received_but_not_billed")
 	return latest_ledger_account("Cost of Goods Sold")
+
+
+def company_item_defaults(names):
+	"""Map each named item to its Books Item Default row for the one company."""
+	if not names:
+		return {}
+	rows = frappe.get_all(
+		"Books Item Default",
+		filters={"parenttype": "Books Item", "parent": ["in", sorted(names)], "company": default_company()},
+		fields=["parent", "income_account", "expense_account", "default_warehouse"],
+	)
+	return {row.parent: row for row in rows}
+
+
+def item_tax_templates(items, date):
+	"""Map each item to the tax template its taxes, else its group's, apply on `date`, as ERPNext picks it."""
+	parents = {item.name for item in items} | {item.item_group for item in items if item.item_group}
+	taxes = defaultdict(list)
+	for row in frappe.get_all(
+		"Books Item Tax",
+		filters={"parenttype": ["in", ["Books Item", "Books Item Group"]], "parent": ["in", sorted(parents)]},
+		fields=["parenttype", "parent", "item_tax_template", "valid_from"],
+	):
+		taxes[row.parenttype, row.parent].append(row)
+	return {
+		item.name: _applicable_template(taxes["Books Item", item.name], date)
+		or _applicable_template(taxes["Books Item Group", item.item_group], date)
+		for item in items
+	}
+
+
+def _applicable_template(taxes, date):
+	"""The template of the latest row valid on `date`; a row without a date always applies."""
+	date = getdate(date)
+	for row in sorted(taxes, key=lambda row: row.valid_from or date.min, reverse=True):
+		if not row.valid_from or row.valid_from <= date:
+			return row.item_tax_template
+	return None
 
 
 @frappe.whitelist()
@@ -149,5 +231,5 @@ def _map_invoice(item, invoice_doctype):
 
 
 def _bill_item(item, invoice):
-	invoice.append("items", {"item": item.name, "quantity": 1})
+	invoice.append("items", {"item_code": item.name, "qty": 1})
 	invoice.fill_mapped_values()

@@ -1,3 +1,4 @@
+import { isAccessoryMode } from 'src/frappe/mode';
 import type { RouteLocationNormalized } from 'vue-router';
 
 type PhoneRoute = Pick<RouteLocationNormalized, 'meta' | 'params'>;
@@ -8,7 +9,7 @@ const desktopOnlyReports = ['GSTR1', 'GSTR2'];
 /** Pages that are left out of the phone layout. */
 export function isDesktopOnly(route: PhoneRoute): boolean {
   if (route.meta.desktopOnly) {
-    return true;
+    return !(route.meta.accessoryOnPhone && isAccessoryMode());
   }
 
   const { schemaName, reportClassName } = route.params;

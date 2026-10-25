@@ -1,7 +1,6 @@
 import frappe
 
 REMARKS = [None, "", "Alpha café", "Beta", "Alpha O'Reilly"]
-STATUSES = ["Saved", "Submitted", "Cancelled"]
 
 
 def make_list_filter_records(tag: str) -> dict[str, list[str]]:
@@ -23,11 +22,10 @@ def make_journal_entry(index: int, tag: str) -> str:
 			"name": f"Filter {index} {tag}",
 			"user_remark": REMARKS[index],
 			"posting_date": f"2024-01-{index + 1:02}",
-			"entry_type": "Journal Entry" if index < 3 else "Cash Entry",
-			"reference_number": str(index),
-			"number_series": "JV-" if index % 2 == 0 else "BANK-",
+			"voucher_type": "Journal Entry" if index < 3 else "Cash Entry",
+			"cheque_no": str(index),
+			"naming_series": "JV-" if index % 2 == 0 else "BANK-",
 			"docstatus": index % 3,
-			"status": STATUSES[index % 3],
 			"owner": user,
 			"modified_by": user,
 			"creation": f"2024-01-{index + 1:02} 12:00:00",
@@ -41,8 +39,9 @@ def make_sales_invoice(index: int, tag: str) -> str:
 		{
 			"doctype": "Books Sales Invoice",
 			"name": f"Filter invoice {index} {tag}",
-			"date": f"2024-01-{index + 1:02} 12:00:00",
-			"number_series": "SINV-",
+			"posting_date": f"2024-01-{index + 1:02}",
+			"posting_time": "12:00:00",
+			"naming_series": "SINV-",
 			"net_total": index * 100,
 			"grand_total": index * 112,
 			"base_grand_total": index * 224,

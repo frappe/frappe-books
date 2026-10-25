@@ -31,30 +31,23 @@ const excludedFieldTypes: FieldType[] = [
  * fieldname. CSV keys start with the schema name.
  */
 const RENAMED_KEYS: Record<string, Record<string, string>> = {
-  Account: { account_name: 'name', parent_books_account: 'parentAccount' },
-  AccountingLedgerEntry: {
-    posting_date: 'date',
-    voucher_no: 'referenceName',
-    voucher_type: 'referenceType',
-  },
+  Account: { account_name: 'name', parent_account: 'parentAccount' },
   Country: { country_name: 'name' },
   Currency: {
     currency_name: 'name',
     smallest_currency_fraction_value: 'smallestValue',
   },
   JournalEntry: { posting_date: 'date' },
-  Payment: { payment_references: 'for' },
   POSProfile: { pos_ui: 'posUI' },
-  TaxDetail: { payment_account: 'payment_account' },
-  TaxSummary: { from_account: 'from_account' },
+  ItemTaxTemplateDetail: { payment_account: 'payment_account' },
+  RealisedTax: { from_account: 'from_account' },
 };
 const AUDIT_KEYS: Record<string, string> = {
   owner: 'createdBy',
   creation: 'created',
 };
-const RENAMED_SCHEMAS: Record<string, string> = {
-  UomConversionItem: 'UOMConversionItem',
-};
+// The number series of a numbered document, keyed as Books wrote it.
+const SERIES_KEYS: Record<string, string> = { naming_series: 'numberSeries' };
 
 /** What an export reads: a page at a time, newest first. */
 interface ExportQuery {
@@ -131,8 +124,7 @@ export async function getCsvExportData(query: ExportQuery): Promise<string> {
 
 /** A field's key in an exported CSV, e.g. `SalesInvoice.numberSeries`. */
 export function getCsvKey(schemaName: string, fieldname: string): string {
-  const schemaKey = RENAMED_SCHEMAS[schemaName] ?? schemaName;
-  return `${schemaKey}.${getExportKey(schemaName, fieldname)}`;
+  return `${schemaName}.${getExportKey(schemaName, fieldname)}`;
 }
 
 /** A picked field as a file holds it: its label, keys and value. */
@@ -230,6 +222,7 @@ function getExportKey(schemaName: string, fieldname: string): string {
     RENAMED_KEYS[schemaName]?.[fieldname] ??
     placements[fieldname]?.books_fieldname ??
     AUDIT_KEYS[fieldname] ??
+    SERIES_KEYS[fieldname] ??
     camelCase(fieldname)
   );
 }

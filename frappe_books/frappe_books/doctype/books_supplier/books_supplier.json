@@ -3,7 +3,7 @@
  "allow_bulk_edit": 1,
  "allow_import": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:supplier_name",
  "creation": "2026-10-11 12:00:00.000000",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -11,17 +11,21 @@
  "field_order": [
   "default_section_break_1",
   "image",
+  "supplier_name",
   "contacts_section_break_4",
-  "email",
-  "phone",
-  "address",
+  "supplier_primary_contact",
+  "email_id",
+  "mobile_no",
+  "address_section_break",
+  "supplier_primary_address",
+  "primary_address",
   "billing_section_break_8",
-  "default_account",
-  "currency",
+  "accounts",
+  "default_currency",
   "billing_section_break_16",
   "tax_id",
   "outstanding_amount",
-  "gst_type",
+  "gst_category",
   "gstin"
  ],
  "fields": [
@@ -36,29 +40,63 @@
    "label": "Image"
   },
   {
-   "fieldname": "contacts_section_break_4",
-   "fieldtype": "Section Break",
-   "label": "Contacts"
+   "bold": 1,
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Supplier Name",
+   "placeholder": "Full Name",
+   "reqd": 1
   },
   {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
+   "fieldname": "contacts_section_break_4",
+   "fieldtype": "Section Break",
+   "label": "Contact"
+  },
+  {
+   "fieldname": "supplier_primary_contact",
+   "fieldtype": "Link",
+   "label": "Primary Contact",
+   "no_copy": 1,
+   "options": "Contact"
+  },
+  {
+   "fetch_from": "supplier_primary_contact.email_id",
+   "fieldname": "email_id",
+   "fieldtype": "Read Only",
+   "label": "Email ID",
+   "no_copy": 1,
    "options": "Email",
    "placeholder": "john@doe.com"
   },
   {
-   "fieldname": "phone",
-   "fieldtype": "Data",
-   "label": "Phone",
+   "fetch_from": "supplier_primary_contact.mobile_no",
+   "fieldname": "mobile_no",
+   "fieldtype": "Read Only",
+   "label": "Mobile No",
+   "no_copy": 1,
    "options": "Phone",
-   "placeholder": "Phone"
+   "placeholder": "Mobile No"
   },
   {
-   "fieldname": "address",
+   "fieldname": "address_section_break",
+   "fieldtype": "Section Break",
+   "label": "Address"
+  },
+  {
+   "fieldname": "supplier_primary_address",
    "fieldtype": "Link",
-   "label": "Address",
-   "options": "Books Address"
+   "label": "Primary Address",
+   "no_copy": 1,
+   "options": "Address"
+  },
+  {
+   "fieldname": "primary_address",
+   "fieldtype": "Text Editor",
+   "hidden": 1,
+   "label": "Primary Address Preview",
+   "no_copy": 1,
+   "read_only": 1
   },
   {
    "fieldname": "billing_section_break_8",
@@ -66,16 +104,16 @@
    "label": "Billing"
   },
   {
-   "fieldname": "default_account",
-   "fieldtype": "Link",
-   "label": "Default Account",
-   "options": "Books Account",
+   "fieldname": "accounts",
+   "fieldtype": "Table",
+   "label": "Default Accounts",
+   "options": "Books Party Account",
    "permlevel": 1
   },
   {
-   "fieldname": "currency",
+   "fieldname": "default_currency",
    "fieldtype": "Link",
-   "label": "Currency",
+   "label": "Billing Currency",
    "options": "Currency",
    "placeholder": "INR"
   },
@@ -97,26 +135,27 @@
   },
   {
    "default": "Unregistered",
-   "fieldname": "gst_type",
+   "fieldname": "gst_category",
    "fieldtype": "Select",
-   "label": "GST Registration",
-   "options": "Unregistered\nRegistered Regular\nConsumer",
-   "placeholder": "GST Registration"
+   "label": "GST Category",
+   "options": "Registered Regular\nUnregistered",
+   "placeholder": "GST Category"
   },
   {
-   "depends_on": "eval:doc.gst_type == 'Registered Regular'",
+   "depends_on": "eval:doc.gst_category == 'Registered Regular'",
    "fieldname": "gstin",
    "fieldtype": "Data",
-   "label": "GSTIN No."
+   "label": "GSTIN / UIN"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-11 12:00:00.000000",
+ "modified": "2026-10-24 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Supplier",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -171,9 +210,10 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "email, phone",
+ "search_fields": "email_id, mobile_no",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "supplier_name",
  "track_changes": 1
 }

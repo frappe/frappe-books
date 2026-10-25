@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseCSV } from './helpers/accounting.mjs';
-import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import {
+  getStandaloneModelNames,
+  loadFrappeModels,
+} from './helpers/frappeModels.mjs';
 import {
   frappeModels,
   getCsvExportData,
@@ -32,15 +35,16 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
     exported.slice(0, 2).map(({ fieldname, label }) => [fieldname, label]),
     [
       ['name', 'Invoice No'],
-      ['number_series', 'Number Series'],
+      ['naming_series', 'Number Series'],
     ]
   );
   assert.equal(
-    exported.find(({ fieldname }) => fieldname === 'attachment').export,
+    getExportFields('Customer').find(({ fieldname }) => fieldname === 'image')
+      .export,
     false
   );
   assert.equal(items.target, 'SalesInvoiceItem');
-  assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item'));
+  assert.ok(items.fields.some(({ fieldname }) => fieldname === 'item_code'));
   assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'name'));
 });
 
@@ -50,14 +54,14 @@ test('customer, supplier and address exports leave out Indian GST fields', () =>
 
   for (const schemaName of ['Customer', 'Supplier']) {
     assert.ok(exported(schemaName).includes('tax_id'));
-    assert.ok(!exported(schemaName).includes('gst_type'));
+    assert.ok(!exported(schemaName).includes('gst_category'));
     assert.ok(!exported(schemaName).includes('gstin'));
   }
   assert.ok(!exported('Address').includes('pos'));
 });
 
 test('the file fields of every model are fields of its schema', () => {
-  const schemaNames = Object.keys(frappeModels).flatMap((schemaName) => [
+  const schemaNames = getStandaloneModelNames().flatMap((schemaName) => [
     schemaName,
     ...Object.values(getDocType(schemaName).tables).map(
       ({ schema }) => schema.name
@@ -96,7 +100,7 @@ test('the wizard offers Books’ fields in Books’ order', () => {
       .map(({ label }) => label),
     ['Submitted', 'Cancelled']
   );
-  assert.deepEqual(invoice.slice(15, 18), [
+  assert.deepEqual(invoice.slice(16, 19), [
     'discount_after_tax',
     'make_auto_payment',
     'make_auto_stock_transfer',
@@ -107,8 +111,9 @@ test('the wizard offers Books’ fields in Books’ order', () => {
   );
   for (const fieldname of [
     'amended_from',
-    'is_returned',
+    'is_return',
     'is_pos',
+    'item_wise_tax_details',
     'docstatus',
   ]) {
     assert.ok(!invoice.includes(fieldname), fieldname);
@@ -116,8 +121,13 @@ test('the wizard offers Books’ fields in Books’ order', () => {
   assert.ok(!fieldnames('JournalEntry').includes('total_debit'));
   assert.ok(!fieldnames('StockLedgerEntry').includes('stock_queue'));
   assert.equal(items.fieldname, 'items');
-  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'qty'));
-  assert.deepEqual(fieldnames('Customer').slice(0, 2), ['image', 'name']);
+  // The server derives the stock quantity from the quantity.
+  assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'stock_qty'));
+  // A customer is named by its name field, which exports as its name.
+  assert.deepEqual(fieldnames('Customer').slice(0, 2), [
+    'image',
+    'customer_name',
+  ]);
   assert.deepEqual(
     account
       .map(({ label }) => label)
@@ -171,36 +181,36 @@ test('files hold Books’ keys and values', async () => {
     message: [
       {
         name: 'PAY-1',
-        date: '2026-09-30 10:00:00',
+        posting_date: '2026-09-30',
         creation: '2026-09-30 10:00:01.123456',
         modified: '2026-09-30 10:00:02.5',
         docstatus: 1,
-        payment_references: [
+        references: [
           {
-            reference_type: 'Books Sales Invoice',
+            reference_doctype: 'Books Sales Invoice',
             reference_name: 'SINV-1',
-            amount: 10,
+            allocated_amount: 10,
           },
         ],
       },
       {
         name: 'PAY-2',
-        date: null,
+        posting_date: null,
         creation: '2026-10-01 09:00:00',
         modified: '2026-10-01 09:00:00',
         docstatus: 0,
-        payment_references: [],
+        references: [],
       },
     ],
   }));
-  const [references] = getExportTableFields('Payment').filter(
-    ({ fieldname }) => fieldname === 'payment_references'
+  const [references] = getExportTableFields('PaymentEntry').filter(
+    ({ fieldname }) => fieldname === 'references'
   );
   const query = {
-    schemaName: 'Payment',
-    fields: pick(getExportFields('Payment'), [
-      'date',
-      'payment_references',
+    schemaName: 'PaymentEntry',
+    fields: pick(getExportFields('PaymentEntry'), [
+      'posting_date',
+      'references',
       'creation',
       'modified',
       'submitted',
@@ -208,7 +218,10 @@ test('files hold Books’ keys and values', async () => {
     tableFields: [
       {
         ...references,
-        fields: pick(references.fields, ['reference_type', 'reference_name']),
+        fields: pick(references.fields, [
+          'reference_doctype',
+          'reference_name',
+        ]),
       },
     ],
     limit: null,
@@ -218,23 +231,23 @@ test('files hold Books’ keys and values', async () => {
   const [paid, draft] = JSON.parse(await getJsonExportData(query));
   assert.deepEqual(Object.keys(paid), [
     'name',
-    'date',
+    'postingDate',
     'created',
     'modified',
     'submitted',
-    'for',
+    'references',
   ]);
   assert.deepEqual(paid, {
     name: 'PAY-1',
-    date: '2026-09-30T10:00:00+05:30',
+    postingDate: '2026-09-30',
     created: '2026-09-30T10:00:01.123456+05:30',
     modified: '2026-09-30 10:00:02.5',
     submitted: true,
-    for: [{ referenceType: 'SalesInvoice', referenceName: 'SINV-1' }],
+    references: [{ referenceDoctype: 'SalesInvoice', referenceName: 'SINV-1' }],
   });
   assert.deepEqual(draft, {
     name: 'PAY-2',
-    date: null,
+    postingDate: null,
     created: '2026-10-01T09:00:00+05:30',
     modified: '2026-10-01 09:00:00',
     submitted: false,
@@ -242,17 +255,17 @@ test('files hold Books’ keys and values', async () => {
 
   const [, keys, row] = parseCSV(await getCsvExportData(query));
   assert.deepEqual(keys, [
-    'Payment.date',
-    'Payment.created',
-    'Payment.modified',
-    'Payment.submitted',
-    'PaymentFor.referenceType',
-    'PaymentFor.referenceName',
+    'PaymentEntry.postingDate',
+    'PaymentEntry.created',
+    'PaymentEntry.modified',
+    'PaymentEntry.submitted',
+    'PaymentEntryReference.referenceDoctype',
+    'PaymentEntryReference.referenceName',
   ]);
   assert.deepEqual(row.slice(-2), ['SalesInvoice', 'SINV-1']);
 });
 
-test('files hold virtual amounts as 0 and other unread values as null', async () => {
+test('files hold unread virtual values as null', async () => {
   stubFrappe(() => ({ message: [{ name: 'SINV-' }] }));
   const series = await getJsonExportData({
     schemaName: 'NumberSeries',
@@ -261,16 +274,8 @@ test('files hold virtual amounts as 0 and other unread values as null', async ()
     limit: null,
     filters: [],
   });
-  const invoice = await getJsonExportData({
-    schemaName: 'SalesInvoice',
-    fields: pick(getExportFields('SalesInvoice'), ['total_discount']),
-    tableFields: [],
-    limit: null,
-    filters: [],
-  });
 
   assert.deepEqual(JSON.parse(series), [{ name: 'SINV-', current: null }]);
-  assert.deepEqual(JSON.parse(invoice), [{ name: 'SINV-', totalDiscount: 0 }]);
 });
 
 test('files keep the keys Books renamed', async () => {
@@ -285,32 +290,28 @@ test('files keep the keys Books renamed', async () => {
   };
 
   assert.deepEqual(
-    await keys('Account', ['account_name', 'parent_books_account', 'owner']),
+    await keys('Account', ['account_name', 'parent_account', 'owner']),
     ['Account.name', 'Account.parentAccount', 'Account.createdBy']
   );
-  assert.deepEqual(await keys('Item', ['item_type', 'uom_conversions']), [
+  assert.deepEqual(await keys('Item', ['item_type', 'uoms']), [
     'Item.itemType',
-    'UOMConversionItem.uom',
+    'UOMConversionDetail.uom',
   ]);
-  assert.deepEqual(
-    await keys('AccountingLedgerEntry', ['posting_date', 'voucher_type']),
-    ['AccountingLedgerEntry.date', 'AccountingLedgerEntry.referenceType']
-  );
 });
 
-test('every exported table is headed by the label of its rows, not their doctype', () => {
-  const lists = Object.keys(frappeModels).filter(
+test('every exported table is headed by the label of its rows, not their Books doctype', () => {
+  const lists = getStandaloneModelNames().filter(
     (schemaName) => !getDocType(schemaName).meta.issingle
   );
   const doctypeLabels = lists.flatMap((schemaName) =>
     Object.values(getDocType(schemaName).tables)
-      .filter(({ doctype, schema }) => schema.label === doctype)
+      .filter(({ schema }) => schema.label.startsWith('Books '))
       .map(({ doctype }) => `${schemaName}: ${doctype}`)
   );
 
   assert.deepEqual(doctypeLabels, []);
-  assert.equal(getSchema('TaxDetail').label, 'Tax Detail');
-  assert.equal(getSchema('UomConversionItem').label, 'UOM Conversion Item');
+  assert.equal(getSchema('ItemTaxTemplateDetail').label, 'Tax Template Detail');
+  assert.equal(getSchema('UOMConversionDetail').label, 'UOM Conversion Detail');
 });
 
 test('a list exports from the framework a page at a time, in list order', async () => {
@@ -365,8 +366,8 @@ test("CSV repeats a document's values on each row of its tables", async () => {
         name: 'SINV-1',
         customer: 'Acme',
         items: [
-          { item: 'Pen', rate: 10 },
-          { item: 'Ink', rate: 5 },
+          { item_code: 'Pen', price_list_rate: 10 },
+          { item_code: 'Ink', price_list_rate: 5 },
         ],
       },
       { name: 'SINV-2', customer: 'Bolt', items: [] },
@@ -377,7 +378,6 @@ test("CSV repeats a document's values on each row of its tables", async () => {
     fields: [
       field('name', 'Invoice No'),
       field('customer', 'Customer'),
-      field('total_discount', 'Discount', 'Currency'),
       field('items', 'Items', 'Table'),
     ],
     tableFields: [
@@ -385,30 +385,31 @@ test("CSV repeats a document's values on each row of its tables", async () => {
         fieldname: 'items',
         label: 'Items',
         target: 'SalesInvoiceItem',
-        fields: [field('item', 'Item'), field('rate', 'Rate', 'Currency')],
+        fields: [
+          field('item_code', 'Item'),
+          field('price_list_rate', 'Rate', 'Currency'),
+        ],
       },
     ],
     limit: null,
     filters: [],
   });
 
-  // A virtual field has no column to read.
   assert.deepEqual(requests[0].body.fields, [
     'name',
     'customer',
-    { items: ['item', 'rate'] },
+    { items: ['item_code', 'price_list_rate'] },
   ]);
   assert.deepEqual(parseCSV(csv), [
-    ['Invoice No', 'Customer', 'Discount', 'Item', 'Rate'],
+    ['Invoice No', 'Customer', 'Item', 'Rate'],
     [
       'SalesInvoice.name',
       'SalesInvoice.customer',
-      'SalesInvoice.totalDiscount',
-      'SalesInvoiceItem.item',
-      'SalesInvoiceItem.rate',
+      'SalesInvoiceItem.itemCode',
+      'SalesInvoiceItem.priceListRate',
     ],
-    ['SINV-1', 'Acme', '0', 'Pen', '10'],
-    ['SINV-1', 'Acme', '0', 'Ink', '5'],
-    ['SINV-2', 'Bolt', '0', '', ''],
+    ['SINV-1', 'Acme', 'Pen', '10'],
+    ['SINV-1', 'Acme', 'Ink', '5'],
+    ['SINV-2', 'Bolt', '', ''],
   ]);
 });

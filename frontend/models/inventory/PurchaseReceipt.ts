@@ -22,8 +22,6 @@ export class PurchaseReceipt extends StockTransfer {
   };
   static override partyField = 'supplier';
   static override rowModels = { items: PurchaseReceiptItem };
-  static override invoiceSchemaName = ModelNameEnum.PurchaseInvoice;
-  static override invoiceMapper = 'make_purchase_receipt';
 
   static getListViewSettings(): ListViewSettings {
     return {
@@ -31,7 +29,7 @@ export class PurchaseReceipt extends StockTransfer {
         'name',
         getDocStatusListColumn(),
         'supplier',
-        'date',
+        'posting_date',
         'grand_total',
       ],
     };

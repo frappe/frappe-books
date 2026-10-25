@@ -11,21 +11,21 @@ const batch = 'DEMO-COFFEE-2026';
 const inventory = 'POS Counter';
 
 const items = {
-  [item]: { track_item: 1, has_batch: 1, unit: 'Unit' },
-  [service]: { track_item: 0, has_batch: 0, unit: 'Unit' },
-  [tea]: { track_item: 1, has_batch: 0, unit: 'Unit' },
+  [item]: { is_stock_item: 1, has_batch_no: 1, stock_uom: 'Unit' },
+  [service]: { is_stock_item: 0, has_batch_no: 0, stock_uom: 'Unit' },
+  [tea]: { is_stock_item: 1, has_batch_no: 0, stock_uom: 'Unit' },
   [flour]: {
-    track_item: 1,
-    has_batch: 1,
-    has_serial_number: 1,
-    unit: 'Kg',
-    uom_conversions: [{ uom: 'Box' }, { uom: 'Kg' }],
+    is_stock_item: 1,
+    has_batch_no: 1,
+    has_serial_no: 1,
+    stock_uom: 'Kg',
+    uoms: [{ uom: 'Box' }, { uom: 'Kg' }],
   },
 };
 const ledger = [
-  { location: inventory, quantity: 4 },
-  { location: 'Warehouse', quantity: 128 },
-].map((row) => ({ item, batch, ...row }));
+  { warehouse: inventory, actual_qty: 4 },
+  { warehouse: 'Warehouse', actual_qty: 128 },
+].map((row) => ({ item_code: item, batch_no: batch, ...row }));
 
 let server;
 stubServer();
@@ -72,18 +72,22 @@ test('the card and batch quantities use the location the server ships POS sales 
 
 test('stock sums come from the ledger through frappe.client.get_list', async () => {
   const requests = stubServer();
-  await posStock.getItemQtyMap([item]);
+  await posStock.getItemQtyMap();
   assert.deepEqual(requests[1], [
     'frappe.client.get_list',
     {
       doctype: 'Books Stock Ledger Entry',
-      fields: ['item', 'batch', { SUM: 'quantity', as: 'quantity' }],
-      filters: [
-        ['location', '=', inventory],
-        ['item', 'in', [item]],
+      fields: [
+        'item_code',
+        'batch_no',
+        { SUM: 'actual_qty', as: 'actual_qty' },
       ],
-      group_by: 'item, batch',
-      order_by: 'item, batch',
+      filters: [
+        ['is_cancelled', '=', 0],
+        ['warehouse', '=', inventory],
+      ],
+      group_by: 'item_code, batch_no',
+      order_by: 'item_code, batch_no',
       limit_page_length: 0,
     },
   ]);
@@ -91,18 +95,25 @@ test('stock sums come from the ledger through frappe.client.get_list', async () 
 
 test('checkout asks the server for the whole sale’s shortfalls in one request', async () => {
   const requests = stubServer();
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validateSinv(invoice);
   assert.deepEqual(requests, [
     [
       'frappe_books.inventory.availability.get_sale_shortfalls',
-      { items: [{ item, batch, quantity: 2 }], is_pos: true },
+      {
+        items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+        is_pos: true,
+      },
     ],
   ]);
 });
 
 test('checkout accepts stocked batches and rejects stock held elsewhere', async () => {
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validateSinv(invoice);
 
   stubServer({ location: 'Empty Counter' });
@@ -115,11 +126,18 @@ test('checkout accepts stocked batches and rejects stock held elsewhere', async 
 test('checkout checks the selected batch instead of just total item stock', async () => {
   stubServer({
     stock: [
-      { item, batch, location: inventory, quantity: 1 },
-      { item, batch: 'DEMO-COFFEE-2027', location: inventory, quantity: 131 },
+      { item_code: item, batch_no: batch, warehouse: inventory, actual_qty: 1 },
+      {
+        item_code: item,
+        batch_no: 'DEMO-COFFEE-2027',
+        warehouse: inventory,
+        actual_qty: 131,
+      },
     ],
   });
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await assert.rejects(
     pos.validateSinv(invoice),
     /POS Counter for batch DEMO-COFFEE-2026.*Available: 1; required: 2/
@@ -129,8 +147,8 @@ test('checkout checks the selected batch instead of just total item stock', asyn
 test('checkout combines repeated item rows, including free items', async () => {
   const invoice = {
     items: [
-      { item, batch, quantity: 3 },
-      { item, batch, quantity: 2, is_free_item: true },
+      { item_code: item, batch_no: batch, stock_qty: 3 },
+      { item_code: item, batch_no: batch, stock_qty: 2, is_free_item: true },
     ],
   };
   await assert.rejects(
@@ -142,8 +160,8 @@ test('checkout combines repeated item rows, including free items', async () => {
 test('an item the POS location has none of is out of stock, the error the server gives first', async () => {
   const invoice = {
     items: [
-      { item, batch, quantity: 5 },
-      { item: tea, quantity: 1 },
+      { item_code: item, batch_no: batch, stock_qty: 5 },
+      { item_code: tea, stock_qty: 1 },
     ],
   };
   await assert.rejects(
@@ -155,18 +173,20 @@ test('an item the POS location has none of is out of stock, the error the server
 test('checkout needs no stock of untracked items', async () => {
   const invoice = {
     items: [
-      { item: service, quantity: 99 },
-      { item, batch, quantity: 2 },
+      { item_code: service, stock_qty: 99 },
+      { item_code: item, batch_no: batch, stock_qty: 2 },
     ],
   };
   await pos.validateSinv(invoice);
 });
 
 test('fractional sales and returns do not produce false stock errors', async () => {
-  const invoice = { items: [{ item, batch, quantity: 0.5 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 0.5 }],
+  };
   await pos.validateSinv(invoice);
   invoice.return_against = 'Original Invoice';
-  invoice.items[0].quantity = -2;
+  invoice.items[0].stock_qty = -2;
   const requests = stubServer({ stock: [] });
   await pos.validateSinv(invoice);
   assert.deepEqual(requests, []);
@@ -181,9 +201,15 @@ test('a row without an item or batch shows no batch stock and asks nothing', asy
 });
 
 test('checkout validates against the stock the server has now', async () => {
-  const invoice = { items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validatePOSCheckout(invoice);
-  stubServer({ stock: [{ item, batch, location: inventory, quantity: 1 }] });
+  stubServer({
+    stock: [
+      { item_code: item, batch_no: batch, warehouse: inventory, actual_qty: 1 },
+    ],
+  });
   await assert.rejects(
     pos.validatePOSCheckout(invoice),
     /Available: 1; required: 2/
@@ -192,7 +218,10 @@ test('checkout validates against the stock the server has now', async () => {
 
 test('a payment retry does not require stock that has already shipped', async () => {
   const requests = stubServer();
-  const invoice = { isSubmitted: true, items: [{ item, batch, quantity: 2 }] };
+  const invoice = {
+    isSubmitted: true,
+    items: [{ item_code: item, batch_no: batch, stock_qty: 2 }],
+  };
   await pos.validatePOSCheckout(invoice);
   assert.deepEqual(requests, []);
 });
@@ -210,31 +239,45 @@ test('a cart row reads batch, serial and unit settings from its item', async () 
   });
 });
 
-/** The ledger rows that match the location and item filters, as their sums. */
+/** The ledger rows that match the warehouse and item filters, as their sums. */
 function getSums(stock, filters) {
-  const values = Object.fromEntries(filters.map(([field, , value]) => [field, value]));
+  const values = Object.fromEntries(
+    filters.map(([field, , value]) => [field, value])
+  );
   return stock
-    .filter((row) => !values.location || row.location === values.location)
-    .filter((row) => !values.item || values.item.includes(row.item))
-    .map(({ item, batch, quantity }) => ({ item, batch, quantity }));
+    .filter((row) => !values.warehouse || row.warehouse === values.warehouse)
+    .filter(
+      (row) => !values.item_code || values.item_code.includes(row.item_code)
+    )
+    .map(({ item_code, batch_no, actual_qty }) => ({
+      item_code,
+      batch_no,
+      actual_qty,
+    }));
 }
 
 /** What the rows lack of each tracked item, or batch, at the location, as the server sums them. */
 function getShortfalls(rows, stock, location) {
   const required = new Map();
-  for (const row of rows.filter((row) => items[row.item]?.track_item)) {
-    const key = JSON.stringify([row.item, row.batch ?? '']);
-    required.set(key, (required.get(key) ?? 0) + row.quantity);
+  for (const row of rows.filter((row) => items[row.item_code]?.is_stock_item)) {
+    const key = JSON.stringify([row.item_code, row.batch_no ?? '']);
+    required.set(key, (required.get(key) ?? 0) + row.stock_qty);
   }
 
   return [...required].flatMap(([key, quantity]) => {
     const [item, batch] = JSON.parse(key);
     const available = stock
-      .filter((row) => row.location === location && row.item === item)
-      .filter((row) => !batch || row.batch === batch)
-      .reduce((total, row) => total + row.quantity, 0);
+      .filter((row) => row.warehouse === location && row.item_code === item)
+      .filter((row) => !batch || row.batch_no === batch)
+      .reduce((total, row) => total + row.actual_qty, 0);
     return quantity > available
-      ? [{ item, batch: batch || null, quantity: quantity - available }]
+      ? [
+          {
+            item_code: item,
+            batch_no: batch || null,
+            stock_qty: quantity - available,
+          },
+        ]
       : [];
   });
 }

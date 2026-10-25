@@ -5,19 +5,17 @@ import { POS, fyo, posItemSearch, stubFrappe } from './helpers/frappe.mjs';
 
 const rice = {
   name: 'Basmati Rice',
-  itemCode: '12345',
-  barcode: '890000000001',
+  barcodes: ['12345', '890000000001'],
   unit: 'Kg',
 };
-const eggs = { name: 'Eggs', itemCode: '54321', unit: 'Unit' };
+const eggs = { name: 'Eggs', barcodes: ['54321'], unit: 'Unit' };
 const items = [rice, eggs];
 const riceRow = {
   name: 'Basmati Rice',
-  item_code: '12345',
-  barcode: '890000000001',
-  unit: 'Kg',
-  rate: 80,
-  track_item: 1,
+  barcodes: [{ barcode: '12345' }, { barcode: '890000000001' }],
+  stock_uom: 'Kg',
+  standard_rate: 80,
+  is_stock_item: 1,
 };
 const scale = {
   weight_enabled_barcode: true,
@@ -39,7 +37,7 @@ test('a scale barcode adds its weight, in kilograms for kg items', () => {
   });
 });
 
-test('other codes match a 12 digit barcode or an exact name or code', () => {
+test('other codes match a 12 digit barcode or an exact name or barcode', () => {
   assert.deepEqual(findScannedPOSItem(items, '890000000001', scale), {
     item: rice,
     quantity: 1,
@@ -55,8 +53,8 @@ test('other codes match a 12 digit barcode or an exact name or code', () => {
 });
 
 test('any barcode matches exactly, whatever its length or characters', () => {
-  const tagged = { name: 'Tagged', barcode: 'ABC-abc-1234', unit: 'Unit' };
-  const short = { name: 'Short', barcode: '96385074', unit: 'Unit' };
+  const tagged = { name: 'Tagged', barcodes: ['ABC-abc-1234'], unit: 'Unit' };
+  const short = { name: 'Short', barcodes: ['96385074'], unit: 'Unit' };
   assert.deepEqual(findScannedPOSItem([tagged, short], 'ABC-abc-1234'), {
     item: tagged,
     quantity: 1,
@@ -88,12 +86,22 @@ test('a scan looks up only the items its code, or its scale item code, may name'
   assert.equal(body.doctype, 'Books Item');
   assert.deepEqual(body.or_filters, [
     ['name', 'like', '211234501500'],
-    ['item_code', 'like', '211234501500'],
-    ['barcode', 'like', '211234501500'],
+    ['Books Item Barcode', 'barcode', 'like', '211234501500'],
     ['name', 'like', '12345'],
-    ['item_code', 'like', '12345'],
-    ['barcode', 'like', '12345'],
+    ['Books Item Barcode', 'barcode', 'like', '12345'],
   ]);
+});
+
+test('a scan finds an item by any of its barcodes, listed once', async () => {
+  fyo.singles.POSSettings = {};
+  // A barcode filter joins the item once per barcode row.
+  stubFrappe(() => ({ message: [riceRow, riceRow] }));
+  const { item, quantity } = await posItemSearch.getScannedItem('12345');
+
+  assert.deepEqual(
+    [item.name, item.barcodes, quantity],
+    ['Basmati Rice', ['12345', '890000000001'], 1]
+  );
 });
 
 test('a blank code looks nothing up', async () => {

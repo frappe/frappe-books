@@ -29,25 +29,26 @@
     <p v-if="!rows.length" class="text-p-sm text-ink-gray-6">
       {{ t`Set Cash Denominations in Settings to count cash here.` }}
     </p>
+    <p v-else-if="note" class="text-p-sm text-ink-gray-5">{{ note }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import { CashCount } from 'models/inventory/Point of Sale/POSOpeningShift';
+import { CashCountRow } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { Money } from 'pesa';
 import NumberStepper from 'src/components/POS/NumberStepper.vue';
 import { fyo } from 'src/initFyo';
 
-/** Cash counted by denomination, with a stepper per note. */
-defineProps<{ heading: string; rows: CashCount[] }>();
+/** Cash counted by denomination, with a stepper per note; `note` says what is kept of it. */
+defineProps<{ heading: string; rows: CashCountRow[]; note?: string }>();
 const emit = defineEmits<{ change: [] }>();
 
 function format(amount?: Money): string {
   return fyo.format(amount ?? fyo.pesa(0), 'Currency');
 }
 
-async function setCount(row: CashCount, count: number) {
+async function setCount(row: CashCountRow, count: number) {
   await row.set('count', Math.max(count, 0));
   emit('change');
 }

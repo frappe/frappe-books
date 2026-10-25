@@ -34,10 +34,7 @@
 </template>
 
 <script lang="ts">
-import {
-  Checkbox as FrappeCheckbox,
-  Switch as FrappeSwitch,
-} from 'frappe-ui';
+import { Checkbox as FrappeCheckbox, Switch as FrappeSwitch } from 'frappe-ui';
 import { defineComponent, PropType } from 'vue';
 import Base from './Base.vue';
 

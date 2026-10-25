@@ -13,6 +13,7 @@ test('a report shown again refetches its data', async () => {
   const calls = [];
   const report = {
     get: () => undefined,
+    getDocumentFilterResets: () => ({}),
     setFilters: async () => {},
     setReportData: async (...args) => calls.push(args),
   };
@@ -32,7 +33,7 @@ test('a report opened with filters runs once on the server', async () => {
   const runs = () =>
     calls.filter((c) => c.method === 'frappe.desk.query_report.run');
   const filters = {
-    referenceType: 'Books Payment',
+    voucherType: 'Books Payment Entry',
     partyType: 'Books Customer',
     party: 'Acme',
   };
@@ -41,7 +42,7 @@ test('a report opened with filters runs once on the server', async () => {
   assert.equal(runs().length, 1);
   assert.equal(runs()[0].args.filters.party_type, 'Books Customer');
   assert.equal(runs()[0].args.filters.party, 'Acme');
-  assert.equal(runs()[0].args.filters.reference_type, 'Books Payment');
+  assert.equal(runs()[0].args.filters.voucher_type, 'Books Payment Entry');
 
   assert.equal(await showReport('GeneralLedger', { party: 'Beta' }), report);
   assert.equal(runs().length, 2);
@@ -88,14 +89,14 @@ test('a report opened without Ref filters drops those it was opened with before'
       ? { from_date: '2025-01-01', to_date: '2025-12-31' }
       : reportResult([['account', 'Data']], [])
   );
-  const document = { referenceType: 'Books Payment', referenceName: 'PAY-1' };
+  const document = { voucherType: 'Books Payment Entry', voucherNo: 'PAY-1' };
   await showReport('GeneralLedger', { ...document, party: 'Acme' });
 
   const report = await showReport('GeneralLedger');
 
   const run = calls.filter((c) => c.method === 'frappe.desk.query_report.run');
-  assert.equal(run.at(-1).args.filters.reference_type, 'All');
-  assert.equal(run.at(-1).args.filters.reference_name, undefined);
+  assert.equal(run.at(-1).args.filters.voucher_type, 'All');
+  assert.equal(run.at(-1).args.filters.voucher_no, undefined);
   assert.equal(report.get('party'), 'Acme');
   delete appFyo.store.reports.GeneralLedger;
 });
@@ -109,7 +110,7 @@ test('a report opened without Ref filters resets the dates a document link set',
   const runs = () =>
     calls.filter((c) => c.method === 'frappe.desk.query_report.run');
   const day = { fromDate: '2025-03-04', toDate: '2025-03-04' };
-  const document = { referenceType: 'Books Payment', referenceName: 'PAY-1' };
+  const document = { voucherType: 'Books Payment Entry', voucherNo: 'PAY-1' };
   await showReport('GeneralLedger', { ...document, ...day });
 
   await showReport('GeneralLedger');

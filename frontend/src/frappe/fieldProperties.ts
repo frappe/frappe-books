@@ -1,11 +1,13 @@
 import type {
   DynamicLinkField,
   Field,
+  FieldControl,
   FieldType,
   NumberField,
   OptionField,
   TargetField,
 } from 'schemas/types';
+import { isAccessoryMode } from './mode';
 
 /** The DocField properties a field's data properties come from. */
 export type DocFieldProperties = {
@@ -18,6 +20,7 @@ export type DocFieldProperties = {
   set_only_once?: number;
   non_negative?: number;
   max_value?: number;
+  precision?: string;
   states?: Record<string, string>;
 };
 
@@ -30,7 +33,29 @@ const booksFieldTypes: Record<string, FieldType | undefined> = {
   'Dynamic Link': 'DynamicLink',
   'Long Text': 'Text',
   'Small Text': 'Text',
+  'Text Editor': 'Text',
+  Percent: 'Float',
+  // Rows of a link each, which /books edits as a table.
+  'Table MultiSelect': 'Table',
+  Time: 'Data',
+  'Read Only': 'Data',
 };
+// The control each ERPNext field type shows in accessory mode.
+const accessoryControls: Record<string, FieldControl | undefined> = {
+  'Text Editor': 'TextEditor',
+  'Table MultiSelect': 'TableMultiSelect',
+  Time: 'Time',
+  Percent: 'Percent',
+  'Read Only': 'ReadOnly',
+};
+
+/** Whether a DocField holds rows, as Frappe's table fieldtypes do. */
+export function isTableDocField(docfield: DocFieldProperties): boolean {
+  return (
+    booksFieldTypes[docfield.fieldtype] === 'Table' ||
+    docfield.fieldtype === 'Table'
+  );
+}
 
 /** A reference field holds a DocType name, which /books shows as a choice of doctypes. */
 export function isReferenceField(docfield: DocFieldProperties): boolean {
@@ -55,9 +80,31 @@ export function getFieldProperties(
   return {
     ...properties,
     fieldtype,
-    default: getDefault(fieldtype, docfield.default),
+    ...getControlProperties(docfield),
+    // A Time's default, like "Now", is the server's to fill.
+    default:
+      docfield.fieldtype === 'Time'
+        ? undefined
+        : getDefault(fieldtype, docfield.default),
     ...getOptionProperties(field, fieldtype, docfield),
   } as Partial<Field>;
+}
+
+function getControlProperties(
+  docfield: DocFieldProperties
+): Partial<NumberField> {
+  const control = isAccessoryMode()
+    ? accessoryControls[docfield.fieldtype]
+    : undefined;
+  if (!control) {
+    return {};
+  }
+
+  // An unset precision is Frappe's float precision.
+  const precision = parseInt(docfield.precision ?? '');
+  return control === 'Percent' && !Number.isNaN(precision)
+    ? { control, precision }
+    : { control };
 }
 
 function getOptionProperties(
@@ -99,7 +146,9 @@ function getOptionProperties(
 }
 
 function getDefault(fieldtype: string, value: string | undefined) {
-  if (value === undefined) {
+  // A default like ":Company", the user's default company, or "__user", the
+  // user, is the server's to fill, as Frappe does on insert.
+  if (value === undefined || value.startsWith(':') || value === '__user') {
     return undefined;
   }
 

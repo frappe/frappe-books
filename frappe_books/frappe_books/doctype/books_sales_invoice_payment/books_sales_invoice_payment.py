@@ -15,11 +15,11 @@ class BooksSalesInvoicePayment(Document):
 
 		amount: DF.Currency
 		clearance_date: DF.Date | None
+		mode_of_payment: DF.Link
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
-		payment_method: DF.Link
-		reference_id: DF.Data | None
+		reference_no: DF.Data | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Sales Invoice Payment"

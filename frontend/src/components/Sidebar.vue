@@ -7,7 +7,7 @@
     <FrappeSidebarHeader
       data-testid="company-name"
       :title="companyName"
-      :subtitle="userName"
+      :subtitle="subtitle"
       :logo="companyLogo || undefined"
       :menu-items="menuItems"
     />

@@ -1,3 +1,5 @@
+from frappe_books.company import COMPANY_DOCTYPES
+
 app_name = "frappe_books"
 app_title = "Books"
 app_publisher = "Frappe Technologies Pvt. Ltd."
@@ -51,6 +53,11 @@ before_tests = [
 	"frappe_books.tests.accounting.enable_features",
 	"frappe_books.tests.accounting.set_default_inventory_accounts",
 ]
+
+# Each new document belongs to the one Books Company.
+doc_events = {doctype: {"before_insert": "frappe_books.company.set_company"} for doctype in COMPANY_DOCTYPES}
+# A new ERPNext Lead saved from /books in accessory mode makes its Address, as a Books Lead does.
+doc_events["Lead"] = {"after_insert": "frappe_books.accounting.party_contacts.make_lead_address"}
 
 scheduler_events = {
 	"daily": ["frappe_books.commerce.loyalty.expire_programs_and_points"],

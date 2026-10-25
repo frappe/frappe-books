@@ -98,8 +98,8 @@ function makeGeneralLedger() {
     credit,
     balance: debit - credit,
     party: 'Sharma Traders',
-    reference_type: 'SalesInvoice',
-    reference_name: `SINV-10${index}`,
+    voucher_type: 'SalesInvoice',
+    voucher_no: `SINV-10${index}`,
   });
   return load(
     new GeneralLedger(fyo),
@@ -111,8 +111,8 @@ function makeGeneralLedger() {
       column('credit', 'Credit', 'Currency'),
       column('balance', 'Balance', 'Currency'),
       column('party', 'Party', 'Link'),
-      column('reference_name', 'Ref Name'),
-      column('reference_type', 'Ref Type'),
+      column('voucher_no', 'Ref Name'),
+      column('voucher_type', 'Ref Type'),
     ],
     [
       { type: 'opening', account: 'Opening', debit: 0, credit: 0, balance: 0 },
@@ -141,15 +141,15 @@ function makeStockBalance() {
     new StockBalance(fyo),
     [
       column('index', '#', 'Int'),
-      column('item', 'Item', 'Link'),
-      column('location', 'Location', 'Link'),
+      column('item_code', 'Item', 'Link'),
+      column('warehouse', 'Warehouse', 'Link'),
       column('balance_quantity', 'Balance Qty.', 'Float'),
       column('balance_value', 'Balance Value', 'Currency'),
     ],
-    rows.map(([item, location, quantity, value], index) => ({
+    rows.map(([item, warehouse, quantity, value], index) => ({
       index: index + 1,
-      item,
-      location,
+      item_code: item,
+      warehouse,
       balance_quantity: quantity,
       balance_value: value,
     }))
@@ -180,22 +180,22 @@ function makeStockLedger() {
     [
       column('index', '#', 'Int'),
       column('date', 'Date', 'Datetime'),
-      column('item', 'Item', 'Link'),
-      column('location', 'Location', 'Link'),
-      column('quantity', 'Quantity', 'Float'),
-      column('balance_quantity', 'Balance Qty.', 'Float'),
-      column('reference_name', 'Ref Name'),
-      column('reference_type', 'Ref Type'),
+      column('item_code', 'Item', 'Link'),
+      column('warehouse', 'Warehouse', 'Link'),
+      column('actual_qty', 'Quantity', 'Float'),
+      column('qty_after_transaction', 'Balance Qty.', 'Float'),
+      column('voucher_no', 'Ref Name'),
+      column('voucher_type', 'Ref Type'),
     ],
-    rows.map(([date, item, location, quantity, balance, name], index) => ({
+    rows.map(([date, item, warehouse, quantity, balance, name], index) => ({
       index: index + 1,
       date,
-      item,
-      location,
-      quantity,
-      balance_quantity: balance,
-      reference_name: name,
-      reference_type: 'DeliveryNote',
+      item_code: item,
+      warehouse,
+      actual_qty: quantity,
+      qty_after_transaction: balance,
+      voucher_no: name,
+      voucher_type: 'DeliveryNote',
     }))
   );
 }
@@ -253,7 +253,7 @@ async function mount() {
   fyo.singles.SystemSettings = {
     currency: 'INR',
     locale: 'en-IN',
-    display_precision: 2,
+    currency_precision: 2,
     date_format: 'MMM d, y',
   } as any;
   fyo.singles.InventorySettings = {

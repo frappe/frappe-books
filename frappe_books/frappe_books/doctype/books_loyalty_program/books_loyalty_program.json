@@ -2,12 +2,13 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:loyalty_program_name",
  "creation": "2026-08-27 22:09:39.845521",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
+  "loyalty_program_name",
   "from_date",
   "to_date",
   "is_enabled",
@@ -18,9 +19,18 @@
   "expense_account",
   "validity_and_usage_section_break_8",
   "maximum_use",
-  "used"
+  "used",
+  "company"
  ],
  "fields": [
+  {
+   "fieldname": "loyalty_program_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Loyalty Program Name",
+   "reqd": 1,
+   "unique": 1
+  },
   {
    "fieldname": "from_date",
    "fieldtype": "Date",
@@ -59,7 +69,7 @@
    "fieldname": "collection_rules",
    "fieldtype": "Table",
    "label": "Collection Rules",
-   "options": "Books Collection Rules Items"
+   "options": "Books Loyalty Program Collection"
   },
   {
    "default": "1",
@@ -75,7 +85,7 @@
    "description": "Days that earned points stay valid; 0 for no expiry.",
    "fieldname": "expiry_duration",
    "fieldtype": "Int",
-   "label": "Expiry Duration",
+   "label": "Expiry Duration (in days)",
    "non_negative": 1
   },
   {
@@ -102,15 +112,23 @@
    "fieldtype": "Int",
    "label": "Used",
    "read_only": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 22:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Loyalty Program",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

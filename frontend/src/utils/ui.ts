@@ -7,16 +7,18 @@ import type { DocValueMap } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
-import { ValueError } from 'fyo/utils/errors';
+import { ConflictError, ValueError } from 'fyo/utils/errors';
 import { canOpenLedger, getLedgerLink } from 'models/helpers';
 import { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
+import { getErrorMessage } from 'src/utils';
 import router from 'src/router';
 import { call } from 'src/web/api';
 import { assertIsType } from 'utils/index';
@@ -127,15 +129,13 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
   })) as boolean;
 }
 
-export async function cancelDocWithPrompt(doc: FrappeDoc) {
-  let payments: LinkedDoc[] = [];
-  if (['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
-    payments = await getInvoicePayments(doc);
-  }
-
+export async function cancelDocWithPrompt(
+  doc: FrappeDoc,
+  linkedDocs: LinkedDoc[]
+) {
   return (await showDialog({
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail: getCancelDetail(payments),
+    detail: getCancelDetail(linkedDocs),
     type: 'warning',
     // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
@@ -143,7 +143,7 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
         label: t`Cancel ${doc.typeLabel}`,
         async action() {
           try {
-            await doc.cancel(payments);
+            await doc.cancel(linkedDocs);
           } catch (err) {
             await handleErrorWithDialog(err as Error, doc);
             return false;
@@ -164,12 +164,80 @@ export async function cancelDocWithPrompt(doc: FrappeDoc) {
   })) as boolean;
 }
 
+/**
+ * The submitted documents that cancelling `doc` also cancels: an invoice's
+ * payments, or, in accessory mode, every submitted document linked to it,
+ * as Desk's Cancel All does.
+ */
+async function getDocsToCancel(doc: FrappeDoc): Promise<LinkedDoc[]> {
+  if (isAccessoryMode()) {
+    const { docs } = await call<{ docs: LinkedDoc[] }>(
+      'frappe.desk.form.linked_with.get_submitted_linked_docs',
+      { doctype: doc.doctype, name: doc.name }
+    );
+    return docs;
+  }
+
+  if (!['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
+    return [];
+  }
+
+  return await getInvoicePayments(doc);
+}
+
 /** The submitted payments that cancelling the invoice `doc` also cancels. */
 async function getInvoicePayments(doc: FrappeDoc): Promise<LinkedDoc[]> {
   return await call('frappe_books.accounting.invoice.get_payments_to_cancel', {
     doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
+}
+
+/**
+ * Accessory mode cancels the documents linked to `doc` with it, all or
+ * nothing, as Desk's Cancel All does; a failure stays in the dialog to try again.
+ */
+async function cancelAllWithPrompt(doc: FrappeDoc, linkedDocs: LinkedDoc[]) {
+  return (await showDialog({
+    title: t`Cancel ${getDocReferenceLabel(doc)}?`,
+    detail: getCancelAllDetail(doc, linkedDocs),
+    destructive: true,
+    keepsOpenOnError: true,
+    buttons: [
+      {
+        label: t`Cancel all`,
+        async action() {
+          try {
+            await doc.cancel(linkedDocs);
+          } catch (err) {
+            const message = getErrorMessage(err as Error);
+            throw new Error(`${message}\n${t`Nothing was cancelled.`}`, {
+              cause: err,
+            });
+          }
+
+          return true;
+        },
+        isPrimary: true,
+      },
+      { label: t`Go back`, action: () => false, isEscape: true },
+    ],
+  })) as boolean;
+}
+
+function getCancelAllDetail(doc: FrappeDoc, linkedDocs: LinkedDoc[]): string {
+  const type = doc.typeLabel.toLowerCase();
+  const rows = linkedDocs.map(
+    ({ doctype, name }) => `${doctype} <b>${name}</b>`
+  );
+  return [
+    t`Cancelling this ${type} in ERPNext also cancels every submitted document linked to it.`,
+    '',
+    linkedDocs.length === 1
+      ? t`1 linked document will also be cancelled:`
+      : t`${linkedDocs.length} linked documents will also be cancelled:`,
+    ...rows,
+  ].join('<br>');
 }
 
 function getCancelDetail(payments: LinkedDoc[]): string {
@@ -227,7 +295,7 @@ export function getGroupedActionsForDoc(doc?: FrappeDoc): ActionGroup[] {
       acc[ac.group].actions.push(ac);
       return acc;
     },
-    {} as Record<string, ActionGroup>,
+    {} as Record<string, ActionGroup>
   );
 
   const grouped = Object.keys(actionsMap)
@@ -309,7 +377,7 @@ function getNewAction(doc: FrappeDoc): Action {
 
 export function getFieldsGroupedByTabAndSection(
   schema: Schema,
-  doc: FrappeDoc,
+  doc: FrappeDoc
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
   for (const field of doc.getFormFields(schema?.fields ?? [])) {
@@ -324,7 +392,8 @@ export function getFieldsGroupedByTabAndSection(
       tabbed.set(section, []);
     }
 
-    if (field.meta) {
+    // Accessory mode's ERPNext fields with no Books position show after these; see `extraFields.ts`.
+    if (field.meta || field.moreDetails || field.appTab) {
       continue;
     }
 
@@ -400,7 +469,7 @@ export function toggleSidebar(value?: boolean) {
 export function focusOrSelectFormControl(
   doc: FrappeDoc,
   ref: unknown,
-  shouldClear = true,
+  shouldClear = true
 ) {
   if (!doc?.fyo) {
     return;
@@ -486,7 +555,7 @@ export enum ShortcutKey {
 
 export async function commonDocDelete(
   doc: FrappeDoc,
-  routeBack = true,
+  routeBack = true
 ): Promise<boolean> {
   const res = await deleteDocWithPrompt(doc);
   if (!res) {
@@ -501,24 +570,42 @@ export async function commonDocDelete(
 }
 
 export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
-  const res = await cancelDocWithPrompt(doc);
-  if (!res) {
+  const linkedDocs = await getDocsToCancel(doc);
+  if (!isAccessoryMode() || !linkedDocs.length) {
+    const cancelled = await cancelDocWithPrompt(doc, linkedDocs);
+    if (cancelled) {
+      showActionToast(doc, 'cancel');
+    }
+    return cancelled;
+  }
+
+  if (!(await cancelAllWithPrompt(doc, linkedDocs))) {
     return false;
   }
 
-  showActionToast(doc, 'cancel');
+  const label = getDocReferenceLabel(doc);
+  const count = linkedDocs.length;
+  const message =
+    count === 1
+      ? t`Cancelled ${label} and 1 linked document`
+      : t`Cancelled ${label} and ${count} linked documents`;
+  showToast({ type: 'success', message, duration: 'short' });
   return true;
 }
+
+/** Shows a failed save or submit: in a dialog, or through `onError`, as accessory forms show it in place. */
+export type ActionErrorHandler = (error: unknown) => void;
 
 export async function commonDocSync(
   doc: FrappeDoc,
   useDialog = false,
+  onError?: ActionErrorHandler
 ): Promise<boolean> {
   let success: boolean;
   if (useDialog) {
-    success = !!(await showSubmitOrSyncDialog(doc, 'sync'));
+    success = !!(await showSubmitOrSyncDialog(doc, 'sync', onError));
   } else {
-    success = await syncWithoutDialog(doc);
+    success = await syncWithoutDialog(doc, onError);
   }
 
   if (!success) {
@@ -529,29 +616,50 @@ export async function commonDocSync(
   return true;
 }
 
-async function syncWithoutDialog(doc: FrappeDoc): Promise<boolean> {
+async function syncWithoutDialog(
+  doc: FrappeDoc,
+  onError?: ActionErrorHandler
+): Promise<boolean> {
   try {
     await doc.sync();
   } catch (error) {
-    await handleErrorWithDialog(error, doc);
+    await reportActionError(error, doc, onError, false);
     return false;
   }
 
   return true;
 }
 
-export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
+export async function commonDocSubmit(
+  doc: FrappeDoc,
+  onError?: ActionErrorHandler
+): Promise<boolean> {
   if (!(await confirmSubmitWarning(doc))) {
     return false;
   }
 
-  const success = await showSubmitOrSyncDialog(doc, 'submit');
+  const success = await showSubmitOrSyncDialog(doc, 'submit', onError);
   if (!success) {
     return false;
   }
 
   showSubmitToast(doc);
   return true;
+}
+
+/** A stale copy still asks to reload in a dialog. */
+async function reportActionError(
+  error: unknown,
+  doc: FrappeDoc,
+  onError: ActionErrorHandler | undefined,
+  dontThrow: boolean
+) {
+  if (onError && !(error instanceof ConflictError)) {
+    onError(error);
+    return;
+  }
+
+  await handleErrorWithDialog(error, doc, dontThrow);
 }
 
 /** The model's warning before a submit; a Yes accepts it, a No stops the submit. */
@@ -576,7 +684,11 @@ async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
   })) as boolean;
 }
 
-async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
+async function showSubmitOrSyncDialog(
+  doc: FrappeDoc,
+  type: 'submit' | 'sync',
+  onError?: ActionErrorHandler
+) {
   const label = getDocReferenceLabel(doc);
   let title = t`Save ${label}?`;
   if (type === 'submit') {
@@ -624,7 +736,7 @@ async function showSubmitOrSyncDialog(doc: FrappeDoc, type: 'submit' | 'sync') {
   const success = (await showDialog(dialogOptions)) as boolean;
   if (actionError) {
     // Show the error after the confirmation closes so it cannot offer a stale retry.
-    await handleErrorWithDialog(actionError, doc, true);
+    await reportActionError(actionError, doc, onError, true);
   }
 
   return success;

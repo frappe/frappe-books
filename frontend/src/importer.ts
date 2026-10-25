@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { getEmptyValuesByFieldTypes, isPesa } from 'fyo/utils';
 import { ValidationError } from 'fyo/utils/errors';
+import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { ModelNameEnum } from 'models/types';
 import {
   Field,
@@ -13,6 +14,7 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getDocType } from 'src/frappe/doctypes';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
 import { toDocValue, toFrappeValue } from 'src/frappe/values';
@@ -24,26 +26,31 @@ export type TemplateField = Field & TemplateFieldProps;
 
 /** The schemas the Import Wizard offers that the user may import. */
 export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
+  // Frappe's Data Import imports, so the user must be able to make one.
+  if (!hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')) {
+    return [];
+  }
+
   const importables = [
     ModelNameEnum.SalesInvoice,
     ModelNameEnum.PurchaseInvoice,
-    ModelNameEnum.Payment,
+    ModelNameEnum.PaymentEntry,
     ModelNameEnum.Customer,
     ModelNameEnum.Supplier,
     ModelNameEnum.Item,
     ModelNameEnum.JournalEntry,
-    ModelNameEnum.Tax,
+    ModelNameEnum.ItemTaxTemplate,
     ModelNameEnum.Account,
     ModelNameEnum.Address,
     ModelNameEnum.NumberSeries,
   ];
 
-  if (fyo.singles.AccountingSettings?.enable_inventory) {
+  if (fyo.isFeatureOn('enable_inventory')) {
     importables.push(
       ModelNameEnum.StockEntry,
       ModelNameEnum.DeliveryNote,
       ModelNameEnum.PurchaseReceipt,
-      ModelNameEnum.Location
+      ModelNameEnum.Warehouse
     );
   }
 
@@ -679,7 +686,8 @@ function getTemplateField(
   return {
     ...field,
     readOnly: false,
-    required: !schema.isChild && (field.required || field.fieldname === 'name'),
+    required:
+      !schema.isChild && (isFilledByUser(field) || field.fieldname === 'name'),
     schemaName: schema.name,
     schemaLabel: schema.label,
     fieldKey: `${schema.name}.${field.fieldname}`,
@@ -706,15 +714,30 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
     return true;
   }
 
-  if (field.hidden) {
+  if (field.hidden && !isCompanyTable(field, schema)) {
     return true;
   }
 
-  if (field.readOnly && !field.required) {
+  if (field.readOnly && !isFilledByUser(field)) {
     return true;
   }
 
   return false;
+}
+
+/** A table the form hides behind a field that edits the current company's row, e.g. a party's accounts. */
+function isCompanyTable(field: Field, schema: Schema): boolean {
+  return schema.fields.some(
+    ({ companyTable }) => companyTable === field.fieldname
+  );
+}
+
+/**
+ * Whether a file must give the field. ERPNext fills many of its mandatory
+ * fields on save, so accessory mode leaves the check to its Data Import.
+ */
+function isFilledByUser(field: Field): boolean {
+  return !!field.required && !isAccessoryMode();
 }
 
 /**

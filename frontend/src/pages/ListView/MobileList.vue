@@ -64,8 +64,8 @@
       v-else
       class="flex-1 py-16"
       :icon="isFiltered ? 'lucide-search-x' : 'lucide-inbox'"
-      :title="t`No entries found`"
-      :description="isFiltered ? t`No results match the current filters` : ''"
+      :title="emptyState.title"
+      :description="emptyState.description"
     >
       <FrappeButton
         v-if="isFiltered"
@@ -80,7 +80,7 @@
         variant="solid"
         size="lg"
         icon-left="lucide-plus"
-        :label="t`Make entry`"
+        :label="emptyState.createLabel"
         @click="$emit('makeNewDoc')"
       />
     </EmptyState>
@@ -93,11 +93,12 @@ import {
   ListCell as FrappeListCell,
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
-import type { RenderData } from 'fyo/model/types';
+import { t } from 'fyo';
+import type { ListViewSettings, RenderData } from 'fyo/model/types';
 import EmptyState from 'src/components/EmptyState.vue';
 import MobilePullToRefresh from 'src/mobile/MobilePullToRefresh.vue';
 import { defineComponent, type PropType } from 'vue';
-import type { ListColumn } from './listColumns';
+import { getEmptyState, type ListColumn } from './listColumns';
 import MobileListRow from './MobileListRow.vue';
 import { getMobileRowLayout, type MobileRowLayout } from './mobileRowLayout';
 
@@ -122,6 +123,10 @@ export default defineComponent({
     isLoadingMore: Boolean,
     isFiltered: Boolean,
     canCreate: Boolean,
+    listConfig: {
+      type: Object as PropType<ListViewSettings | undefined>,
+      default: undefined,
+    },
     isSelectionMode: Boolean,
     selectedItems: { type: Array as PropType<string[]>, default: () => [] },
     refresh: {
@@ -142,6 +147,15 @@ export default defineComponent({
   computed: {
     layout(): MobileRowLayout {
       return getMobileRowLayout(this.schemaName, this.columns);
+    },
+    emptyState(): { title: string; description?: string; createLabel: string } {
+      return getEmptyState(this.listConfig, this.isFiltered, {
+        title: t`No entries found`,
+        description: this.isFiltered
+          ? t`No results match the current filters`
+          : '',
+        createLabel: t`Make entry`,
+      });
     },
   },
 });

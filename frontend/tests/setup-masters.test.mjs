@@ -28,46 +28,54 @@ function getLayout(schemaName) {
     );
 }
 
-test('a tax template shows its name and detail rows as before', () => {
-  const tax = getSchema('Tax');
+test('a tax template shows its title and tax rate rows', () => {
+  const tax = getSchema('ItemTaxTemplate');
   assert.equal(tax.label, 'Tax Template');
-  assert.deepEqual(getLayout('Tax'), [
-    'name | Name | ',
-    'details | Details | ',
+  assert.deepEqual(getLayout('ItemTaxTemplate'), [
+    'title | Title | ',
+    'taxes | Tax Rates | ',
   ]);
-  assert.deepEqual(tax.quickEditFields, ['details']);
-  assert.deepEqual(getLayout('TaxDetail'), [
-    'account | Tax Invoice Account | ',
+  assert.deepEqual(tax.quickEditFields, ['taxes']);
+  assert.deepEqual(getLayout('ItemTaxTemplateDetail'), [
+    'tax_type | Tax | ',
     'payment_account | Tax Payment Account | ',
-    'rate | Rate | 0%',
+    'tax_rate | Tax Rate | 0%',
   ]);
-  const detail = getSchema('TaxDetail');
-  assert.deepEqual(detail.tableFields, ['account', 'payment_account', 'rate']);
+  const detail = getSchema('ItemTaxTemplateDetail');
+  assert.deepEqual(detail.tableFields, [
+    'tax_type',
+    'payment_account',
+    'tax_rate',
+  ]);
   assert.ok(
-    detail.fields.find((field) => field.fieldname === 'account').create
+    detail.fields.find((field) => field.fieldname === 'tax_type').create
   );
-  assert.deepEqual(frappeModels.Tax.getListViewSettings(fyo).columns, ['name']);
+  assert.deepEqual(
+    frappeModels.ItemTaxTemplate.getListViewSettings(fyo).columns,
+    ['name']
+  );
 });
 
-test('a payment method shows its type, account and clearance date as before', () => {
-  const method = getSchema('PaymentMethod');
-  assert.equal(method.label, 'Payment Method');
-  assert.deepEqual(getLayout('PaymentMethod'), [
-    'name | Name | ',
+test('a mode of payment shows its type, accounts and clearance date', () => {
+  const mode = getSchema('ModeOfPayment');
+  assert.equal(mode.label, 'Mode of Payment');
+  assert.deepEqual(getLayout('ModeOfPayment'), [
+    'mode_of_payment | Mode of Payment | ',
     'type | Type | ',
-    'account | Account | ',
+    'accounts | Accounts | ',
     'requires_clearance_date | Requires Clearance Date | ',
   ]);
-  assert.deepEqual(method.quickEditFields, [
-    'name',
+  assert.deepEqual(mode.quickEditFields, [
     'type',
-    'account',
+    'accounts',
     'requires_clearance_date',
   ]);
-  const account = method.fields.find((field) => field.fieldname === 'account');
+  const account = getSchema('ModeofPaymentAccount').fields.find(
+    (field) => field.fieldname === 'default_account'
+  );
   assert.equal(account.create, false);
   assert.deepEqual(
-    frappeModels.PaymentMethod.getListViewSettings(fyo).columns,
+    frappeModels.ModeOfPayment.getListViewSettings(fyo).columns,
     ['name', 'type']
   );
 });
@@ -108,7 +116,7 @@ test('a number series shows its prefix, counter and labelled reference types', (
     referenceType.options.map(({ value, label }) => [value, label])
   );
   assert.equal(labels.SalesInvoice, 'Sales Invoice');
-  assert.equal(labels.Payment, 'Payment');
+  assert.equal(labels.PaymentEntry, 'Payment Entry');
   const digits = series.fields.find(
     ({ fieldname }) => fieldname === 'pad_zeros'
   );
@@ -119,23 +127,23 @@ test('a number series shows its prefix, counter and labelled reference types', (
 });
 
 test('number series links filter and create by reference_type', async () => {
-  const { SalesInvoice, Defaults, Payment, JournalEntry, StockEntry } =
+  const { SalesInvoice, Defaults, PaymentEntry, JournalEntry, StockEntry } =
     frappeModels;
   const invoice = { schemaName: 'SalesInvoice' };
   const series = (schemaName) => [['reference_type', '=', schemaName]];
   assert.deepEqual(
-    await SalesInvoice.filters.number_series(invoice),
+    await SalesInvoice.filters.naming_series(invoice),
     series('SalesInvoice')
   );
-  assert.deepEqual(Payment.filters.number_series(), series('Payment'));
   assert.deepEqual(
-    JournalEntry.filters.number_series(),
+    PaymentEntry.filters.naming_series(),
+    series('PaymentEntry')
+  );
+  assert.deepEqual(
+    JournalEntry.filters.naming_series(),
     series('JournalEntry')
   );
-  assert.deepEqual(
-    StockEntry.filters.number_series(),
-    series('StockEntry')
-  );
+  assert.deepEqual(StockEntry.filters.naming_series(), series('StockEntry'));
   assert.deepEqual(
     Defaults.createFilters.delivery_note_number_series(),
     series('DeliveryNote')

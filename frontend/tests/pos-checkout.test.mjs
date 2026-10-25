@@ -27,7 +27,7 @@ function respond({ path, body }) {
     return { status: 417, body: { exc_type: 'PermissionError' } };
   }
   if (method === 'get_list') {
-    const isMethods = body.doctype === 'Books Payment Method';
+    const isMethods = body.doctype === 'Books Mode of Payment';
     return { message: isMethods ? paymentMethods : [{ parent: 'PAY-1001' }] };
   }
   if (method === 'get_sale_shortfalls') {
@@ -50,16 +50,23 @@ function withServerDefaults(values) {
   return { ...values, make_auto_payment: 0, make_auto_stock_transfer: 1 };
 }
 
-/** A previewed POS sale of 500 for Asha. */
+/** A previewed POS sale of 500 for Asha; the preview filled its item names and stock quantities. */
 function makeSale(values = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,
-    number_series: 'SINV-',
+    naming_series: 'SINV-',
     customer: 'Asha',
-    account: 'Debtors',
-    date: new Date('2026-10-04T00:00:00Z'),
+    debit_to: 'Debtors',
+    posting_date: new Date('2026-10-04T00:00:00Z'),
     items: [
-      { item: 'Pen', account: 'Sales', quantity: 2, rate: fyo.pesa(250) },
+      {
+        item_code: 'Pen',
+        item_name: 'Pen',
+        income_account: 'Sales',
+        qty: 2,
+        stock_qty: 2,
+        price_list_rate: fyo.pesa(250),
+      },
     ],
     grand_total: fyo.pesa(500),
     base_grand_total: fyo.pesa(500),
@@ -178,11 +185,11 @@ test('a method keeps only the payment details it needs', async () => {
 
   checkout.selectMethod('Card');
   assert.deepEqual(
-    [checkout.tender.reference_id, checkout.tender.clearance_date],
+    [checkout.tender.reference_no, checkout.tender.clearance_date],
     ['CHQ-77', undefined]
   );
   checkout.selectMethod('Cash');
-  assert.equal(checkout.tender.reference_id, undefined);
+  assert.equal(checkout.tender.reference_no, undefined);
 });
 
 test('a draft sale is submitted with the tender as its payment row', async () => {
@@ -197,7 +204,7 @@ test('a draft sale is submitted with the tender as its payment row', async () =>
   assert.deepEqual(await payments, ['PAY-1001']);
   const [row] = getInserted().payments;
   assert.deepEqual(
-    [row.payment_method, Number(row.amount), row.reference_id],
+    [row.mode_of_payment, Number(row.amount), row.reference_no],
     ['Card', 500, 'TXN-9']
   );
   const paths = requests.map(({ path, body }) => body.method ?? path);
@@ -210,7 +217,7 @@ test('a draft sale is submitted with the tender as its payment row', async () =>
 
 test('a draft sale submitted unpaid has no payment rows and names no payments', async () => {
   const sale = makeSale({
-    payments: [{ payment_method: 'Cash', amount: fyo.pesa(500) }],
+    payments: [{ mode_of_payment: 'Cash', amount: fyo.pesa(500) }],
   });
   const checkout = usePOSCheckout(() => sale);
   requests.length = 0;
@@ -249,9 +256,9 @@ test('a submitted sale is paid at the counter', async () => {
     invoice: 'SINV-0900',
     payments: [
       {
-        payment_method: 'Cheque',
+        mode_of_payment: 'Cheque',
         amount: 200,
-        reference_id: 'CHQ-77',
+        reference_no: 'CHQ-77',
         clearance_date: '2026-10-05',
       },
     ],
@@ -267,13 +274,13 @@ test('a reset tender starts again at what the next sale is due', async () => {
 
   checkout.reset();
   assert.deepEqual(
-    [checkout.tender.payment_method, checkout.tender.amount.float],
+    [checkout.tender.mode_of_payment, checkout.tender.amount.float],
     [undefined, 0]
   );
-  assert.equal(checkout.tender.reference_id, undefined);
+  assert.equal(checkout.tender.reference_no, undefined);
 
   sale.value = makeSale({ outstanding_amount: fyo.pesa(80) });
   await checkout.start();
   assert.equal(checkout.tender.amount.float, 80);
-  assert.equal(checkout.tender.payment_method, undefined);
+  assert.equal(checkout.tender.mode_of_payment, undefined);
 });

@@ -6,11 +6,17 @@ from unittest.mock import patch
 import frappe
 from frappe.core.doctype.permission_type.permission_type import get_doctype_ptype_map
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import nowdate
 
 from frappe_books import linked_entries as linked_entries_module
 from frappe_books.linked_entries import get_linked_entries
-from frappe_books.tests.accounting import make_account, make_customer, make_invoice, make_item
+from frappe_books.tests.accounting import (
+	make_account,
+	make_customer,
+	make_invoice,
+	make_item,
+	set_company_value,
+)
 
 QUOTED_TABLE = re.compile(r'[`"](tab[^`"]+)[`"]')
 
@@ -20,17 +26,17 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		account = make_account("Linked entry IDs")
 		entry = frappe.get_doc(
 			{
-				"doctype": "Books Ledger Entry",
+				"doctype": "Books GL Entry",
 				"account": account.name,
 				"posting_date": "2026-09-06",
 				"debit": 12.5,
 			}
 		).insert()
 
-		names = get_linked_entries(account.doctype, account.name)["Books Ledger Entry"]
+		names = get_linked_entries(account.doctype, account.name)["Books GL Entry"]
 		# The panel then lists them by name, as getFrappeRows does.
 		details = frappe.get_list(
-			"Books Ledger Entry",
+			"Books GL Entry",
 			filters={"name": ["in", names]},
 			fields=["name", "posting_date", "account", "debit", "credit"],
 		)
@@ -44,29 +50,29 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		cash = make_account("Linked Cash", account_type="Cash")
 		income = make_account("Linked Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Linked Expense", root_type="Expense", account_type="Expense Account")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		party = make_customer(receivable.name)
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 		invoice.submit()
-		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
+		self.assertNotIn("Books Payment Entry", get_linked_entries(invoice.doctype, invoice.name))
 
 		payment = frappe.get_doc(
 			{
-				"doctype": "Books Payment",
+				"doctype": "Books Payment Entry",
 				"party_type": party.doctype,
 				"party": party.name,
-				"date": now_datetime(),
+				"posting_date": nowdate(),
 				"payment_type": "Receive",
-				"account": receivable.name,
-				"payment_account": cash.name,
-				"payment_method": "Cash",
-				"amount": invoice.base_grand_total,
-				"payment_references": [
+				"paid_from": receivable.name,
+				"paid_to": cash.name,
+				"mode_of_payment": "Cash",
+				"paid_amount": invoice.base_grand_total,
+				"references": [
 					{
-						"reference_type": invoice.doctype,
+						"reference_doctype": invoice.doctype,
 						"reference_name": invoice.name,
-						"amount": invoice.base_grand_total,
+						"allocated_amount": invoice.base_grand_total,
 					}
 				],
 			}
@@ -74,22 +80,20 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 		payment.submit()
 
 		entries = get_linked_entries(invoice.doctype, invoice.name)
-		self.assertEqual(entries["Books Payment"], [payment.name])
-		self.assertIn("Books Ledger Entry", entries)
+		self.assertEqual(entries["Books Payment Entry"], [payment.name])
+		self.assertIn("Books GL Entry", entries)
 
 		payment.cancel()
-		self.assertNotIn("Books Payment", get_linked_entries(invoice.doctype, invoice.name))
+		self.assertNotIn("Books Payment Entry", get_linked_entries(invoice.doctype, invoice.name))
 
 	def test_linked_entries_list_the_newest_within_the_limit(self):
 		account = make_account("Linked limit")
 		older, newer = (_ledger_entry(account.name, creation) for creation in ("2026-01-01", "2026-01-02"))
 
 		with patch.object(linked_entries_module, "LINKED_ENTRIES_LIMIT", 1):
-			self.assertEqual(
-				get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer]}
-			)
+			self.assertEqual(get_linked_entries(account.doctype, account.name), {"Books GL Entry": [newer]})
 		self.assertEqual(
-			get_linked_entries(account.doctype, account.name), {"Books Ledger Entry": [newer, older]}
+			get_linked_entries(account.doctype, account.name), {"Books GL Entry": [newer, older]}
 		)
 
 	def test_linked_entries_read_only_books_tables(self):
@@ -112,7 +116,7 @@ class IntegrationTestLinkedEntries(IntegrationTestCase):
 
 def _ledger_entry(account, creation):
 	entry = frappe.get_doc(
-		{"doctype": "Books Ledger Entry", "account": account, "posting_date": creation, "debit": 1}
+		{"doctype": "Books GL Entry", "account": account, "posting_date": creation, "debit": 1}
 	).insert()
 	entry.db_set("creation", creation, update_modified=False)
 	return str(entry.name)

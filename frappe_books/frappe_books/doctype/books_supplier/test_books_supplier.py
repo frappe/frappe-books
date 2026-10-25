@@ -5,7 +5,14 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.frappe_books.doctype.books_supplier.books_supplier import make_purchase_invoice
-from frappe_books.tests.accounting import make_account, make_invoice, make_item, make_supplier, unique_name
+from frappe_books.tests.accounting import (
+	make_account,
+	make_invoice,
+	make_item,
+	make_supplier,
+	set_company_value,
+	unique_name,
+)
 
 
 class IntegrationTestBooksSupplier(IntegrationTestCase):
@@ -17,15 +24,17 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 	def test_supplier_defaults_to_creditors(self):
 		if not frappe.db.exists("Books Account", "Creditors"):
 			make_account("Creditors", root_type="Liability", account_type="Payable", account_name="Creditors")
-		supplier = frappe.get_doc({"doctype": "Books Supplier", "name": unique_name("Supplier")}).insert()
+		supplier = frappe.get_doc(
+			{"doctype": "Books Supplier", "supplier_name": unique_name("Supplier")}
+		).insert()
 
-		self.assertEqual(supplier.default_account, "Creditors")
+		self.assertEqual(supplier.accounts[0].account, "Creditors")
 
 	def test_supplier_outstanding_follows_its_purchase_invoices(self):
 		payable = make_account("Supplier Payable", root_type="Liability", account_type="Payable")
 		income = make_account("Supplier Income", root_type="Income")
 		expense = make_account("Supplier Expense", root_type="Expense")
-		frappe.db.set_single_value("Books Accounting Settings", "discount_account", expense.name)
+		set_company_value("default_discount_account", expense.name)
 		supplier = make_supplier(payable.name)
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Purchase Invoice", supplier.name, payable.name, item.name, expense.name)
@@ -33,7 +42,7 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 
 		self.assertEqual(supplier.db_get("outstanding_amount"), 180)
 		party_entries = frappe.get_all(
-			"Books Ledger Entry",
+			"Books GL Entry",
 			filters={"voucher_no": invoice.name, "party": ["is", "set"]},
 			pluck="party_type",
 		)
@@ -47,4 +56,4 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 
 		invoice = make_purchase_invoice(supplier.name)
 
-		self.assertEqual((invoice.supplier, invoice.account), (supplier.name, payable.name))
+		self.assertEqual((invoice.supplier, invoice.credit_to), (supplier.name, payable.name))

@@ -31,6 +31,8 @@ export class DefaultCashDenominations extends FrappeDoc {
 /** Books Defaults, served by Frappe: what new documents start with. */
 export class Defaults extends FrappeDoc {
   static override doctype = 'Books Defaults';
+  // Standalone only
+  static override erpnextDoctype = null;
   // Print templates are picked, not created, from the settings.
   static override presentation = {
     label: 'Defaults',
@@ -70,7 +72,7 @@ export class Defaults extends FrappeDoc {
       ['reference_type', '=', ModelNameEnum.JournalEntry],
     ],
     payment_number_series: () => [
-      ['reference_type', '=', ModelNameEnum.Payment],
+      ['reference_type', '=', ModelNameEnum.PaymentEntry],
     ],
     stock_entry_number_series: () => [
       ['reference_type', '=', ModelNameEnum.StockEntry],
@@ -87,11 +89,11 @@ export class Defaults extends FrappeDoc {
   static createFilters: FiltersMap = this.commonFilters;
 
   getInventoryHidden() {
-    return () => !this.fyo.singles.AccountingSettings?.enable_inventory;
+    return () => !this.fyo.isFeatureOn('enable_inventory');
   }
 
   getPointOfSaleHidden() {
-    return () => !this.fyo.singles.InventorySettings?.enable_point_of_sale;
+    return () => !this.fyo.isFeatureOn('enable_point_of_sale');
   }
 
   hidden: HiddenMap = {

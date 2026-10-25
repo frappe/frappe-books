@@ -9,7 +9,14 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate, set_request
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, make_number_series
+from frappe_books.tests.accounting import (
+	ensure_user,
+	ledger_entries,
+	make_account,
+	make_customer,
+	make_number_series,
+	make_supplier,
+)
 
 READ_ONLY_USER = "books-journal-preview-reader@example.com"
 
@@ -28,8 +35,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_submit_posts_balanced_ledger_entries(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 125.50},
-				{"account": self.equity.name, "credit": 125.50},
+				{"account": self.cash.name, "debit_in_account_currency": 125.50},
+				{"account": self.equity.name, "credit_in_account_currency": 125.50},
 			]
 		)
 		journal_entry.submit()
@@ -42,8 +49,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_cancel_posts_reversals(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 50},
-				{"account": self.equity.name, "credit": 50},
+				{"account": self.cash.name, "debit_in_account_currency": 50},
+				{"account": self.equity.name, "credit_in_account_currency": 50},
 			]
 		)
 		journal_entry.submit()
@@ -53,8 +60,27 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		self.assertEqual(len(entries), 4)
 		self.assertEqual(sum(flt(entry.debit, 2) for entry in entries), 100)
 		self.assertEqual(sum(flt(entry.credit, 2) for entry in entries), 100)
-		self.assertEqual(sum(bool(entry.reverts) for entry in entries), 2)
-		self.assertTrue(all(entry.reverted for entry in entries))
+		originals, reversals = entries[:2], entries[2:]
+		self.assertCountEqual(
+			[(entry.account, entry.credit, entry.debit) for entry in originals],
+			[(entry.account, entry.debit, entry.credit) for entry in reversals],
+		)
+		self.assertTrue(all(entry.is_cancelled for entry in entries))
+
+	def test_save_copies_account_amounts_to_company_amounts(self):
+		# Books has one currency, so the company amounts are the account amounts; stale ones are replaced.
+		journal_entry = make_journal_entry(
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 40, "credit": 7},
+				{"account": self.equity.name, "credit_in_account_currency": 40, "debit": 3},
+			]
+		)
+		journal_entry.reload()
+
+		self.assertEqual(
+			[(flt(row.debit), flt(row.credit)) for row in journal_entry.accounts], [(40, 0), (0, 40)]
+		)
+		self.assertEqual((flt(journal_entry.total_debit), flt(journal_entry.total_credit)), (40, 40))
 
 	def test_rejects_unbalanced_entry(self):
 		journal_entry = frappe.get_doc(
@@ -62,8 +88,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 				"doctype": "Books Journal Entry",
 				"posting_date": nowdate(),
 				"accounts": [
-					{"account": self.cash.name, "debit": 10},
-					{"account": self.equity.name, "credit": 9},
+					{"account": self.cash.name, "debit_in_account_currency": 10},
+					{"account": self.equity.name, "credit_in_account_currency": 9},
 				],
 			}
 		)
@@ -72,9 +98,9 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_fractional_amounts_balance(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 0.1},
-				{"account": self.cash.name, "debit": 0.2},
-				{"account": self.equity.name, "credit": 0.3},
+				{"account": self.cash.name, "debit_in_account_currency": 0.1},
+				{"account": self.cash.name, "debit_in_account_currency": 0.2},
+				{"account": self.equity.name, "credit_in_account_currency": 0.3},
 			]
 		)
 		journal_entry.submit()
@@ -86,8 +112,8 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 	def test_posts_amounts_rounded_to_currency(self):
 		journal_entry = make_journal_entry(
 			[
-				{"account": self.cash.name, "debit": 10.005},
-				{"account": self.equity.name, "credit": 10.005},
+				{"account": self.cash.name, "debit_in_account_currency": 10.005},
+				{"account": self.equity.name, "credit_in_account_currency": 10.005},
 			]
 		)
 		journal_entry.submit()
@@ -95,6 +121,51 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 		entries = ledger_entries(journal_entry.doctype, journal_entry.name)
 		self.assertEqual(sum(as_decimal(entry.debit) for entry in entries), Decimal("10.01"))
 		self.assertEqual(sum(as_decimal(entry.credit) for entry in entries), Decimal("10.01"))
+
+	def test_a_row_posts_its_party(self):
+		receivable = make_account("Test Debtors", account_type="Receivable")
+		customer = make_customer(receivable.name)
+		journal_entry = make_journal_entry(
+			[
+				{
+					"account": receivable.name,
+					"party_type": "Books Customer",
+					"party": customer.name,
+					"debit_in_account_currency": 40,
+				},
+				{"account": self.equity.name, "credit_in_account_currency": 40},
+			]
+		)
+		journal_entry.submit()
+
+		entries = frappe.get_all(
+			"Books GL Entry",
+			filters={"voucher_no": journal_entry.name},
+			fields=["account", "party_type", "party"],
+			as_list=True,
+		)
+		self.assertCountEqual(
+			[tuple(entry) for entry in entries],
+			[(receivable.name, "Books Customer", customer.name), (self.equity.name, None, None)],
+		)
+
+	def test_a_row_party_suits_its_account(self):
+		receivable = make_account("Test Debtors", account_type="Receivable")
+		payable = make_account("Test Creditors", root_type="Liability", account_type="Payable")
+		supplier = make_supplier(payable.name)
+		for party_type, party, message in (
+			("Books Supplier", supplier.name, "different account types"),
+			("Books Supplier", None, "Party is mandatory"),
+		):
+			with self.subTest(party_type=party_type, party=party):
+				row = {"account": receivable.name, "party_type": party_type, "party": party}
+				with self.assertRaisesRegex(frappe.ValidationError, message):
+					make_journal_entry(
+						[
+							{**row, "debit_in_account_currency": 40},
+							{"account": self.equity.name, "credit_in_account_currency": 40},
+						]
+					)
 
 	def test_preview_fills_the_default_series_without_saving(self):
 		series = make_number_series("JournalEntry")
@@ -104,20 +175,23 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 
 		journal_entry.preview()
 
-		self.assertEqual(journal_entry.number_series, series)
+		self.assertEqual(journal_entry.naming_series, series)
 		self.assertEqual(frappe.db.count("Books Journal Entry"), entries)
 
 	def test_number_series_cannot_change_after_insert(self):
 		journal_entry = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
-		journal_entry.number_series = make_number_series("JournalEntry")
+		journal_entry.naming_series = make_number_series("JournalEntry")
 		self.assertRaises(frappe.CannotChangeConstantError, journal_entry.save)
 
 	def test_preview_keeps_a_chosen_series(self):
-		journal_entry = frappe.new_doc("Books Journal Entry", number_series="JV-")
+		journal_entry = frappe.new_doc("Books Journal Entry", naming_series="JV-")
 		journal_entry.preview()
-		self.assertEqual(journal_entry.number_series, "JV-")
+		self.assertEqual(journal_entry.naming_series, "JV-")
 
 	def test_preview_needs_the_right_to_make_journal_entries(self):
 		journal_entry = frappe.new_doc("Books Journal Entry")
@@ -129,7 +203,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 
 	def test_the_client_copy_submits_and_cancels_through_run_doc_method(self):
 		journal_entry = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
 		set_request(method="POST", path="/api/v2/method/run_doc_method")
 		for method, docstatus in (("submit", 1), ("cancel", 2)):
@@ -140,7 +217,10 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 			self.assertEqual(journal_entry.docstatus, docstatus)
 
 		draft = make_journal_entry(
-			[{"account": self.cash.name, "debit": 5}, {"account": self.equity.name, "credit": 5}]
+			[
+				{"account": self.cash.name, "debit_in_account_currency": 5},
+				{"account": self.equity.name, "credit_in_account_currency": 5},
+			]
 		)
 		without_creation = client_copy(draft)
 		without_creation.pop("creation")

@@ -4,8 +4,7 @@
       <MultiLabelLink
         class="min-w-0 flex-1"
         secondary-link="barcode"
-        third-link="itemCode"
-        :option-records="searchItems"
+        :option-records="searchRecords"
         :df="{
           label: t`Search by item name, code or barcode`,
           fieldtype: 'Link',
@@ -61,12 +60,16 @@
 </template>
 
 <script lang="ts">
-import { Button as FrappeButton, TabButtons as FrappeTabButtons } from 'frappe-ui';
+import {
+  Button as FrappeButton,
+  TabButtons as FrappeTabButtons,
+} from 'frappe-ui';
 import { t } from 'fyo';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
+import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import EmptyState from 'src/components/EmptyState.vue';
-import { getAllDocuments } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
+import { getPOSItemGroups } from 'src/utils/pos';
 import { defineComponent, PropType } from 'vue';
 import ItemsGrid from './ItemsGrid.vue';
 import ItemsTable from './ItemsTable.vue';
@@ -89,12 +92,20 @@ export default defineComponent({
     searchTerm: { type: String, default: '' },
     itemGroup: { type: String, default: '' },
     tableView: Boolean,
+    profile: { type: Object as PropType<POSProfile | null>, default: null },
   },
   emits: ['search', 'setItemGroup', 'addItem', 'toggleView'],
   data() {
     return { itemGroups: [] as string[] };
   },
   computed: {
+    // The search lists an item's barcodes beside its name.
+    searchRecords() {
+      return this.searchItems.map((item) => ({
+        ...item,
+        barcode: item.barcodes.join(', '),
+      }));
+    },
     viewOptions() {
       return [
         { value: 'grid', label: t`Grid view`, icon: 'lucide-layout-grid' },
@@ -102,15 +113,21 @@ export default defineComponent({
       ];
     },
   },
+  watch: {
+    // An ERPNext POS Profile names the groups it sells.
+    async profile() {
+      await this.setItemGroups();
+    },
+  },
   async mounted() {
-    if (!fyo.singles.AccountingSettings?.enableitem_group) {
-      return;
-    }
-
-    const groups = await getAllDocuments('Books Item Group', {
-      fields: ['name'],
-    });
-    this.itemGroups = groups.map(({ name }) => name as string);
+    await this.setItemGroups();
+  },
+  methods: {
+    async setItemGroups() {
+      if (fyo.isFeatureOn('enable_item_group')) {
+        this.itemGroups = await getPOSItemGroups(this.profile);
+      }
+    },
   },
 });
 </script>

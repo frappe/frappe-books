@@ -23,7 +23,7 @@ class BooksNumberSeries(Document):
 			"SalesInvoice",
 			"Quotation",
 			"PurchaseInvoice",
-			"Payment",
+			"PaymentEntry",
 			"JournalEntry",
 			"StockEntry",
 			"DeliveryNote",

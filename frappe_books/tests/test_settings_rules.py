@@ -2,6 +2,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.coa import STANDARD_CHART, chart_options, ensure_chart, load_chart
+from frappe_books.company import company_value, default_company
 from frappe_books.frappe_books.doctype.books_accounting_settings import books_accounting_settings
 from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
 	POINT_OF_SALE_FEATURES,
@@ -11,15 +12,13 @@ from frappe_books.frappe_books.doctype.books_system_settings.books_system_settin
 	set_display_precision,
 )
 from frappe_books.series import default_series
-from frappe_books.tests.accounting import make_account, make_number_series, unique_name
+from frappe_books.tests.accounting import make_account, make_number_series, set_company_value, unique_name
 
 COMPANY = {
-	"company_name": "Settings Test Company",
 	"fullname": "Settings Owner",
-	"email": "owner@example.com",
 	"bank_name": "Settings Test Bank",
-	"fiscal_year_start": "2026-04-01",
-	"fiscal_year_end": "2027-03-31",
+	"year_start_date": "2026-04-01",
+	"year_end_date": "2027-03-31",
 }
 
 
@@ -35,15 +34,16 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 	def test_enabling_discounting_creates_the_discount_account(self):
 		ensure_chart(load_chart(STANDARD_CHART))
 		frappe.db.delete("Books Account", {"name": "Discounts"})
-		settings = _accounting_settings(enable_discounting=0, discount_account=None)
+		set_company_value("default_discount_account", None)
+		settings = _accounting_settings(enable_discounts_and_margin=0)
 
-		settings.enable_discounting = 1
+		settings.enable_discounts_and_margin = 1
 		settings.save()
 
-		self.assertEqual(settings.discount_account, "Discounts")
+		self.assertEqual(company_value("default_discount_account"), "Discounts")
 		account = frappe.get_doc("Books Account", "Discounts")
 		self.assertEqual(
-			(account.parent_books_account, account.root_type, account.account_type, account.is_group),
+			(account.parent_account, account.root_type, account.account_type, account.is_group),
 			("Indirect Income", "Income", "Income Account", 0),
 		)
 
@@ -59,15 +59,15 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 			self.assertTrue(inventory_settings.get(fieldname), fieldname)
 
 	def test_a_pos_can_list_all_items(self):
-		settings = frappe.get_single("Books Pos Settings")
+		settings = frappe.get_single("Books POS Settings")
 		cash = make_account("POS Cash", account_type="Cash").name
 		settings.update({"item_visibility": "All Items", "cash_account": cash})
 		settings.save()
 		profile = frappe.get_doc(
 			{
-				"doctype": "Books Pos Profile",
+				"doctype": "Books POS Profile",
 				"name": unique_name("POS Profile"),
-				"inventory": "Stores",
+				"warehouse": "Stores",
 				"item_visibility": "All Items",
 			}
 		).insert()
@@ -90,18 +90,34 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 
 	def test_email_and_phone_values_must_be_valid(self):
 		invalid_values = [
-			("Books Customer", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
-			("Books Customer", {"phone": "call me"}, frappe.InvalidPhoneNumberError),
-			("Books Lead", {"email": "not-an-email"}, frappe.InvalidEmailAddressError),
-			("Books Lead", {"mobile": "call me"}, frappe.InvalidPhoneNumberError),
+			(
+				"Books Customer",
+				{"customer_name": unique_name("Format Test"), "email_id": "not-an-email"},
+				frappe.InvalidEmailAddressError,
+			),
+			(
+				"Books Customer",
+				{"customer_name": unique_name("Format Test"), "mobile_no": "call me"},
+				frappe.InvalidPhoneNumberError,
+			),
+			(
+				"Books Lead",
+				{"lead_name": unique_name("Format Test"), "email_id": "not-an-email"},
+				frappe.InvalidEmailAddressError,
+			),
+			(
+				"Books Lead",
+				{"lead_name": unique_name("Format Test"), "mobile_no": "call me"},
+				frappe.InvalidPhoneNumberError,
+			),
 		]
 		for doctype, values, error in invalid_values:
 			with self.subTest(doctype=doctype, values=values):
 				doc = frappe.get_doc({"doctype": doctype, "name": unique_name("Format Test"), **values})
 				self.assertRaises(error, doc.insert)
-		settings = _accounting_settings()
-		settings.email = "not-an-email"
-		self.assertRaises(frappe.InvalidEmailAddressError, settings.save)
+		company = frappe.get_doc("Books Company", default_company())
+		company.email = "not-an-email"
+		self.assertRaises(frappe.InvalidEmailAddressError, company.save)
 
 	def test_display_precision_stays_between_zero_and_nine(self):
 		for precision in (-1, 10):
@@ -122,7 +138,7 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		self.assertEqual(
 			[
 				default_series(doctype)
-				for doctype in ("Books Sales Invoice", "Books Payment", "Books Pricing Rule")
+				for doctype in ("Books Sales Invoice", "Books Payment Entry", "Books Pricing Rule")
 			],
 			[series, "PAY-", "PRLE-"],
 		)

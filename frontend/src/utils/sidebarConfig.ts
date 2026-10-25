@@ -1,7 +1,11 @@
 import { t } from 'fyo';
-import { reports } from 'reports';
+import { kebabCase } from 'lodash';
+import { getReports, type ReportName } from 'reports';
+import { erpnextReports } from 'reports/erpnext';
 import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';
+import { canPickFields } from 'src/frappe/fieldPicks';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
 import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
@@ -50,8 +54,8 @@ export function canOpen(route: string): boolean {
   }
 
   if (page === 'report') {
-    const report = reports[name as keyof typeof reports];
-    return canOpenReport(report.serverReportName);
+    const report = getReports()[name as ReportName];
+    return !!report && canOpenReport(report.serverReportName);
   }
 
   return pageRights[page]?.() ?? true;
@@ -59,7 +63,28 @@ export function canOpen(route: string): boolean {
 
 /** Whether the user may change the settings, which the Setup group gathers. */
 function canEditSettings(): boolean {
-  return fyo.can('AccountingSettings', 'write');
+  return fyo.can('SystemSettings', 'write');
+}
+
+/** Standalone customizes forms with Books Custom Forms; accessory mode picks the ERPNext fields they show. */
+function getCustomizeFormItem(): SidebarItem {
+  if (isAccessoryMode()) {
+    return {
+      label: t`Customize Form`,
+      name: 'customize-form',
+      route: '/customize-form',
+      hidden: () => !canPickFields(),
+    };
+  }
+
+  return {
+    label: t`Customize Form`,
+    name: 'customize-form',
+    route: `/list/CustomForm/${t`Customize Form`}`,
+    hidden: () =>
+      !fyo.isFeatureOn('enable_form_customization') ||
+      !fyo.can('CustomForm', 'create'),
+  };
 }
 
 function getRegionalSidebar(): SidebarRoot[] {
@@ -91,7 +116,7 @@ function getRegionalSidebar(): SidebarRoot[] {
 }
 
 function getInventorySidebar(): SidebarRoot[] {
-  const hasInventory = !!fyo.singles.AccountingSettings?.enable_inventory;
+  const hasInventory = fyo.isFeatureOn('enable_inventory');
   if (!hasInventory) {
     return [];
   }
@@ -133,55 +158,67 @@ function getPOSSidebar() {
     route: '/pos',
     icon: 'lucide-store',
     hidden: () =>
-      !fyo.singles.InventorySettings?.enable_point_of_sale ||
-      !fyo.can('POSOpeningShift', 'create'),
+      !fyo.isFeatureOn('enable_point_of_sale') ||
+      !fyo.can('POSOpeningEntry', 'create'),
   };
 }
 
 function getReportSidebar() {
-  const isInventoryDisabled = () =>
-    !fyo.singles.AccountingSettings?.enable_inventory;
-
   return {
     label: t`Reports`,
     name: 'reports',
     icon: 'lucide-chart-no-axes-combined',
     route: '/report/GeneralLedger',
-    items: [
-      {
-        label: t`General Ledger`,
-        name: 'general-ledger',
-        route: '/report/GeneralLedger',
-      },
-      {
-        label: t`Profit and Loss`,
-        name: 'profit-and-loss',
-        route: '/report/ProfitAndLoss',
-      },
-      {
-        label: t`Balance Sheet`,
-        name: 'balance-sheet',
-        route: '/report/BalanceSheet',
-      },
-      {
-        label: t`Trial Balance`,
-        name: 'trial-balance',
-        route: '/report/TrialBalance',
-      },
-      {
-        label: t`Stock Ledger`,
-        name: 'stock-ledger',
-        route: '/report/StockLedger',
-        hidden: isInventoryDisabled,
-      },
-      {
-        label: t`Stock Balance`,
-        name: 'stock-balance',
-        route: '/report/StockBalance',
-        hidden: isInventoryDisabled,
-      },
-    ],
+    items: isAccessoryMode() ? getERPNextReportItems() : getBooksReportItems(),
   };
+}
+
+/** Accessory mode lists ERPNext's reports, stock ones only with inventory on. */
+function getERPNextReportItems(): SidebarItem[] {
+  return Object.entries(erpnextReports).map(([name, report]) => ({
+    label: report.title,
+    name: kebabCase(name),
+    route: `/report/${name}`,
+    hidden: () => report.isInventory && !fyo.isFeatureOn('enable_inventory'),
+  }));
+}
+
+function getBooksReportItems(): SidebarItem[] {
+  const isInventoryDisabled = () => !fyo.isFeatureOn('enable_inventory');
+  return [
+    {
+      label: t`General Ledger`,
+      name: 'general-ledger',
+      route: '/report/GeneralLedger',
+    },
+    {
+      label: t`Profit and Loss`,
+      name: 'profit-and-loss',
+      route: '/report/ProfitAndLoss',
+    },
+    {
+      label: t`Balance Sheet`,
+      name: 'balance-sheet',
+      route: '/report/BalanceSheet',
+    },
+    {
+      label: t`Trial Balance`,
+      name: 'trial-balance',
+      route: '/report/TrialBalance',
+    },
+    {
+      label: t`Stock Ledger`,
+      name: 'stock-ledger',
+      route: '/report/StockLedger',
+      hidden: isInventoryDisabled,
+    },
+    {
+      label: t`Stock Balance`,
+      name: 'stock-balance',
+      route: '/report/StockBalance',
+      hidden: isInventoryDisabled,
+    },
+  ];
 }
 
 function getCompleteSidebar(): SidebarConfig {
@@ -222,8 +259,8 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Sales Payment`,
           name: 'payments',
-          route: `/list/Payment/${t`Sales Payment`}`,
-          schemaName: 'Payment',
+          route: `/list/PaymentEntry/${t`Sales Payment`}`,
+          schemaName: 'PaymentEntry',
           filters: routeFilters.SalesPayments,
         },
         {
@@ -237,28 +274,28 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'loyalty-program',
           route: '/list/LoyaltyProgram',
           schemaName: 'LoyaltyProgram',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_loyalty_program,
+          hidden: () => !fyo.isFeatureOn('enable_loyalty_point_program'),
         },
         {
           label: t`Lead`,
           name: 'lead',
           route: '/list/Lead',
           schemaName: 'Lead',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_lead,
+          hidden: () => !fyo.isFeatureOn('enable_lead'),
         },
         {
           label: t`Pricing Rule`,
           name: 'pricing-rule',
           route: '/list/PricingRule',
           schemaName: 'PricingRule',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_pricing_rule,
+          hidden: () => !fyo.isFeatureOn('enable_pricing_rule'),
         },
         {
           label: t`Coupon Code`,
           name: 'coupon-code',
           route: `/list/CouponCode`,
           schemaName: 'CouponCode',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_coupon_code,
+          hidden: () => !fyo.isFeatureOn('enable_coupon_code'),
         },
       ] as SidebarItem[],
     },
@@ -277,8 +314,8 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Purchase Payment`,
           name: 'payments',
-          route: `/list/Payment/${t`Purchase Payment`}`,
-          schemaName: 'Payment',
+          route: `/list/PaymentEntry/${t`Purchase Payment`}`,
+          schemaName: 'PaymentEntry',
           filters: routeFilters.PurchasePayments,
         },
         {
@@ -312,7 +349,14 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'price-list',
           route: '/list/PriceList',
           schemaName: 'PriceList',
-          hidden: () => !fyo.singles.AccountingSettings?.enable_price_list,
+          hidden: () => !fyo.isFeatureOn('enable_price_list'),
+        },
+        {
+          label: t`Item Price`,
+          name: 'item-price',
+          route: '/list/ItemPrice',
+          schemaName: 'ItemPrice',
+          hidden: () => !fyo.isFeatureOn('enable_price_list'),
         },
       ] as SidebarItem[],
     },
@@ -325,7 +369,8 @@ function getCompleteSidebar(): SidebarConfig {
       name: 'setup',
       icon: 'lucide-sliders-horizontal',
       route: '/chart-of-accounts',
-      hidden: () => !canEditSettings(),
+      // Accessory mode shows each Setup page the user's ERPNext roles open.
+      hidden: () => !isAccessoryMode() && !canEditSettings(),
       items: [
         {
           label: t`Chart of Accounts`,
@@ -335,8 +380,20 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Tax Template`,
           name: 'taxes',
-          route: '/list/Tax',
-          schemaName: 'Tax',
+          route: '/list/ItemTaxTemplate',
+          schemaName: 'ItemTaxTemplate',
+        },
+        {
+          label: t`Sales Taxes and Charges Template`,
+          name: 'sales-taxes',
+          route: '/list/SalesTaxesAndChargesTemplate',
+          schemaName: 'SalesTaxesAndChargesTemplate',
+        },
+        {
+          label: t`Purchase Taxes and Charges Template`,
+          name: 'purchase-taxes',
+          route: '/list/PurchaseTaxesAndChargesTemplate',
+          schemaName: 'PurchaseTaxesAndChargesTemplate',
         },
         {
           label: t`Number Series`,
@@ -354,15 +411,10 @@ function getCompleteSidebar(): SidebarConfig {
           label: t`Print Template`,
           name: 'print-template',
           route: `/list/PrintFormat/${t`Print Template`}`,
+          // The template builder makes Books templates; ERPNext has its print formats.
+          hidden: isAccessoryMode,
         },
-        {
-          label: t`Customize Form`,
-          name: 'customize-form',
-          route: `/list/CustomForm/${t`Customize Form`}`,
-          hidden: () =>
-            !fyo.singles.AccountingSettings?.enable_form_customization ||
-            !fyo.can('CustomForm', 'create'),
-        },
+        getCustomizeFormItem(),
         {
           label: t`Settings`,
           name: 'settings',

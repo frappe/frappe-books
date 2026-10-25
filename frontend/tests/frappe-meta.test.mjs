@@ -162,7 +162,7 @@ test('a model presents option labels, row editing, state colours and help text',
 test('a doctype named by script from its number series names by number series', () => {
   const context = { schemaNames: {}, roles: [], placements: {} };
   const meta = (fields) => ({ name: 'Books Rule', permissions: [], fields });
-  const series = [{ fieldname: 'number_series', fieldtype: 'Link' }];
+  const series = [{ fieldname: 'naming_series', fieldtype: 'Link' }];
   assert.equal(
     toSchema(meta(series), 'Rule', { label: 'Rule' }, context).naming,
     'numberSeries'

@@ -22,18 +22,21 @@ class BooksDeliveryNote(StockTransferController):
 		)
 
 		amended_from: DF.Link | None
-		attachment: DF.Attach | None
-		back_reference: DF.Link | None
+		company: DF.Link | None
 		customer: DF.Link
-		date: DF.Datetime
 		grand_total: DF.Currency
-		is_fully_billed: DF.Check
-		is_returned: DF.Check
+		is_return: DF.Check
 		items: DF.Table[BooksDeliveryNoteItem]
-		number_series: DF.Link
+		naming_series: DF.Link
+		per_billed: DF.Percent
+		per_returned: DF.Percent
+		posting_date: DF.Date
+		posting_time: DF.Time | None
 		return_against: DF.Link | None
-		status: DF.Literal["Saved", "Submitted", "Return", "Return Issued", "Cancelled"]
-		terms: DF.Text | None
+		status: DF.Literal[
+			"Draft", "To Bill", "Partially Billed", "Completed", "Return", "Return Issued", "Cancelled"
+		]
+		terms: DF.TextEditor | None
 	# end: auto-generated types
 
 	transfer_type = "sales"

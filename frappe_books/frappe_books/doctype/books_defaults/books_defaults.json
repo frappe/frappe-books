@@ -74,13 +74,13 @@
    "fieldname": "delivery_note_location",
    "fieldtype": "Link",
    "label": "Delivery Note Location",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "purchase_receipt_location",
    "fieldtype": "Link",
    "label": "Purchase Receipt Location",
-   "options": "Books Location"
+   "options": "Books Warehouse"
   },
   {
    "fieldname": "number_series_section_break_7",
@@ -202,7 +202,7 @@
    "fieldtype": "Link",
    "is_virtual": 1,
    "label": "Payment Print Template",
-   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Payment\"]]",
+   "link_filters": "[[\"Print Format\",\"doc_type\",\"=\",\"Books Payment Entry\"]]",
    "options": "Print Format"
   },
   {

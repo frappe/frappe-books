@@ -133,7 +133,7 @@ export const {
 /** A Fyo with the settings tests read: discounting on, amounts in USD to two decimals. */
 export async function makeFyo() {
   const fyo = new Fyo();
-  fyo.singles.AccountingSettings = { enable_discounting: true };
-  fyo.singles.SystemSettings = { currency: 'USD', display_precision: 2 };
+  fyo.singles.AccountingSettings = { enable_discounts_and_margin: true };
+  fyo.singles.SystemSettings = { currency: 'USD', currency_precision: 2 };
   return fyo;
 }

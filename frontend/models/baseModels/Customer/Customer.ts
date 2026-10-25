@@ -3,32 +3,47 @@ import { Action, HiddenMap } from 'fyo/model/types';
 import { ModelNameEnum } from 'models/types';
 import { getFrappeDoc } from 'src/frappe/documents';
 import type { Presentation } from 'src/frappe/schema';
-import { getPartyActions, getPartyPresentation, Party } from '../Party/Party';
+import {
+  ADDRESS_FIELDNAMES,
+  getPartyActions,
+  getPartyPresentation,
+  getPrimaryEmptyMessages,
+  getPartyFilters,
+  Party,
+} from '../Party/Party';
 
 /** Books Customer. The server marks the lead it came from converted. */
 export class Customer extends Party {
   static override doctype = 'Books Customer';
-  static override presentation: Presentation = {
-    ...getPartyPresentation('Customer', [
-      'email',
-      'phone',
-      'address',
-      'default_account',
+  static override presentation: Presentation = getPartyPresentation(
+    'Customer',
+    'customer',
+    [
+      'customer_primary_contact',
+      'email_id',
+      'mobile_no',
+      'customer_primary_address',
+      ...ADDRESS_FIELDNAMES,
+      'account',
       'loyalty_program',
-      'currency',
+      'default_currency',
       'tax_id',
-    ]),
-    fields: { from_lead: { create: false } },
-  };
+    ],
+    { lead_name: { create: false } }
+  );
   static override accountType = 'Receivable' as const;
+  static override partyKey = 'customer' as const;
+  static override filters = getPartyFilters('customer');
+  static override emptyMessages = getPrimaryEmptyMessages('customer');
 
-  from_lead?: string;
+  lead_name?: string;
   declare loyalty_program?: string;
 
   // Loyalty shows while the program is on.
   hidden: HiddenMap = {
+    ...this.hidden,
     loyalty_program: () =>
-      !this.fyo.singles.AccountingSettings?.enable_loyalty_program,
+      !this.fyo.isFeatureOn('enable_loyalty_point_program'),
     loyalty_points: () => !this.loyalty_program,
   };
 
@@ -43,8 +58,8 @@ export class Customer extends Party {
 
   /** Shows the lead status the server set when this customer was saved or deleted. */
   async reloadLead() {
-    if (this.from_lead) {
-      await getFrappeDoc(ModelNameEnum.Lead, this.from_lead, { refresh: true });
+    if (this.lead_name) {
+      await getFrappeDoc(ModelNameEnum.Lead, this.lead_name, { refresh: true });
     }
   }
 

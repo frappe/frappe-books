@@ -1,0 +1,38 @@
+{
+ "actions": [],
+ "creation": "2026-10-25 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "table_fieldname",
+  "fieldname"
+ ],
+ "fields": [
+  {
+   "description": "The table whose rows show the field; empty for the document's own field.",
+   "fieldname": "table_fieldname",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Table Fieldname"
+  },
+  {
+   "fieldname": "fieldname",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Fieldname",
+   "reqd": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-10-25 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe Books",
+ "name": "Books Field Pick Field",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

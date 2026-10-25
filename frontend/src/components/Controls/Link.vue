@@ -1,6 +1,8 @@
 <script>
 import { t } from 'fyo';
-import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
+import { getLinkDisplayValue, searchLink } from 'src/frappe/link';
+import { getERPNextLinkSearch, toFilterList } from 'src/frappe/linkSearch';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -48,11 +50,11 @@ export default {
     getTargetSchemaName() {
       return this.df.target;
     },
-    async getOptions(keyword, filters) {
+    async getOptions(keyword, search) {
       const { groupBy } = this.df;
       const options = await this.searchOptions(
         keyword,
-        filters,
+        search,
         groupBy ? [groupBy] : []
       );
       return options.map(({ record, ...option }) =>
@@ -60,27 +62,32 @@ export default {
       );
     },
     /** Options from Frappe's link search, each with its record's `fields`. */
-    async searchOptions(keyword, filters, fields) {
+    async searchOptions(keyword, search, fields) {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
       }
 
-      return await searchFrappeLink(
+      return await searchLink(
         schemaName,
         keyword,
-        filters,
+        search,
         LINK_PAGE_LENGTH,
         fields
       );
     },
     async getSuggestions(keyword = '') {
-      const filters = this.filtersDisabled ? null : await this.getFilters();
-      let options = await this.getOptions(keyword, filters);
+      const search = this.filtersDisabled
+        ? { filters: null }
+        : await this.getSearch();
+      let options = await this.getOptions(keyword, search);
       options = sortByFuzzyMatch(keyword, options, (item) => [item.label]);
 
       if (options.length === 0 && !this.df.emptyMessage) {
-        if (filters && !!fyo.singles.SystemSettings?.allow_filter_bypass) {
+        if (
+          search.filters &&
+          !!fyo.singles.SystemSettings?.allow_filter_bypass
+        ) {
           options = [
             {
               label: t`Show unfiltered results`,
@@ -127,7 +134,10 @@ export default {
 
       const name =
         this.searchQuery || fyo.getTemporaryName(getSchema(schemaName));
-      const values = await this.getCreateValues(schemaName);
+      const values = {
+        ...this.getTypedTitle(schemaName),
+        ...(await this.getCreateValues(schemaName)),
+      };
       const { openQuickEdit } = await import('src/utils/ui');
 
       const doc = newFrappeDoc(schemaName, { name, ...values });
@@ -140,6 +150,13 @@ export default {
         this.triggerChange(savedName);
       });
     },
+    /** The typed text as the title of a record its DocType names by script, like an address. */
+    getTypedTitle(target) {
+      const { titleField } = getModel(target)?.presentation ?? {};
+      return titleField && this.searchQuery
+        ? { [titleField]: this.searchQuery }
+        : {};
+    },
     /** Values a record created from the link takes from its create filters, else its filters. */
     async getCreateValues(target) {
       const { schemaName, fieldname } = this.df;
@@ -149,15 +166,33 @@ export default {
         : await this.getFilters();
       return getNewDocValues(target, filters ?? []);
     },
+    /** The search's filters as a list; a query method's filters are its arguments, not field values. */
     async getFilters() {
+      const { query, filters } = await this.getSearch();
+      return query ? null : toFilterList(filters);
+    },
+    /**
+     * How the link searches, in this order: the field's presentation filters;
+     * in accessory mode ERPNext's set_query rule and the DocField's
+     * link_filters; else the model's filters.
+     */
+    async getSearch() {
       if (this.df.filters) {
-        return this.df.filters;
+        return { filters: this.df.filters };
       }
 
       if (fyo.singles.SystemSettings?.remove_filter) {
-        return null;
+        return { filters: null };
       }
 
+      const ownsField = this.doc?.schemaName === this.df.schemaName;
+      const erpnextSearch =
+        isAccessoryMode() && ownsField
+          ? getERPNextLinkSearch(this.df.fieldname, this.doc)
+          : undefined;
+      return erpnextSearch ?? { filters: await this.getModelFilters() };
+    },
+    async getModelFilters() {
       const { schemaName, fieldname } = this.df;
       const getFilters = getModel(schemaName)?.filters?.[fieldname];
 

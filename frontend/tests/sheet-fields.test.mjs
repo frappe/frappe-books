@@ -57,11 +57,13 @@ test('quick edit asks for required fields that have no default', () => {
 
 test('row editors add the custom fields of a row', () => {
   const fieldnames = getRowEditFieldnames(getSchema('SalesInvoiceItem'));
-  assert.ok(fieldnames.includes('item'));
+  assert.ok(fieldnames.includes('item_code'));
   assert.ok(fieldnames.includes('custom_books_warranty'));
   assert.deepEqual(getRowEditFieldnames(getSchema('JournalEntryAccount')), [
     'account',
-    'debit',
-    'credit',
+    'party_type',
+    'party',
+    'debit_in_account_currency',
+    'credit_in_account_currency',
   ]);
 });

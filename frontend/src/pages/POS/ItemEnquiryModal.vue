@@ -152,10 +152,10 @@ export default defineComponent({
   methods: {
     async updateCustomerContact(customer: string) {
       const [record] = await getDocuments('Books Customer', {
-        fields: ['phone'],
+        fields: ['mobile_no'],
         filters: [['name', '=', customer]],
       });
-      this.ItemEnquiry.contact = (record?.phone as string) || '';
+      this.ItemEnquiry.contact = (record?.mobile_no as string) || '';
     },
 
     async submitForm() {

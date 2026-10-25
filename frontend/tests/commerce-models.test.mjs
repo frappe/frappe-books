@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   frappeModels,
   fyo,
+  getExportFields,
   getFrappeDoc,
   getLinkDisplayValue,
   getModel,
@@ -25,32 +26,34 @@ const requests = await loadFrappeModels(frappeModels, (request) =>
   respond(request)
 );
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
-test('item group, unit, location, batch and serial number forms show what they showed', () => {
+test('item group, unit, warehouse, batch and serial number forms show what they showed', () => {
   assert.deepEqual(getLayout('ItemGroup'), [
     'image | Image |  | Default',
-    'name | Name | Name | Default',
-    'tax | Tax | Tax | Default',
-    'hsn_code | HSN/SAC | HSN/SAC Code | Default',
+    'item_group_name | Item Group Name |  | Default',
+    'taxes | Taxes |  | Default',
+    'gst_hsn_code | HSN/SAC | HSN/SAC Code | Default',
   ]);
   assert.deepEqual(getLayout('UOM'), [
-    'name | UOM | Item Name | Default',
-    'is_whole | Is Whole |  | Default',
+    'uom_name | UOM Name |  | Default',
+    'must_be_whole_number | Must be Whole Number |  | Default',
   ]);
-  assert.deepEqual(getLayout('Location'), [
-    'name | Location Name |  | Default',
+  assert.deepEqual(getLayout('Warehouse'), [
+    'warehouse_name | Warehouse Name |  | Default',
     'address | Address |  | Default',
+    'is_group | Is Group Warehouse |  | Default',
   ]);
   assert.deepEqual(getLayout('Batch'), [
-    'name | Batch |  | Default',
+    'batch_id | Batch No |  | Default',
     'item | Item |  | Default',
     'expiry_date | Expiry Date |  | Default',
-    'manufacture_date | Manufacture Date |  | Default',
+    'manufacturing_date | Manufacturing Date |  | Default',
   ]);
-  assert.deepEqual(getLayout('SerialNumber'), [
-    'name | Serial Number |  | Default',
-    'item | Item |  | Default',
+  assert.deepEqual(getLayout('SerialNo'), [
+    'serial_no | Serial No |  | Default',
+    'item_code | Item Code |  | Default',
     'description | Description | Serial Number Description | Default',
     'status | Status |  | Default',
   ]);
@@ -58,42 +61,42 @@ test('item group, unit, location, batch and serial number forms show what they s
   assert.deepEqual(getSchema('Batch').quickEditFields, [
     'item',
     'expiry_date',
-    'manufacture_date',
+    'manufacturing_date',
   ]);
 });
 
 test('item groups show HSN/SAC only for an Indian company', () => {
-  const group = newFrappeDoc('ItemGroup', { name: 'Tea' });
+  const group = newFrappeDoc('ItemGroup', { item_group_name: 'Tea' });
   const columns = () =>
     getModel('ItemGroup')
       .getListViewSettings(fyo)
       .columns.map((column) => column.fieldname ?? column);
 
   fyo.singles.AccountingSettings = { country: 'United States' };
-  assert.equal(hidden(group, 'hsn_code'), true);
-  assert.deepEqual(columns(), ['name', 'tax']);
+  assert.equal(hidden(group, 'gst_hsn_code'), true);
+  assert.deepEqual(columns(), ['name']);
   fyo.singles.AccountingSettings = { country: 'India' };
-  assert.equal(hidden(group, 'hsn_code'), false);
-  assert.deepEqual(columns(), ['name', 'tax', 'hsn_code']);
+  assert.equal(hidden(group, 'gst_hsn_code'), false);
+  assert.deepEqual(columns(), ['name', 'gst_hsn_code']);
 });
 
 test('batch and serial number lists show their columns', () => {
   assert.deepEqual(getColumns('Batch'), [
     'name',
     'expiry_date',
-    'manufacture_date',
+    'manufacturing_date',
   ]);
-  assert.deepEqual(getColumns('SerialNumber'), [
+  assert.deepEqual(getColumns('SerialNo'), [
     'name',
     'status',
-    'item',
+    'item_code',
     'description',
   ]);
 });
 
 test('a serial number status badge takes the DocType state colour', () => {
-  const [, status] = getModel('SerialNumber').getListViewSettings().columns;
-  const schema = getSchema('SerialNumber');
+  const [, status] = getModel('SerialNo').getListViewSettings().columns;
+  const schema = getSchema('SerialNo');
   assert.deepEqual(status.badge({ schema, status: 'Delivered' }), {
     label: 'Delivered',
     theme: 'blue',
@@ -104,23 +107,30 @@ test('a serial number status badge takes the DocType state colour', () => {
   });
 });
 
-test('the address form shows what it showed, and links show its display text', () => {
+test("the address form is Frappe's Address, titled by its address title", () => {
   assert.deepEqual(getLayout('Address'), [
-    'name | Address Name |  | Default',
-    'address_line1 | Address Line 1 | Address Line 1 | Default',
-    'address_line2 | Address Line 2 | Address Line 2 | Default',
-    'city | City / Town | City / Town | Default',
-    'country | Country | Country | Default',
-    'state | State | State | Default',
-    'postal_code | Postal Code | Postal Code | Default',
-    'email_address | Email Address | Email Address | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'fax | Fax |  | Contacts',
-    'address_display | Address Display |  | Miscellaneous',
+    'address_title | Address Title |  | Default',
+    'address_type | Address Type |  | Default',
+    'address_line1 | Address Line 1 |  | Default',
+    'address_line2 | Address Line 2 |  | Default',
+    'city | City/Town |  | Default',
+    'county | County |  | Default',
+    'state | State/Province |  | Default',
+    'country | Country |  | Default',
+    'pincode | Postal Code |  | Default',
+    'email_id | Email Address |  | Default',
+    'phone | Phone |  | Default',
+    'fax | Fax |  | Default',
+    'is_primary_address | Preferred Billing Address |  | Default',
+    'is_shipping_address | Preferred Shipping Address |  | Default',
+    'disabled | Disabled |  | Default',
+    'links | Links |  | Reference',
   ]);
   const schema = getSchema('Address');
   const country = schema.fields.find((f) => f.fieldname === 'country');
-  assert.equal(schema.linkDisplayField, 'address_display');
+  assert.equal(schema.titleField, 'address_title');
+  assert.equal(schema.linkDisplayField, undefined);
+  assert.equal(newFrappeDoc('Address').address_type, 'Billing');
   // Frappe's own Country, picked but not created from an address.
   assert.deepEqual(
     [country.fieldtype, country.target, country.create],
@@ -136,32 +146,14 @@ test('the address form shows what it showed, and links show its display text', (
   ]);
 });
 
-test("a link shows an address's display text and other records' names", async () => {
-  respond = ({ path }) =>
-    path === '/api/v2/document/Books Address'
-      ? { data: [{ address_display: '7 Hill Street' }] }
-      : { data: [] };
-  requests.length = 0;
-
-  assert.equal(await getLinkDisplayValue('Address', 'Home'), '7 Hill Street');
-  assert.equal(await getLinkDisplayValue('Address', undefined), '');
-  assert.equal(await getLinkDisplayValue('Customer', 'Asha'), 'Asha');
-  assert.deepEqual(
-    requests.map(({ path }) => path),
-    ['/api/v2/document/Books Address']
-  );
-  assert.deepEqual(requests[0].params.fields, ['address_display']);
-  assert.deepEqual(requests[0].params.filters, [['name', '=', 'Home']]);
-});
-
-test('a link to an open address shows its text without a request', async () => {
-  const address = newFrappeDoc('Address', { address_display: '9 Lake Road' });
+test('a link shows an address by its name, without a request', async () => {
   requests.length = 0;
 
   assert.equal(
-    await getLinkDisplayValue('Address', address.name),
-    '9 Lake Road'
+    await getLinkDisplayValue('Address', 'Home-Billing'),
+    'Home-Billing'
   );
+  assert.equal(await getLinkDisplayValue('Customer', 'Asha'), 'Asha');
   assert.deepEqual(requests, []);
 });
 
@@ -212,33 +204,33 @@ test('an address lists Indian states for India and has no place of supply', () =
   assert.equal(address.fieldMap.pos, undefined);
 });
 
-test('an address leaves its display text to the server', async () => {
-  const address = newFrappeDoc('Address', { name: 'Office' });
-  await address.setMultiple({
-    address_line1: '42 Market Road',
-    city: 'Mumbai',
-    country: 'India',
-  });
-  assert.ok(!address.address_display);
-});
-
-test('the lead form and list show what they showed, status coloured by state', () => {
+test('the lead form and list show what they showed, a new lead its address, status coloured by state', () => {
   assert.deepEqual(getLayout('Lead'), [
-    'name | Name | Full Name | Default',
+    'lead_name | Full Name | Full Name | Default',
     'status | Status |  | Default',
-    'email | Email | john@doe.com | Contacts',
-    'mobile | Mobile | Mobile | Contacts',
-    'address | Address |  | Contacts',
+    'email_id | Email | john@doe.com | Contacts',
+    'mobile_no | Mobile No | Mobile | Contacts',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ]);
-  assert.deepEqual(getColumns('Lead'), ['name', 'status', 'email', 'mobile']);
+  assert.deepEqual(getColumns('Lead'), [
+    'name',
+    'status',
+    'email_id',
+    'mobile_no',
+  ]);
   const [, status] = getModel('Lead').getListViewSettings().columns;
   const schema = getSchema('Lead');
   assert.deepEqual(status.badge({ schema, status: 'Converted' }), {
     label: 'Converted',
     theme: 'green',
   });
-  assert.deepEqual(status.badge({ schema, status: 'Do not Contact' }), {
-    label: 'Do not Contact',
+  assert.deepEqual(status.badge({ schema, status: 'Do Not Contact' }), {
+    label: 'Do Not Contact',
     theme: 'red',
   });
 });
@@ -256,20 +248,27 @@ test('a lead makes a customer or a quote once saved', () => {
 
 test('lead contacts are checked as Frappe checks them, with the Books messages', async () => {
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
-  await assert.rejects(lead.set('email', 'asha@'), {
+  await assert.rejects(lead.set('email_id', 'asha@'), {
     message: 'Invalid email: asha@',
   });
-  await assert.rejects(lead.set('mobile', '98x'), {
+  await assert.rejects(lead.set('mobile_no', '98x'), {
     message: 'Invalid phone: 98x',
   });
-  await lead.set('email', 'Asha <asha@example.com>, ops@example.com');
-  await lead.set('mobile', '+91 (22) 555-0199');
-  assert.equal(lead.mobile, '+91 (22) 555-0199');
+  await lead.set('email_id', 'Asha <asha@example.com>, ops@example.com');
+  await lead.set('mobile_no', '+91 (22) 555-0199');
+  assert.equal(lead.mobile_no, '+91 (22) 555-0199');
 });
 
 test('a lead makes its customer with the server mapper, as an unsaved customer', async () => {
   const mapped = { doctype: 'Books Customer', name: 'Asha' };
-  respond = () => ({ message: { ...mapped, from_lead: 'Asha', __islocal: 1 } });
+  respond = () => ({
+    message: {
+      ...mapped,
+      customer_name: 'Asha',
+      lead_name: 'Asha',
+      __islocal: 1,
+    },
+  });
   const lead = newFrappeDoc('Lead', { name: 'Asha' });
   await loadSaved(lead);
   const { action } = getModel('Lead')
@@ -285,15 +284,12 @@ test('a lead makes its customer with the server mapper, as an unsaved customer',
   });
   assert.equal(route, '/edit/Customer/Asha');
   const customer = await getFrappeDoc('Customer', 'Asha');
-  assert.deepEqual(
-    [customer.from_lead, customer.notInserted],
-    ['Asha', true]
-  );
+  assert.deepEqual([customer.lead_name, customer.notInserted], ['Asha', true]);
 });
 
 test('saving or deleting a converted customer refreshes its open lead only', async () => {
   let leadStatus = 'Open';
-  const saved = { name: 'Ravi', from_lead: 'Ravi' };
+  const saved = { name: 'Ravi', lead_name: 'Ravi' };
   respond = ({ method, path }) => {
     if (path === '/api/v2/document/Books Lead/Ravi') {
       return { data: { name: 'Ravi', status: leadStatus, modified: 'x' } };
@@ -323,29 +319,47 @@ test('saving or deleting a converted customer refreshes its open lead only', asy
 test('customer and supplier forms and lists show what they showed, without GST fields', () => {
   const supplierFields = [
     'image | Image |  | Default',
-    'name | Name | Full Name | Default',
-    'email | Email | john@doe.com | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'address | Address |  | Contacts',
-    'default_account | Default Account |  | Billing',
-    'currency | Currency | INR | Billing',
+    'supplier_name | Supplier Name | Full Name | Default',
+    'supplier_primary_contact | Primary Contact | No primary contact | Contact',
+    'email_id | Email ID | john@doe.com | Contact',
+    'mobile_no | Mobile No | Mobile No | Contact',
+    'supplier_primary_address | Primary Address | No primary address | Address',
+    'primary_address | Primary Address Preview |  | Address',
+    'accounts | Default Accounts |  | Billing',
+    'account | Account |  | Billing',
+    'default_currency | Billing Currency | INR | Billing',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ];
   assert.deepEqual(getLayout('Supplier'), supplierFields);
   assert.deepEqual(getLayout('Customer'), [
     'image | Image |  | Default',
-    'name | Name | Full Name | Default',
-    'email | Email | john@doe.com | Contacts',
-    'phone | Phone | Phone | Contacts',
-    'address | Address |  | Contacts',
-    'default_account | Default Account |  | Billing',
-    'currency | Currency | INR | Billing',
-    'from_lead | From Lead |  | References',
+    'customer_name | Customer Name | Full Name | Default',
+    'customer_primary_contact | Customer Primary Contact | No primary contact | Contact',
+    'email_id | Email Id | john@doe.com | Contact',
+    'mobile_no | Mobile No | Mobile No | Contact',
+    'customer_primary_address | Customer Primary Address | No primary address | Address',
+    'primary_address | Primary Address |  | Address',
+    'accounts | Default Accounts |  | Billing',
+    'account | Account |  | Billing',
+    'default_currency | Billing Currency | INR | Billing',
+    'lead_name | Lead |  | References',
     'loyalty_program | Loyalty Program |  | Loyalty Program',
     'loyalty_points | Loyalty Points |  | Loyalty Program',
     'tax_id | Tax ID |  | Billing',
     'outstanding_amount | Outstanding Amount |  | Billing',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ]);
   for (const schemaName of ['Customer', 'Supplier']) {
     const party = newFrappeDoc(schemaName);
@@ -353,11 +367,91 @@ test('customer and supplier forms and lists show what they showed, without GST f
     assert.equal(hidden(party, 'tax_id'), false);
     assert.deepEqual(getColumns(schemaName), [
       'name',
-      'email',
-      'phone',
+      'email_id',
+      'mobile_no',
       'outstanding_amount',
     ]);
   }
+});
+
+test('a new party asks for its contact and address, a saved one shows its primary ones', async () => {
+  for (const [schemaName, key] of [
+    ['Customer', 'customer'],
+    ['Supplier', 'supplier'],
+  ]) {
+    const party = newFrappeDoc(schemaName, { name: `New ${key}` });
+    const shown = (fieldname) => !hidden(party, fieldname);
+    const entry = ['email_id', 'mobile_no', 'address_line1', 'country'];
+    const primary = [`${key}_primary_contact`, `${key}_primary_address`];
+    assert.ok(entry.every(shown) && !primary.some(shown), schemaName);
+    assert.equal(
+      party.getSectionDescription('Contact'),
+      `Saved as the primary Contact for this ${key}`
+    );
+    await party.set('address_line1', '12 Harbour Road');
+    assert.equal(party.getFrappeValues().address_line1, '12 Harbour Road');
+
+    await loadSaved(party, { [primary[0]]: 'Asha-Asha' });
+    assert.ok(primary.every(shown) && !entry.some(shown), schemaName);
+    assert.equal('address_line1' in party.getFrappeValues(), false);
+    assert.equal(party.getSectionDescription('Contact'), undefined);
+    const sections = party
+      .getFormFields(party.schema.fields)
+      .filter(({ fieldname }) => primary.includes(fieldname))
+      .map(({ section }) => section);
+    assert.deepEqual(sections, ['Primary contact', 'Primary address']);
+  }
+});
+
+test('a primary contact or address is picked from those linked to the party', async () => {
+  const customer = newFrappeDoc('Customer', { name: 'Asha' });
+  const { filters, emptyMessages } = getModel('Customer');
+  const linked = [
+    ['Dynamic Link', 'link_doctype', '=', 'Books Customer'],
+    ['Dynamic Link', 'link_name', '=', 'Asha'],
+  ];
+  assert.deepEqual(await filters.customer_primary_contact(customer), linked);
+  assert.deepEqual(await filters.customer_primary_address(customer), linked);
+  assert.equal(
+    emptyMessages.customer_primary_contact(customer),
+    'No contacts linked to this customer'
+  );
+  const contactField = getSchema('Customer').fields.find(
+    ({ fieldname }) => fieldname === 'customer_primary_contact'
+  );
+  assert.equal(contactField.create, false);
+  // Files hold the DocType's fields, which the address a new party asks for is not.
+  assert.ok(!getExportFields('Customer').some((f) => f.insertOnly));
+});
+
+test('a primary contact or address card shows its record', () => {
+  const contact = getModel('Contact').linkCard.getContent({
+    name: 'Asha-Asha',
+    full_name: 'Asha',
+    email_id: 'asha@example.com',
+    mobile_no: null,
+  });
+  assert.deepEqual(contact, {
+    title: 'Asha',
+    lines: [{ icon: 'lucide-mail', text: 'asha@example.com' }],
+  });
+
+  const address = getModel('Address').linkCard.getContent({
+    name: 'Asha-Billing',
+    address_line1: '12 Harbour Road',
+    address_line2: 'Unit 4',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411001',
+    country: 'India',
+  });
+  assert.deepEqual(address, {
+    title: 'Asha-Billing',
+    lines: [
+      { icon: 'lucide-map-pin', text: '12 Harbour Road, Unit 4' },
+      { text: 'Pune, Maharashtra 411001, India' },
+    ],
+  });
 });
 
 test('a customer shows loyalty fields only when the program is on', async () => {
@@ -366,7 +460,7 @@ test('a customer shows loyalty fields only when the program is on', async () => 
   assert.equal(hidden(customer, 'loyalty_program'), true);
   assert.equal(hidden(customer, 'loyalty_points'), true);
 
-  fyo.singles.AccountingSettings = { enable_loyalty_program: true };
+  fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };
   assert.equal(hidden(customer, 'loyalty_program'), false);
   assert.equal(hidden(customer, 'loyalty_points'), true);
   await customer.set('loyalty_program', 'Gold');
@@ -385,61 +479,66 @@ test('a customer makes and lists sales, a supplier purchases', () => {
   assert.deepEqual(labels('Supplier'), ['Create purchase', 'View purchases']);
 });
 
-test('a customer defaults to a receivable account, a supplier to a payable one', () => {
-  const accountType = (schemaName) =>
-    getModel(schemaName).filters.default_account(newFrappeDoc(schemaName));
-  assert.deepEqual(accountType('Customer'), [
+test('a customer defaults to a receivable account, a supplier to a payable one', async () => {
+  const accountType = async (schemaName) => {
+    const party = newFrappeDoc(schemaName);
+    await party.append('accounts');
+    return getModel('PartyAccount').filters.account(party.accounts[0]);
+  };
+  assert.deepEqual(await accountType('Customer'), [
     ['is_group', '=', 0],
     ['account_type', '=', 'Receivable'],
   ]);
-  assert.deepEqual(accountType('Supplier'), [
+  assert.deepEqual(await accountType('Supplier'), [
     ['is_group', '=', 0],
     ['account_type', '=', 'Payable'],
   ]);
 });
 
-test('the price list form shows its item prices; the list shows its use', () => {
+test('price list and item price forms show their fields; the list shows its use', () => {
   assert.deepEqual(getLayout('PriceList'), [
-    'name | Name |  | Default',
-    'is_enabled | Is Price List Enabled |  | Default',
-    'is_sales | For Sales |  | Default',
-    'is_purchase | For Purchase |  | Default',
-    'price_list_item | Item Prices |  | Item Prices',
+    'price_list_name | Price List Name |  | Default',
+    'currency | Currency |  | Default',
+    'selling | Selling |  | Default',
+    'buying | Buying |  | Default',
+    'enabled | Enabled |  | Default',
   ]);
-  assert.deepEqual(getSchema('PriceListItem').tableFields, [
-    'item',
-    'unit',
-    'rate',
+  assert.deepEqual(getLayout('ItemPrice'), [
+    'item_code | Item Code |  | Default',
+    'uom | UOM |  | Default',
+    'price_list | Price List |  | Default',
+    'currency | Currency |  | Default',
+    'selling | Selling |  | Default',
+    'buying | Buying |  | Default',
+    'price_list_rate | Rate |  | Default',
+    'valid_from | Valid From |  | Default',
+    'valid_upto | Valid Up To |  | Default',
   ]);
   const [, enabled, usage] =
     getModel('PriceList').getListViewSettings().columns;
-  const row = { is_enabled: 1, is_sales: 1, is_purchase: 1 };
+  const row = { enabled: 1, selling: 1, buying: 1 };
   assert.equal(enabled.badge(row).label, 'Enabled');
   assert.equal(enabled.badge({}).label, 'Disabled');
   assert.equal(usage.badge(row).label, 'Sales and Purchase');
-  assert.equal(usage.badge({ is_purchase: 1 }).label, 'Purchase');
+  assert.equal(usage.badge({ buying: 1 }).label, 'Purchase');
 });
 
-test("a price list row takes its item's unit from the server preview", async () => {
+test("an item price takes its item's unit from the server preview", async () => {
   respond = ({ path, body }) => {
     if (path !== '/api/v2/method/run_doc_method') {
       return { data: [] };
     }
-    const [row] = body.document.price_list_item;
-    return {
-      docs: [{ ...body.document, price_list_item: [{ ...row, unit: 'Kg' }] }],
-    };
+    return { docs: [{ ...body.document, uom: 'Kg' }] };
   };
-  const prices = newFrappeDoc('PriceList', { name: 'Retail' });
-  await prices.append('price_list_item', { item: 'Sugar' });
-  await prices.price_list_item[0].set('rate', fyo.pesa(5));
+  const price = newFrappeDoc('ItemPrice', { price_list: 'Retail' });
+  await price.set('item_code', 'Sugar');
 
-  await prices.whenFilled();
-  assert.equal(prices.price_list_item[0].unit, 'Kg');
+  await price.whenFilled();
+  assert.equal(price.uom, 'Kg');
   assert.equal(requests.at(-1).body.method, 'preview');
 });
 
-test('a price list or pricing rule row takes the unit of each item it is given', async () => {
+test('a pricing rule row takes the unit of each item it is given', async () => {
   const units = { Sugar: 'Kg', Salt: 'Gram' };
   const sent = [];
   respond = ({ path, body }) => {
@@ -447,37 +546,32 @@ test('a price list or pricing rule row takes the unit of each item it is given',
       return { data: [] };
     }
     // As the server's fetch_if_empty: an empty unit is the item's.
-    const table = body.document.price_list_item
-      ? 'price_list_item'
-      : 'applied_items';
+    const table = 'items';
     const rows = body.document[table].map((row) => {
-      sent.push(row.unit ?? null);
-      return { ...row, unit: row.unit || units[row.item] };
+      sent.push(row.uom ?? null);
+      return { ...row, uom: row.uom || units[row.item_code] };
     });
     return { docs: [{ ...body.document, [table]: rows }] };
   };
-  for (const [schemaName, table] of [
-    ['PriceList', 'price_list_item'],
-    ['PricingRule', 'applied_items'],
-  ]) {
+  for (const [schemaName, table] of [['PricingRule', 'items']]) {
     sent.length = 0;
     const doc = newFrappeDoc(schemaName);
-    await doc.append(table, { item: 'Sugar' });
+    await doc.append(table, { item_code: 'Sugar' });
     const row = doc[table][0];
     await doc.preview();
-    assert.equal(row.unit, 'Kg');
+    assert.equal(row.uom, 'Kg');
 
-    await row.set('unit', 'Gram');
+    await row.set('uom', 'Gram');
     await doc.preview();
-    assert.equal(row.unit, 'Gram');
+    assert.equal(row.uom, 'Gram');
 
-    await row.set('item', 'Salt');
+    await row.set('item_code', 'Salt');
     await doc.preview();
-    assert.equal(row.unit, 'Gram');
+    assert.equal(row.uom, 'Gram');
 
-    await row.set('unit', 'Kg');
+    await row.set('uom', 'Kg');
     await doc.preview();
-    assert.equal(row.unit, 'Kg');
+    assert.equal(row.uom, 'Kg');
     assert.deepEqual(sent, [null, 'Gram', null, 'Kg']);
   }
 });
@@ -485,39 +579,42 @@ test('a price list or pricing rule row takes the unit of each item it is given',
 test('the pricing rule form shows each discount scheme as it did', async () => {
   assert.deepEqual(getLayout('PricingRule').slice(0, 8), [
     'name | ID |  | Default',
-    'number_series | Number Series |  | Default',
-    'is_enabled | Is Pricing Rule Enabled |  | Default',
+    'naming_series | Number Series |  | Default',
+    'disable | Disable |  | Default',
     'title | Title |  | Default',
-    'applied_items | Applied Items |  | Items',
-    'discount_type | Discount Type |  | Default',
-    'is_coupon_code_based | Is Coupon Code Based |  | Default',
+    'items | Apply Rule On Item Code |  | Items',
+    'price_or_product_discount | Price or Product Discount |  | Default',
+    'coupon_code_based | Coupon Code Based |  | Default',
     'priority | Priority |  | Default',
   ]);
   const schema = getSchema('PricingRule');
   const field = (fieldname) =>
     schema.fields.find((f) => f.fieldname === fieldname);
   assert.equal(schema.naming, 'numberSeries');
-  assert.equal(field('applied_items').edit, true);
+  assert.equal(field('items').edit, true);
   assert.deepEqual(
-    field('price_discount_type').options.map(({ label }) => label),
+    field('rate_or_discount').options.map(({ label }) => label),
     ['Rate', 'Discount Percentage', 'Discount Amount']
   );
-  assert.equal(field('number_series').setOnlyOnce, true);
+  assert.equal(field('naming_series').setOnlyOnce, true);
   // Free items and applied items are picked, not created, as before.
   const creates = (schemaName, fieldnames) =>
     fieldnames.map(
       (name) =>
         getSchema(schemaName).fields.find((f) => f.fieldname === name).create
     );
-  assert.deepEqual(creates('PricingRule', ['free_item', 'free_item_unit']), [
+  assert.deepEqual(creates('PricingRule', ['free_item', 'free_item_uom']), [
     false,
     false,
   ]);
-  assert.deepEqual(creates('PricingRuleItem', ['item', 'unit']), [false, true]);
-  assert.deepEqual(creates('PriceListItem', ['item', 'unit']), [true, false]);
+  assert.deepEqual(creates('PricingRuleItemCode', ['item_code', 'uom']), [
+    false,
+    true,
+  ]);
+  assert.deepEqual(creates('ItemPrice', ['item_code', 'uom']), [true, false]);
 
   const rule = newFrappeDoc('PricingRule');
-  assert.equal(rule.number_series, 'PRLE-');
+  assert.equal(rule.naming_series, 'PRLE-');
   const shown = () =>
     rule.schema.fields
       .filter(
@@ -525,44 +622,53 @@ test('the pricing rule form shows each discount scheme as it did', async () => {
       )
       .filter((f) => !hidden(rule, f.fieldname))
       .map((f) => f.fieldname);
-  await rule.set('discount_type', 'Price Discount');
-  await rule.set('price_discount_type', 'percentage');
+  await rule.set('price_or_product_discount', 'Price');
+  await rule.set('rate_or_discount', 'Discount Percentage');
   assert.deepEqual(shown().slice(0, 2), [
-    'price_discount_type',
+    'rate_or_discount',
     'discount_percentage',
   ]);
-  assert.equal(rule.getFieldState(rule.fieldMap.price_discount_type).required, true);
-  await rule.set('discount_type', 'Product Discount');
+  assert.equal(
+    rule.getFieldState(rule.fieldMap.rate_or_discount).required,
+    true
+  );
+  await rule.set('price_or_product_discount', 'Product');
   await rule.set('is_recursive', true);
   assert.deepEqual(shown().slice(0, 6), [
     'free_item',
-    'free_item_quantity',
-    'free_item_unit',
-    'round_free_item_qty',
+    'free_qty',
+    'free_item_uom',
+    'round_free_qty',
     'is_recursive',
-    'recurse_every',
+    'recurse_for',
   ]);
   assert.equal(
-    rule.getFieldState(rule.fieldMap.price_discount_type).required,
+    rule.getFieldState(rule.fieldMap.rate_or_discount).required,
     false
   );
 });
 
+test("the pricing rule list reads Enabled from ERPNext's disable check", () => {
+  const [, , enabled] = getModel('PricingRule').getListViewSettings().columns;
+  assert.equal(enabled.badge({ disable: 0 }).label, 'Enabled');
+  assert.equal(enabled.badge({ disable: 1 }).label, 'Disabled');
+});
+
 test('pricing rule limits show the message /books showed at each field', async () => {
-  const rule = newFrappeDoc('PricingRule', { max_quantity: 5 });
-  await assert.rejects(rule.set('min_quantity', 6), {
+  const rule = newFrappeDoc('PricingRule', { max_qty: 5 });
+  await assert.rejects(rule.set('min_qty', 6), {
     message: 'Minimum Quantity should be less than the Maximum Quantity.',
   });
-  await rule.set('max_quantity', 0);
-  await rule.set('min_quantity', 6);
-  await assert.rejects(rule.set('max_quantity', 5), {
+  await rule.set('max_qty', 0);
+  await rule.set('min_qty', 6);
+  await assert.rejects(rule.set('max_qty', 5), {
     message: 'Maximum Quantity should be greater than the Minimum Quantity.',
   });
-  await rule.set('max_amount', fyo.pesa(10));
-  await assert.rejects(rule.set('min_amount', fyo.pesa(10)), {
+  await rule.set('max_amt', fyo.pesa(10));
+  await assert.rejects(rule.set('min_amt', fyo.pesa(10)), {
     message: 'Minimum Amount should be less than the Maximum Amount.',
   });
-  await rule.set('valid_to', new Date('2026-01-01'));
+  await rule.set('valid_upto', new Date('2026-01-01'));
   await assert.rejects(rule.set('valid_from', new Date('2026-02-01')), {
     message: 'Valid From Date should be less than Valid To Date.',
   });
@@ -570,40 +676,35 @@ test('pricing rule limits show the message /books showed at each field', async (
 
 test('coupon and invoice links filter pricing rules and price lists by Frappe fieldnames', () => {
   assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), [
-    ['is_coupon_code_based', '=', 1],
+    ['coupon_code_based', '=', 1],
   ]);
-  assert.deepEqual(
-    frappeModels.SalesInvoice.filters.price_list({ isSales: true }),
-    [
-      ['is_enabled', '=', 1],
-      ['is_sales', '=', 1],
-    ]
-  );
-  assert.deepEqual(
-    frappeModels.PurchaseInvoice.filters.price_list({ isSales: false }),
-    [
-      ['is_enabled', '=', 1],
-      ['is_purchase', '=', 1],
-    ]
-  );
+  assert.deepEqual(frappeModels.SalesInvoice.filters.selling_price_list(), [
+    ['enabled', '=', 1],
+    ['selling', '=', 1],
+  ]);
+  assert.deepEqual(frappeModels.PurchaseInvoice.filters.buying_price_list(), [
+    ['enabled', '=', 1],
+    ['buying', '=', 1],
+  ]);
 });
 
-test('the coupon form shows what it showed and names a new coupon from its name', async () => {
+test('the coupon form shows what it showed and makes a new coupon a code from its name', async () => {
   assert.deepEqual(getLayout('CouponCode'), [
-    'name | Coupon Code |  | Default',
-    'coupon_name | Name | Coupon Name | Default',
+    'coupon_name | Coupon Name |  | Default',
+    'coupon_type | Coupon Type |  | Default',
+    'coupon_code | Coupon Code |  | Default',
     'is_enabled | Is Enabled |  | Default',
     'pricing_rule | Pricing Rule |  | Default',
-    'min_amount | Min Amount |  | Amount',
-    'max_amount | Max Amount |  | Amount',
+    'min_amt | Min Amt |  | Amount',
+    'max_amt | Max Amt |  | Amount',
     'valid_from | Valid From |  | Validity and Usage',
-    'valid_to | Valid To |  | Validity and Usage',
+    'valid_upto | Valid Up To |  | Validity and Usage',
     'maximum_use | Maximum Use |  | Validity and Usage',
     'used | Used |  | Validity and Usage',
   ]);
   assert.deepEqual(getColumns('CouponCode'), [
     'name',
-    'coupon_name',
+    'coupon_code',
     'pricing_rule',
     'maximum_use',
     'used',
@@ -615,33 +716,39 @@ test('the coupon form shows what it showed and names a new coupon from its name'
 
   const coupon = newFrappeDoc('CouponCode');
   await coupon.set('coupon_name', 'Save Twenty Five');
-  assert.equal(coupon.name, 'SAVETWEN');
+  assert.equal(coupon.coupon_code, 'SAVETWEN');
+  await coupon.set('coupon_name', 'Spring Sale');
+  assert.equal(coupon.coupon_code, 'SPRINGSA');
+  await coupon.set('coupon_code', 'SPRING');
+  await coupon.set('coupon_name', 'Spring Offer');
+  assert.equal(coupon.coupon_code, 'SPRING');
   await loadSaved(coupon);
+  await coupon.set('coupon_code', '');
   await coupon.set('coupon_name', 'Other');
-  assert.equal(coupon.name, 'SAVETWEN');
+  assert.equal(coupon.coupon_code, '');
 });
 
 test('a coupon code leaves its amount and date rules to the server', async () => {
   const coupon = newFrappeDoc('CouponCode', {
     pricing_rule: 'Promotion',
     valid_from: new Date('2026-06-01'),
-    min_amount: fyo.pesa(20),
+    min_amt: fyo.pesa(20),
   });
-  await coupon.set('valid_to', new Date('2026-05-01'));
-  await coupon.set('max_amount', fyo.pesa(5));
-  assert.equal(coupon.max_amount.float, 5);
+  await coupon.set('valid_upto', new Date('2026-05-01'));
+  await coupon.set('max_amt', fyo.pesa(5));
+  assert.equal(coupon.max_amt.float, 5);
 });
 
 test('the loyalty program form and list show what they showed', async () => {
   assert.deepEqual(getLayout('LoyaltyProgram'), [
-    'name | Name | Name | Default',
+    'loyalty_program_name | Loyalty Program Name |  | Default',
     'from_date | From Date |  | Default',
     'to_date | To Date |  | Default',
     'is_enabled | Is Enabled |  | Default',
     'status | Status |  | Default',
     'collection_rules | Collection Rules |  | Default',
     'conversion_factor | Conversion Factor |  | Default',
-    'expiry_duration | Expiry Duration |  | Default',
+    'expiry_duration | Expiry Duration (in days) |  | Default',
     'expense_account | Expense Account |  | Default',
     'maximum_use | Maximum Use |  | Validity and Usage',
     'used | Used |  | Validity and Usage',
@@ -655,15 +762,15 @@ test('the loyalty program form and list show what they showed', async () => {
     field(schema, 'conversion_factor').sub_label,
     '100 Points → 100 (Factor 1), 50 (Factor 0.5)'
   );
-  const tiers = getSchema('CollectionRulesItems');
+  const tiers = getSchema('LoyaltyProgramCollection');
   assert.deepEqual(tiers.tableFields, [
     'tier_name',
     'collection_factor',
-    'minimum_total_spent',
+    'min_spent',
   ]);
   assert.equal(
     field(tiers, 'collection_factor').sub_label,
-    'Sale 100→ 100 (1), 50 (0.5)'
+    'For how much spent = 1 Loyalty Point'
   );
 
   const [, status] = getModel('LoyaltyProgram').getListViewSettings().columns;

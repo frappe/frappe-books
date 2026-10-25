@@ -34,7 +34,7 @@ test('a submitted entry shows its accounting entries in the ledger list', async 
     page.getByRole('textbox', { name: 'Reference Number', exact: true })
   ).toHaveValue(`JE ${run}`);
 
-  await page.goto('/books/list/AccountingLedgerEntry');
+  await page.goto('/books/list/GLEntry');
   await waitForBooks(page);
   await expect(page.getByText(entry, { exact: true })).toHaveCount(2);
 });
@@ -63,12 +63,12 @@ async function submitEntry(page: Page, reference: string): Promise<string> {
   const [asset] = await getLeafAccounts(page, 'Asset');
   const [equity] = await getLeafAccounts(page, 'Equity');
   const entry = await insertDocument(page, 'Books Journal Entry', {
-    entry_type: 'Journal Entry',
-    reference_number: reference,
+    voucher_type: 'Journal Entry',
+    cheque_no: reference,
     docstatus: 1,
     accounts: [
-      { account: asset, debit: 10 },
-      { account: equity, credit: 10 },
+      { account: asset, debit_in_account_currency: 10 },
+      { account: equity, credit_in_account_currency: 10 },
     ],
   });
   return entry.name as string;

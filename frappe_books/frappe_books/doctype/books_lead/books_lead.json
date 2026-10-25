@@ -2,18 +2,19 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:lead_name",
  "creation": "2026-08-27 22:09:39.808939",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
   "default_section_break_1",
+  "lead_name",
   "status",
   "contacts_section_break_3",
-  "email",
-  "mobile",
-  "address"
+  "email_id",
+  "mobile_no",
+  "company"
  ],
  "fields": [
   {
@@ -22,12 +23,21 @@
    "label": "Default"
   },
   {
-   "default": "Open",
+   "fieldname": "lead_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Full Name",
+   "placeholder": "Full Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Lead",
    "fieldname": "status",
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Open\nReplied\nInterested\nOpportunity\nConverted\nQuotation\nDo not Contact",
+   "options": "Lead\nOpen\nReplied\nOpportunity\nQuotation\nLost Quotation\nInterested\nConverted\nDo Not Contact",
    "reqd": 1
   },
   {
@@ -36,33 +46,35 @@
    "label": "Contacts"
   },
   {
-   "fieldname": "email",
+   "fieldname": "email_id",
    "fieldtype": "Data",
    "label": "Email",
    "options": "Email",
    "placeholder": "john@doe.com"
   },
   {
-   "fieldname": "mobile",
+   "fieldname": "mobile_no",
    "fieldtype": "Data",
-   "label": "Mobile",
+   "label": "Mobile No",
    "options": "Phone",
    "placeholder": "Mobile"
   },
   {
-   "fieldname": "address",
+   "fieldname": "company",
    "fieldtype": "Link",
-   "label": "Address",
-   "options": "Books Address"
+   "hidden": 1,
+   "label": "Company",
+   "options": "Books Company"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Lead",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -103,10 +115,14 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
- "search_fields": "email, mobile",
+ "search_fields": "email_id, mobile_no",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [
+  {
+   "color": "Gray",
+   "title": "Lead"
+  },
   {
    "color": "Gray",
    "title": "Open"
@@ -117,15 +133,7 @@
   },
   {
    "color": "Orange",
-   "title": "Interested"
-  },
-  {
-   "color": "Orange",
    "title": "Opportunity"
-  },
-  {
-   "color": "Green",
-   "title": "Converted"
   },
   {
    "color": "Green",
@@ -133,7 +141,19 @@
   },
   {
    "color": "Red",
-   "title": "Do not Contact"
+   "title": "Lost Quotation"
+  },
+  {
+   "color": "Orange",
+   "title": "Interested"
+  },
+  {
+   "color": "Green",
+   "title": "Converted"
+  },
+  {
+   "color": "Red",
+   "title": "Do Not Contact"
   }
  ],
  "track_changes": 1

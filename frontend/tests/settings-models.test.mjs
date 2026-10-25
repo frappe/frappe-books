@@ -14,6 +14,7 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 import { baseTemplate } from '../src/utils/printFormats.ts';
+import { getStandaloneModelNames } from './helpers/frappeModels.mjs';
 import { getLayout } from './helpers/models.mjs';
 import { previousForms } from './helpers/previousForms.mjs';
 
@@ -25,7 +26,8 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 const readOnly = (doc, fieldname) =>
   doc.getFieldState(doc.fieldMap[fieldname]).readOnly;
 const fieldnames = (schemaName) =>
@@ -56,14 +58,14 @@ test('each Get Started task is checked by a Books Get Started field', async () =
 });
 
 test('POS Settings hide barcode fields as the features they need are off', async () => {
-  fyo.singles.InventorySettings = { enable_barcodes: false };
+  fyo.singles.InventorySettings = { show_barcode_field: false };
   fyo.singles.AccountingSettings = {};
   const settings = newFrappeDoc('POSSettings');
   assert.equal(hidden(settings, 'weight_enabled_barcode'), true);
   // An inventory POS can list all items too.
   assert.equal(hidden(settings, 'item_visibility'), false);
 
-  fyo.singles.InventorySettings = { enable_barcodes: true };
+  fyo.singles.InventorySettings = { show_barcode_field: true };
   fyo.singles.AccountingSettings = {
     enable_point_of_sale_with_out_inventory: true,
   };
@@ -77,7 +79,7 @@ test('POS Settings hide barcode fields as the features they need are off', async
 
 test('a saved inventory feature cannot be turned off; an unsaved one can', async () => {
   const features = [
-    'enable_barcodes',
+    'show_barcode_field',
     'enable_batches',
     'enable_serial_number',
     'enable_uom_conversions',
@@ -102,24 +104,23 @@ test('a saved inventory feature cannot be turned off; an unsaved one can', async
 });
 
 test('the rules of each Frappe-backed model name fields of its DocType', () => {
-  const problems = Object.entries(frappeModels).flatMap(
-    ([schemaName, Model]) => {
-      const known = fieldnames(schemaName);
-      const doc = newFrappeDoc(schemaName);
-      const maps = {
-        filters: Model.filters,
-        createFilters: Model.createFilters,
-        hidden: doc.hidden,
-        readOnly: doc.readOnly,
-        validations: doc.validations,
-      };
-      return Object.entries(maps).flatMap(([map, rules]) =>
-        Object.keys(rules ?? {})
-          .filter((fieldname) => !known.includes(fieldname))
-          .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
-      );
-    }
-  );
+  const problems = getStandaloneModelNames().flatMap((schemaName) => {
+    const Model = frappeModels[schemaName];
+    const known = fieldnames(schemaName);
+    const doc = newFrappeDoc(schemaName);
+    const maps = {
+      filters: Model.filters,
+      createFilters: Model.createFilters,
+      hidden: doc.hidden,
+      readOnly: doc.readOnly,
+      validations: doc.validations,
+    };
+    return Object.entries(maps).flatMap(([map, rules]) =>
+      Object.keys(rules ?? {})
+        .filter((fieldname) => !known.includes(fieldname))
+        .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
+    );
+  });
   assert.deepEqual(problems, []);
 });
 
@@ -163,44 +164,54 @@ test('Defaults and POS profiles offer colours for the POS buttons that use them'
   }
 });
 
-test('the General tab shows the fields, placeholders and sections it showed', () => {
-  const layout = getSchema('AccountingSettings')
-    .fields.filter((field) => !field.meta && !field.hidden)
-    .map(({ fieldname, placeholder, section, readOnly }) =>
-      [fieldname, placeholder ?? '', section, readOnly ? 'read only' : '']
-        .join(' | ')
-        .trim()
-    );
-  assert.deepEqual(layout.slice(0, 5), [
+test('the General and Company tabs show the fields, placeholders and sections they showed', () => {
+  const layout = (schemaName) =>
+    getSchema(schemaName)
+      .fields.filter((field) => !field.meta && !field.hidden)
+      .map(({ fieldname, placeholder, section, readOnly }) =>
+        [fieldname, placeholder ?? '', section, readOnly ? 'read only' : '']
+          .join(' | ')
+          .trim()
+      );
+  assert.deepEqual(layout('AccountingSettings').slice(0, 3), [
     'fullname |  | Default |',
-    'company_name |  | Default | read only',
     'bank_name |  | Default | read only',
     'country | Select Country | Default | read only',
-    'email |  | Default |',
   ]);
-  assert.deepEqual(layout.slice(-2), [
-    'tax_id | CHE-123.456.789 | Default |',
+  assert.deepEqual(layout('AccountingSettings').slice(-1), [
     'gstin | 27AAAAA0000A1Z5 | Default |',
+  ]);
+  // The Company tab hides country and currency, which are System Settings'.
+  assert.deepEqual(layout('Company').slice(0, 6), [
+    'company_name |  | Details | read only',
+    'abbr |  | Details | read only',
+    'email |  | Details |',
+    'tax_id | CHE-123.456.789 | Details |',
+    'write_off_account |  | Accounts |',
+    'round_off_account |  | Accounts |',
   ]);
 });
 
-test('General settings show the regional tax ID of the company country', async () => {
+test('settings show the regional tax ID of the company country', async () => {
   const settings = newFrappeDoc('AccountingSettings', { country: 'India' });
+  const company = newFrappeDoc('Company', { country: 'India' });
   assert.equal(hidden(settings, 'gstin'), false);
-  assert.equal(hidden(settings, 'tax_id'), true);
+  assert.equal(hidden(company, 'tax_id'), true);
 
   await settings.set('country', 'Switzerland');
+  await company.set('country', 'Switzerland');
   assert.equal(hidden(settings, 'gstin'), true);
-  assert.equal(hidden(settings, 'tax_id'), false);
+  assert.equal(hidden(company, 'tax_id'), false);
 });
 
 test('discounts lead to pricing rules, then coupons, and stay on once on', async () => {
   const settings = newFrappeDoc('AccountingSettings');
-  assert.equal(hidden(settings, 'discount_account'), true);
+  const company = newFrappeDoc('Company');
+  assert.equal(hidden(company, 'default_discount_account'), true);
   assert.equal(hidden(settings, 'enable_pricing_rule'), true);
 
-  await settings.set('enable_discounting', true);
-  assert.equal(hidden(settings, 'discount_account'), false);
+  await settings.set('enable_discounts_and_margin', true);
+  assert.equal(hidden(company, 'default_discount_account'), false);
   assert.equal(hidden(settings, 'enable_pricing_rule'), false);
   assert.equal(hidden(settings, 'enable_coupon_code'), true);
 
@@ -224,10 +235,10 @@ test('a switch that stays on locks once saved, not when checked before Save', as
   await settings.load();
   assert.equal(readOnly(settings, 'enable_inventory'), true);
 
-  await settings.set('enable_discounting', true);
-  assert.equal(readOnly(settings, 'enable_discounting'), false);
-  await settings.set('enable_discounting', false);
-  assert.equal(settings.enable_discounting, false);
+  await settings.set('enable_discounts_and_margin', true);
+  assert.equal(readOnly(settings, 'enable_discounts_and_margin'), false);
+  await settings.set('enable_discounts_and_margin', false);
+  assert.equal(settings.enable_discounts_and_margin, false);
 });
 
 test('the System tab offers sample dates and takes custom formats and locales', async () => {
@@ -238,10 +249,10 @@ test('the System tab offers sample dates and takes custom formats and locales', 
     { value: 'MM/dd/yyyy', label: '03/23/2022' },
   ]);
   assert.equal(field('currency').readOnly, true);
-  assert.equal(field('display_precision').maxvalue, 9);
+  assert.equal(field('currency_precision').maxvalue, 9);
   assert.deepEqual(fieldnames('SystemSettings').slice(4, 8), [
     'locale',
-    'display_precision',
+    'currency_precision',
     'currency',
     'internal_precision',
   ]);
@@ -250,14 +261,14 @@ test('the System tab offers sample dates and takes custom formats and locales', 
   await settings.set('date_format', 'EEE, d MMM y');
   await settings.set('locale', 'de-CH');
   await assert.rejects(
-    settings.set('display_precision', 10),
+    settings.set('currency_precision', 10),
     /between 0 and 9/
   );
 });
 
 test("a System tab save that changes the display precision first sets Frappe's", async () => {
   const settings = newFrappeDoc('SystemSettings');
-  const saved = { ...settings.getFrappeValues(), display_precision: 2 };
+  const saved = { ...settings.getFrappeValues(), currency_precision: 2 };
   const requests = stubFrappe(({ method, body }) => {
     if (method === 'GET') {
       return { data: saved };
@@ -267,7 +278,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
   });
   await settings.load();
   await assert.rejects(
-    settings.set('display_precision', ''),
+    settings.set('currency_precision', ''),
     /between 0 and 9/
   );
   await settings.set('locale', 'de-CH');
@@ -279,7 +290,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
     ['PUT']
   );
 
-  await settings.set('display_precision', 3);
+  await settings.set('currency_precision', 3);
   requests.length = 0;
   await settings.sync();
   const [setPrecision, save] = requests;
@@ -287,7 +298,7 @@ test("a System tab save that changes the display precision first sets Frappe's",
     setPrecision.path,
     '/api/method/frappe_books.frappe_books.doctype.books_system_settings.books_system_settings.set_display_precision'
   );
-  assert.deepEqual(setPrecision.body, { display_precision: 3 });
+  assert.deepEqual(setPrecision.body, { currency_precision: 3 });
   assert.deepEqual(
     [save.method, save.path],
     ['PUT', '/api/v2/document/Books System Settings/Books System Settings']
@@ -304,7 +315,7 @@ test('only users who can write System Settings change what Frappe formats with',
     user: { can_write: canWrite },
   };
 
-  const formats = ['display_precision', 'date_format', 'locale'];
+  const formats = ['currency_precision', 'date_format', 'locale'];
   for (const fieldname of formats) {
     assert.equal(readOnly(settings, fieldname), true, fieldname);
   }

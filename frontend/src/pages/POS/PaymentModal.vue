@@ -19,14 +19,14 @@
     <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-4">
       <PaymentMethodSelector
         :methods="posCheckout.methods"
-        :selected="posCheckout.tender.payment_method"
+        :selected="posCheckout.tender.mode_of_payment"
         @select="posCheckout.selectMethod"
       />
 
       <div class="flex flex-col gap-1.5">
         <Currency
           :df="{
-            ...getField('PaymentFor', 'amount')!,
+            ...getField('PaymentEntryReference', 'allocated_amount')!,
             label: sinvDoc.isReturn ? t`Refund amount` : t`Amount paid`,
           }"
           :show-label="true"
@@ -68,12 +68,12 @@
       >
         <Data
           v-if="posCheckout.requirements.requiresReferenceId"
-          :df="getField('Payment', 'reference_id')!"
+          :df="getField('PaymentEntry', 'reference_no')!"
           :show-label="true"
           :border="true"
           :required="true"
           :read-only="false"
-          :value="posCheckout.tender.reference_id"
+          :value="posCheckout.tender.reference_no"
           :class="
             posCheckout.requirements.requiresClearanceDate ? '' : 'col-span-2'
           "
@@ -82,7 +82,7 @@
 
         <DateControl
           v-if="posCheckout.requirements.requiresClearanceDate"
-          :df="getField('Payment', 'clearance_date')!"
+          :df="getField('PaymentEntry', 'clearance_date')!"
           :show-label="true"
           :border="true"
           :required="true"

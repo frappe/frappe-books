@@ -59,16 +59,16 @@ const note = (docfield = {}) => ({
 });
 
 test('optional custom fields retain their configured defaults', async () => {
-  await customize('Books Uom', [note({ default: 'Optional default' })]);
+  await customize('Books UOM', [note({ default: 'Optional default' })]);
 
   const unit = newFrappeDoc('UOM');
   assert.equal(unit.custom_books_mynote, 'Optional default');
   assert.equal(unit.fieldMap.custom_books_mynote.required, undefined);
-  await customize('Books Uom', []);
+  await customize('Books UOM', []);
 });
 
 test('a custom check field without a default starts unchecked and saves', async () => {
-  await customize('Books Uom', [
+  await customize('Books UOM', [
     {
       fieldname: 'fragile',
       docfield: {
@@ -80,33 +80,36 @@ test('a custom check field without a default starts unchecked and saves', async 
     },
   ]);
 
-  const unit = newFrappeDoc('UOM', { name: 'Box' });
+  const unit = newFrappeDoc('UOM', { uom_name: 'Box' });
   assert.equal(unit.custom_books_fragile, false);
   assert.equal(unit.getFrappeValues().custom_books_fragile, 0);
-  await customize('Books Uom', []);
+  await customize('Books UOM', []);
 });
 
 test('saving and deleting customizations refresh open documents without losing edits', async () => {
-  const unit = newFrappeDoc('UOM', { name: 'Test Unit', is_whole: true });
-  await customize('Books Uom', [note({ reqd: 1, default: 'Initial note' })]);
+  const unit = newFrappeDoc('UOM', {
+    uom_name: 'Test Unit',
+    must_be_whole_number: true,
+  });
+  await customize('Books UOM', [note({ reqd: 1, default: 'Initial note' })]);
   assert.equal(unit.fieldMap.custom_books_mynote.tab, 'Custom');
   assert.equal(unit.custom_books_mynote, 'Initial note');
   await unit.set('custom_books_mynote', 'Unsaved note');
 
-  await customize('Books Uom', [note({ label: 'Updated label' })]);
+  await customize('Books UOM', [note({ label: 'Updated label' })]);
   assert.equal(unit.fieldMap.custom_books_mynote.label, 'Updated label');
   assert.equal(unit.custom_books_mynote, 'Unsaved note');
-  assert.equal(unit.is_whole, true);
+  assert.equal(unit.must_be_whole_number, true);
 
-  await customize('Books Uom', []);
+  await customize('Books UOM', []);
   assert.equal(unit.fieldMap.custom_books_mynote, undefined);
   assert.equal('custom_books_mynote' in unit.getFrappeValues(), false);
-  assert.equal(unit.is_whole, true);
+  assert.equal(unit.must_be_whole_number, true);
 });
 
 test('customizing a table refreshes the rows of open documents', async () => {
   const invoice = newFrappeDoc('SalesInvoice');
-  invoice.push('items', { item: 'Test Item', quantity: 2 });
+  invoice.push('items', { item_code: 'Test Item', qty: 2 });
   const [row] = invoice.items;
 
   await customize('Books Sales Invoice Item', [
@@ -122,5 +125,5 @@ test('customizing a table refreshes the rows of open documents', async () => {
   ]);
 
   assert.ok(row.fieldMap.custom_books_packingnote);
-  assert.deepEqual([row.item, row.quantity], ['Test Item', 2]);
+  assert.deepEqual([row.item_code, row.qty], ['Test Item', 2]);
 });

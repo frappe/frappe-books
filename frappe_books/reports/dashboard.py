@@ -2,11 +2,12 @@ import frappe
 from frappe import _
 from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
+from frappe_books.accessory import active_doctype, company_conditions, company_filters
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.reports.filters import datetime_conditions
 from frappe_books.reports.periods import get_fiscal_year
 
-LEDGER = "Books Ledger Entry"
+LEDGER = "Books GL Entry"
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 PERIOD_MONTHS = {"This Year": 12, "This Quarter": 3, "This Month": 1}
 MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
@@ -64,7 +65,7 @@ def get_top_expenses(period: str) -> list[dict]:
 	"""Return the five expense accounts with the most spent in the period, and the rest as Others."""
 	from_date, to_date = get_period_dates(period)
 	rows = frappe.get_list(
-		LEDGER,
+		active_doctype(LEDGER),
 		filters=_ledger_filters(from_date, to_date, {"account.root_type": "Expense"}),
 		fields=["account", DEBIT_MINUS_CREDIT],
 		group_by="account",
@@ -84,10 +85,14 @@ def get_invoice_summary(doctype: str, period: str) -> dict:
 
 	Credit notes are negative, so they reduce the amounts. `from_date` and `before_date` bound the invoice dates.
 	"""
-	if doctype not in INVOICE_DOCTYPES:
+	if doctype not in map(active_doctype, INVOICE_DOCTYPES):
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
-	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
+	conditions = [
+		["docstatus", "=", 1],
+		*datetime_conditions("posting_date", from_date, to_date),
+		*company_conditions(),
+	]
 	totals = _invoice_totals(doctype, conditions)
 	total, unpaid = as_decimal(totals.total), as_decimal(totals.outstanding)
 	paid_count, unpaid_count = (
@@ -106,7 +111,7 @@ def get_invoice_summary(doctype: str, period: str) -> dict:
 
 def _monthly_totals(from_date, to_date, filters, fields) -> dict:
 	rows = frappe.get_list(
-		LEDGER,
+		active_doctype(LEDGER),
 		filters=_ledger_filters(from_date, to_date, filters),
 		fields=fields,
 		group_by="year, month",
@@ -124,7 +129,12 @@ def _balance(totals, month):
 
 
 def _ledger_filters(from_date, to_date, filters):
-	return {"reverted": 0, "posting_date": ["between", [from_date, to_date]], **filters}
+	return {
+		"is_cancelled": 0,
+		"posting_date": ["between", [from_date, to_date]],
+		**company_filters(),
+		**filters,
+	}
 
 
 def _invoice_totals(doctype, conditions):

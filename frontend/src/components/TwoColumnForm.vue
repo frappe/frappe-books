@@ -3,7 +3,7 @@
   <div v-if="isMobile" class="flex flex-col gap-4 py-4">
     <template v-for="df in formFields" :key="df.fieldname">
       <Table
-        v-if="df.fieldtype === 'Table'"
+        v-if="df.fieldtype === 'Table' && !df.control"
         ref="controls"
         :df="df"
         :show-label="true"
@@ -31,9 +31,9 @@
   </div>
   <div v-else class="text-base">
     <template v-for="df in formFields">
-      <!-- Table Field Form (Eg: PaymentFor) -->
+      <!-- Table Field Form (Eg: PaymentEntryReference) -->
       <Table
-        v-if="df.fieldtype === 'Table'"
+        v-if="df.fieldtype === 'Table' && !df.control"
         :key="`${df.fieldname}-table`"
         ref="controls"
         size="small"
@@ -99,6 +99,11 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       default: () => [1, 1],
     },
+    /** Messages to show by fieldname, e.g. a required field a save found empty. */
+    fieldErrors: {
+      type: Object as PropType<Record<string, string>>,
+      default: () => ({}),
+    },
   },
   setup() {
     return { isMobile };
@@ -122,6 +127,15 @@ export default defineComponent({
   watch: {
     doc() {
       this.setFormFields();
+    },
+    fields() {
+      this.setFormFields();
+    },
+    fieldErrors: {
+      immediate: true,
+      handler(given: Record<string, string>) {
+        Object.assign(this.errors, given);
+      },
     },
   },
   mounted() {

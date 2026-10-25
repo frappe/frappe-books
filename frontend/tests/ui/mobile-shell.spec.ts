@@ -29,7 +29,7 @@ test('bottom tabs open each section and light the page owner', async ({
   await expect(page).toHaveURL(/\/books\/report\/GeneralLedger$/);
   await expect(tab(page, 'Reports')).toHaveAttribute('data-state', 'active');
 
-  await page.goto('/books/list/Payment/Purchase%20Payment');
+  await page.goto('/books/list/PaymentEntry/Purchase%20Payment');
   await expect(tab(page, 'Purchases')).toHaveAttribute('data-state', 'active');
   await expect(tab(page, 'Sales')).toHaveAttribute('data-state', 'inactive');
 });

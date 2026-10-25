@@ -1,11 +1,15 @@
+import { uniqBy } from 'lodash';
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
-import { fyo } from 'src/initFyo';
+import { toActiveDoctype } from 'src/frappe/mode';
+import { call } from 'src/web/api';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
+import { getPOSPreference } from 'src/utils/posSetup';
 
-type POSItemSearchRecord = Pick<POSItem, 'name' | 'itemCode' | 'barcode'>;
+type POSItemSearchRecord = Pick<POSItem, 'name' | 'barcodes'> &
+  Partial<Pick<POSItem, 'itemName'>>;
 export type ScannableItem = POSItemSearchRecord & Pick<POSItem, 'unit'>;
 
 type BarcodeSettings = Pick<
@@ -26,7 +30,21 @@ type POSItemSearchMatch = {
   isMatch: boolean;
 };
 
-const SCANNED_FIELDS = ['name', 'item_code', 'barcode'];
+/** The item's name, then its barcode rows. */
+function getScannedFields(): string[][] {
+  return [['name'], [toActiveDoctype('Books Item Barcode'), 'barcode']];
+}
+
+/** The item ERPNext's scan_barcode finds by a barcode, batch, serial number or item code, one at a time. */
+export async function getERPNextScannedItem(
+  code: string
+): Promise<{ item: { name: string }; quantity: number } | undefined> {
+  const { item_code } = await call<{ item_code?: string }>(
+    'erpnext.stock.utils.scan_barcode',
+    { search_value: code.trim() }
+  );
+  return item_code ? { item: { name: item_code }, quantity: 1 } : undefined;
+}
 
 /** The item a scanned or typed code names among all items, whatever a list shows. */
 export async function getScannedItem(
@@ -38,14 +56,14 @@ export async function getScannedItem(
     return;
   }
 
-  const settings = fyo.singles.POSSettings;
+  const settings = getBarcodeSettings();
   const items = await getScannableItems(scannedCode, settings, itemQtyMap);
   return findScannedPOSItem(items, scannedCode, settings);
 }
 
 /**
  * The items a scanned code, or the item code in a scale barcode, may name:
- * those whose name, item code or barcode is the code in any case.
+ * those whose name or a barcode is the code in any case.
  * `findScannedPOSItem` picks the item among them.
  */
 async function getScannableItems(
@@ -57,15 +75,28 @@ async function getScannableItems(
   const orFilters = codes
     .filter((value): value is string => !!value)
     .flatMap((value) =>
-      SCANNED_FIELDS.map((field): Filter => [field, 'like', value])
+      getScannedFields().map((field) => [...field, 'like', value] as Filter)
     );
-  const items = await getList('Books Item', {
+  const items = await getList(toActiveDoctype('Books Item'), {
     fields: POS_ITEM_FIELDS,
     orFilters,
     orderBy: 'creation desc',
     limit: 0,
   });
-  return items.map((item) => toPOSItem(item, itemQtyMap));
+  // A barcode row joins its item once per barcode.
+  return uniqBy(items, 'name').map((item) => toPOSItem(item, itemQtyMap));
+}
+
+/** How POS preferences read scale barcodes. */
+function getBarcodeSettings(): BarcodeSettings {
+  return {
+    weight_enabled_barcode: !!getPOSPreference('weight_enabled_barcode'),
+    check_digits: getPOSPreference('check_digits') as number | undefined,
+    item_code_digits: getPOSPreference('item_code_digits') as
+      number | undefined,
+    item_weight_digits: getPOSPreference('item_weight_digits') as
+      number | undefined,
+  };
 }
 
 export function filterPOSItems<T extends POSItemSearchRecord>(
@@ -130,13 +161,11 @@ function findByBarcode<T extends ScannableItem>(
 ): T | undefined {
   if (weighed) {
     const { itemCode } = weighed;
-    return items.find((item) =>
-      [item.itemCode, item.barcode].includes(itemCode)
-    );
+    return items.find((item) => item.barcodes.includes(itemCode));
   }
 
   if (code.length === 12) {
-    return items.find((item) => item.barcode === code);
+    return items.find((item) => item.barcodes.includes(code));
   }
 }
 
@@ -183,7 +212,7 @@ function getBestMatch(
 }
 
 function getSearchValues(item: POSItemSearchRecord): string[] {
-  return [item.name, item.itemCode, item.barcode].filter(
+  return [item.name, item.itemName, ...item.barcodes].filter(
     (value): value is string => typeof value === 'string' && !!value
   );
 }

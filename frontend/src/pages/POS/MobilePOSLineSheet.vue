@@ -1,7 +1,7 @@
 <template>
   <FrappeBottomSheet
     :open="!!row"
-    :title="row?.item ?? ''"
+    :title="row?.item_name || row?.item_code || ''"
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div
@@ -11,13 +11,13 @@
       <div class="grid grid-cols-2 gap-3">
         <FormControl
           :class="isDiscountingEnabled ? '' : 'col-span-2'"
-          :df="row.fieldMap.transfer_rate"
-          :value="row.transfer_rate"
+          :df="row.fieldMap.price_list_rate"
+          :value="row.price_list_rate"
           :show-label="true"
           :border="true"
           :required="false"
-          :read-only="isPOSRowFieldReadOnly(row, 'transfer_rate', permissions)"
-          @change="(value: Money) => setValue('transfer_rate', value)"
+          :read-only="isPOSRowFieldReadOnly(row, 'price_list_rate', permissions)"
+          @change="(value: Money) => setValue('price_list_rate', value)"
         />
         <FormControl
           v-if="isDiscountingEnabled"
@@ -26,19 +26,19 @@
             fieldtype: 'Float',
             label: t`Discount %`,
           }"
-          :value="row.item_discount_percent"
+          :value="row.discount_percentage"
           :show-label="true"
           :border="true"
           :read-only="
-            isPOSRowFieldReadOnly(row, 'item_discount_percent', permissions)
+            isPOSRowFieldReadOnly(row, 'discount_percentage', permissions)
           "
-          @change="(value: number) => setValue('item_discount_percent', value)"
+          @change="(value: number) => setValue('discount_percentage', value)"
         />
       </div>
-      <div v-if="row.batch" class="grid grid-cols-2 gap-3">
+      <div v-if="row.batch_no" class="grid grid-cols-2 gap-3">
         <FormControl
-          :df="{ fieldname: 'batch', fieldtype: 'Data', label: t`Batch` }"
-          :value="row.batch"
+          :df="{ fieldname: 'batch_no', fieldtype: 'Data', label: t`Batch` }"
+          :value="row.batch_no"
           :show-label="true"
           :border="true"
           :read-only="true"
@@ -115,7 +115,7 @@ const permissions = ref<POSPermissions>({
 });
 
 onMounted(async () => {
-  permissions.value = await getPOSPermissions();
+  permissions.value = await getPOSPermissions(props.row?.parentdoc);
 });
 
 async function setValue(field: POSRowField, value: number | Money) {

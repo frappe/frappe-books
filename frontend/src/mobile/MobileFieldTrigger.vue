@@ -21,6 +21,10 @@
         aria-hidden="true"
       />
     </button>
+    <!-- As frappe-ui's inputs show a description. -->
+    <p v-if="description" class="text-p-sm text-ink-gray-6">
+      {{ description }}
+    </p>
   </div>
 </template>
 <script setup lang="ts">
@@ -29,6 +33,7 @@ import { FormLabel as FrappeFormLabel } from 'frappe-ui';
 withDefaults(
   defineProps<{
     label?: string;
+    description?: string;
     required?: boolean;
     placeholder?: string;
     displayValue?: string;

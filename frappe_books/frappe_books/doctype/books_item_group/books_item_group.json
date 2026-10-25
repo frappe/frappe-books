@@ -2,7 +2,7 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:item_group_name",
  "creation": "2026-08-27 22:09:39.796134",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -10,8 +10,9 @@
  "field_order": [
   "default_section_break_1",
   "image",
-  "tax",
-  "hsn_code"
+  "item_group_name",
+  "taxes",
+  "gst_hsn_code"
  ],
  "fields": [
   {
@@ -25,14 +26,21 @@
    "label": "Image"
   },
   {
-   "fieldname": "tax",
-   "fieldtype": "Link",
-   "label": "Tax",
-   "options": "Books Tax",
-   "placeholder": "Tax"
+   "fieldname": "item_group_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Item Group Name",
+   "reqd": 1,
+   "unique": 1
   },
   {
-   "fieldname": "hsn_code",
+   "fieldname": "taxes",
+   "fieldtype": "Table",
+   "label": "Taxes",
+   "options": "Books Item Tax"
+  },
+  {
+   "fieldname": "gst_hsn_code",
    "fieldtype": "Data",
    "label": "HSN/SAC",
    "placeholder": "HSN/SAC Code"
@@ -41,10 +49,11 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item Group",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

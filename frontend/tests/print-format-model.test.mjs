@@ -72,7 +72,7 @@ test('a new template is a custom sales invoice template on an A4 page, named by 
 test('a shipped template is read only, and its duplicate is an editable copy named after it', async () => {
   const shipped = newFrappeDoc('PrintFormat', {
     name: 'Business - Payment',
-    doc_type: 'Books Payment',
+    doc_type: 'Books Payment Entry',
     standard: 'Yes',
     custom_format: true,
     html: '<p>{{ doc.name }}</p>',
@@ -86,7 +86,7 @@ test('a shipped template is read only, and its duplicate is an editable copy nam
     [copy.name, copy.doc_type, copy.html, copy.standard, copy.isEditable],
     [
       'Business - Payment CPY',
-      'Books Payment',
+      'Books Payment Entry',
       '<p>{{ doc.name }}</p>',
       'No',
       true,
@@ -97,7 +97,7 @@ test('a shipped template is read only, and its duplicate is an editable copy nam
 test('the template list labels each type as its schema and marks custom templates', () => {
   const [, type, custom] =
     getDocType('PrintFormat').Model.getListViewSettings(fyo).columns;
-  assert.equal(type.display('Books Payment'), 'Payment');
+  assert.equal(type.display('Books Payment Entry'), 'Payment Entry');
   assert.equal(custom.display('No'), 'Yes');
   assert.equal(custom.display('Yes'), 'No');
 });
@@ -109,13 +109,10 @@ test('print template pickers offer the Print Formats of the doctype they print',
       .linkFilters;
   const sales = [['doc_type', '=', 'Books Sales Invoice']];
   assert.deepEqual(linkFilters('payment_print_template'), [
-    ['doc_type', '=', 'Books Payment'],
+    ['doc_type', '=', 'Books Payment Entry'],
   ]);
   assert.deepEqual(linkFilters('pos_print_template'), sales);
-  assert.deepEqual(
-    frappeModels.POSProfile.filters.pos_print_template(),
-    sales
-  );
+  assert.deepEqual(frappeModels.POSProfile.filters.print_format(), sales);
 });
 
 test("a settings save first sets the doctypes' print formats through their method", async () => {

@@ -9,17 +9,15 @@ import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { POSItem } from 'src/components/POS/types';
 import { getFrappeDoc } from 'src/frappe/documents';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import type { POSPermissions } from './posSetup';
 
-type QuantityField = 'quantity' | 'transfer_quantity';
-// The rate is per transfer unit, as the quantity is.
+type QuantityField = 'stock_qty' | 'qty';
+// The rate and the discount amount are per the row's unit, as its quantity is.
 export type POSRowField =
-  | QuantityField
-  | 'transfer_rate'
-  | 'item_discount_amount'
-  | 'item_discount_percent';
+  QuantityField | 'price_list_rate' | 'discount_amount' | 'discount_percentage';
 
 /** How `addToCart` adds: from `batch` if given, and in the stock unit if `isStockQuantity`, as a scale barcode does. */
 export type CartAddition = { batch?: string; isStockQuantity?: boolean };
@@ -45,7 +43,9 @@ export async function addToCart(
   }
 
   // A new row sells in the item's stock unit.
-  await validateStock(item.name, batch, [{ item: item.name, batch, quantity }]);
+  await validateStock(sale, item.name, batch, [
+    { item_code: item.name, batch_no: batch, stock_qty: quantity },
+  ]);
   return await appendRow(sale, item.name, quantity, batch);
 }
 
@@ -60,21 +60,15 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   }
 
   const field = getQuantityField();
-  const previous = {
-    quantity: row.quantity,
-    transfer_quantity: row.transfer_quantity,
-  };
+  const previous = { stock_qty: row.stock_qty, qty: row.qty };
   try {
     await writeQuantity(row, field, quantity);
-    const rows = getItemRows(
-      row.parentdoc as SalesInvoice,
-      row.item,
-      row.batch
-    );
-    await validateStock(row.item as string, row.batch, rows);
+    const sale = row.parentdoc as SalesInvoice;
+    const rows = getItemRows(sale, row.item_code, row.batch_no);
+    await validateStock(sale, row.item_code as string, row.batch_no, rows);
   } catch (error) {
     await row.set(field, previous[field]);
-    row.quantity = previous.quantity;
+    Object.assign(row, previous);
     throw error;
   }
 
@@ -90,7 +84,7 @@ export async function stepCartQuantity(row: SalesInvoiceItem, step: number) {
 }
 
 /**
- * A cart row's quantity as the cart shows it: in the transfer unit with UOM
+ * A cart row's quantity as the cart shows it: in the row's unit with UOM
  * conversions, and unsigned on a return.
  */
 export function getCartRowQuantity(row: SalesInvoiceItem): number {
@@ -99,9 +93,9 @@ export function getCartRowQuantity(row: SalesInvoiceItem): number {
 
 /** Sells a cart row in another unit; its stock quantity, and so its serial numbers, follow on the server. */
 export async function setCartUnit(row: SalesInvoiceItem, unit: string) {
-  await row.set('transfer_unit', unit);
+  await row.set('uom', unit);
   if (!row.isReturn) {
-    row.leaveToServer(['serial_number']);
+    row.leaveToServer(['serial_no']);
   }
 }
 
@@ -111,12 +105,15 @@ export async function setPOSRowValue(
   field: POSRowField,
   value: number | Money
 ) {
-  if (field === 'quantity' || field === 'transfer_quantity') {
+  if (field === 'stock_qty' || field === 'qty') {
     return await setCartQuantity(row, value as number);
   }
 
-  if (field !== 'transfer_rate') {
-    await row.set('set_item_discount_amount', field === 'item_discount_amount');
+  // A row discounts by a percentage or by an amount per unit, as ERPNext's does.
+  if (field === 'discount_amount') {
+    row.discount_percentage = 0;
+  } else if (field === 'discount_percentage') {
+    row.discount_amount = fyo.pesa(0);
   }
   await row.set(field, value);
 }
@@ -126,8 +123,13 @@ export function getPOSRowFieldLabel(
   row: SalesInvoiceItem,
   field: POSRowField
 ): string {
-  if (field === 'transfer_quantity') {
+  if (field === 'qty') {
     return t`Transfer Quantity`;
+  }
+
+  // The stock quantity is the cart's quantity, whatever ERPNext's label for it.
+  if (field === 'stock_qty') {
+    return t`Quantity`;
   }
 
   return row.fieldMap[field]?.label;
@@ -143,17 +145,17 @@ export function isPOSRowFieldReadOnly(
   }
 
   switch (field) {
-    case 'quantity':
-      return getQuantityField() !== 'quantity';
-    case 'transfer_rate':
+    case 'stock_qty':
+      return getQuantityField() !== 'stock_qty';
+    case 'price_list_rate':
       return !permissions.canChangeRate;
-    case 'item_discount_amount':
+    case 'discount_amount':
+      return !permissions.canEditDiscount || (row.discount_percentage ?? 0) > 0;
+    case 'discount_percentage':
+      // The server works out a percentage's amount, which then stays editable as the percentage.
       return (
-        !permissions.canEditDiscount || (row.item_discount_percent ?? 0) > 0
-      );
-    case 'item_discount_percent':
-      return (
-        !permissions.canEditDiscount || !row.item_discount_amount?.isZero()
+        !permissions.canEditDiscount ||
+        (!row.discount_percentage && !row.discount_amount?.isZero())
       );
     default:
       return false;
@@ -164,9 +166,9 @@ export function isPOSRowFieldReadOnly(
 export function getQuantityByItem(sale: SalesInvoice): Record<string, number> {
   const quantities: Record<string, number> = {};
   for (const row of sale.items ?? []) {
-    if (row.item && !row.is_free_item) {
-      quantities[row.item] = safeParseFloat(
-        (quantities[row.item] ?? 0) + getCartRowQuantity(row)
+    if (row.item_code && !row.is_free_item) {
+      quantities[row.item_code] = safeParseFloat(
+        (quantities[row.item_code] ?? 0) + getCartRowQuantity(row)
       );
     }
   }
@@ -184,35 +186,33 @@ export function getTotalQuantity(rows: SalesInvoiceItem[]): number {
 
 /** Checks a cart row has a serial number for each unit it sells or takes back. */
 export function validateSerialNumberCount(row: SalesInvoiceItem) {
-  const quantity = Math.abs(row.quantity ?? 0);
+  const quantity = Math.abs(row.stock_qty ?? 0);
   const count = getSerialNumberCount(row);
   if (count !== quantity) {
     throw new ValidationError(
-      t`Need ${quantity} Serial Numbers for Item ${row.item!}. You have provided ${count}`
+      t`Need ${quantity} Serial Numbers for Item ${row.item_code!}. You have provided ${count}`
     );
   }
 }
 
-/** The quantity field the cart shows and edits: the transfer quantity with UOM conversions. */
+/** The quantity field the cart shows and edits: the quantity in the row's unit with UOM conversions. */
 function getQuantityField(): QuantityField {
-  return fyo.singles.InventorySettings?.enable_uom_conversions
-    ? 'transfer_quantity'
-    : 'quantity';
+  return fyo.isFeatureOn('enable_uom_conversions') ? 'qty' : 'stock_qty';
 }
 
 /** A stock quantity in the unit the cart row shows. */
 function toCartQuantity(row: SalesInvoiceItem, stockQuantity: number): number {
-  if (getQuantityField() === 'quantity') {
+  if (getQuantityField() === 'stock_qty') {
     return stockQuantity;
   }
 
-  return stockQuantity / (row.unit_conversion_factor || 1);
+  return stockQuantity / (row.conversion_factor || 1);
 }
 
 /**
  * Sets the row's quantity in `field`, which the row signs as its sale takes
- * it. A transfer quantity's stock quantity shows at once, for the stock
- * check; the server derives it again.
+ * it. The other quantity shows at once, for the stock check and the cart;
+ * the server derives it again.
  */
 async function writeQuantity(
   row: SalesInvoiceItem,
@@ -220,24 +220,28 @@ async function writeQuantity(
   quantity: number
 ) {
   await row.set(field, quantity);
-  if (field === 'transfer_quantity') {
-    row.quantity = row.transfer_quantity! * (row.unit_conversion_factor || 1);
+  const factor = row.conversion_factor || 1;
+  if (field === 'qty') {
+    row.stock_qty = row.qty! * factor;
+  } else {
+    row.qty = row.stock_qty! / factor;
   }
 }
 
-/** Checks the POS location has the stock that `rows` of the item, from `batch`, need. */
+/** Checks the sale's POS location has the stock that `rows` of the item, from `batch`, need. */
 async function validateStock(
+  sale: SalesInvoice,
   item: string,
   batch: string | undefined,
   rows: ItemQuantity[]
 ) {
   const doc = (await getFrappeDoc(ModelNameEnum.Item, item)) as Item;
-  if (doc.has_batch && !batch) {
+  if (doc.has_batch_no && !batch) {
     throw new ValidationError(t`Please select a batch first`);
   }
 
-  if (doc.track_item) {
-    await validatePOSStock(rows);
+  if (doc.is_stock_item) {
+    await validatePOSStock(rows, sale);
   }
 }
 
@@ -247,14 +251,14 @@ async function validateStock(
  * keeps the sold ones.
  */
 function refillSerialNumbers(row: SalesInvoiceItem) {
-  const quantity = row.quantity ?? 0;
+  const quantity = row.stock_qty ?? 0;
   if (quantity > 0 && getSerialNumberCount(row) !== quantity) {
-    row.leaveToServer(['serial_number']);
+    row.leaveToServer(['serial_no']);
   }
 }
 
 function getSerialNumberCount(row: SalesInvoiceItem): number {
-  return (row.serial_number ?? '')
+  return (row.serial_no ?? '')
     .split('\n')
     .filter((serialNumber) => serialNumber.trim()).length;
 }
@@ -267,20 +271,31 @@ function getItemRows(
 ): SalesInvoiceItem[] {
   return (sale.items ?? []).filter(
     (row) =>
-      row.item === item && !row.is_free_item && (!batch || row.batch === batch)
+      row.item_code === item &&
+      !row.is_free_item &&
+      (!batch || row.batch_no === batch)
   );
 }
 
-/** A new row of the item, set as a cashier picks it, so the server prices it and fills its details. */
+/**
+ * A new row of the item, set as a cashier picks it, so the server prices it
+ * and fills its details. ERPNext's preview starts a row afresh for its new
+ * item, keeping what was set after the item, so the batch follows it there.
+ */
 async function appendRow(
   sale: SalesInvoice,
   item: string,
   quantity: number,
   batch?: string
 ): Promise<SalesInvoiceItem> {
-  await sale.append('items', { batch });
+  const isAccessory = isAccessoryMode();
+  await sale.append('items', isAccessory ? {} : { batch_no: batch });
   const row = sale.items!.at(-1)!;
-  await row.set('item', item);
+  await row.set('item_code', item);
+  if (isAccessory && batch) {
+    await row.set('batch_no', batch);
+  }
+
   await writeQuantity(row, getQuantityField(), quantity);
   return row;
 }

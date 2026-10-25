@@ -1,8 +1,9 @@
 import { Fyo } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
 import { DateTime } from 'luxon';
-import { Field, FieldType, FieldTypeEnum } from 'schemas/types';
+import { Field, FieldType, FieldTypeEnum, NumberField } from 'schemas/types';
 import { getFloatPrecision } from 'src/utils/precision';
+import { formatTime } from 'src/utils/time';
 import { getIsNullOrUndef, safeParseFloat } from 'utils';
 import { getOptionList, isPesa } from '.';
 import {
@@ -23,6 +24,14 @@ export function format(
   }
 
   const field: Field = getField(df);
+
+  if (field.control === 'Percent') {
+    return formatPercent(value, field, fyo);
+  }
+
+  if (field.control === 'Time') {
+    return value ? formatTime(String(value)) : '';
+  }
 
   if (field.fieldtype === FieldTypeEnum.Float) {
     return formatFloat(value, fyo);
@@ -70,6 +79,27 @@ function formatFloat(value: unknown, fyo: Fyo): string {
 
   const isWhole = safeParseFloat(value) % 1 === 0;
   return formatNumber(value, fyo, isWhole ? 0 : (getFloatPrecision() ?? 3));
+}
+
+/** A Percent as Desk shows it, e.g. `2.5%`. */
+function formatPercent(value: unknown, field: Field, fyo: Fyo): string {
+  const precision = (field as NumberField).precision ?? getFloatPrecision();
+  const number = formatPercentNumber(value, fyo, precision);
+  return number && `${number}%`;
+}
+
+/** Desk's Percent number: to its precision, but with no more decimals than the value has. */
+export function formatPercentNumber(
+  value: unknown,
+  fyo: Fyo,
+  precision: number | null
+): string {
+  if (getIsNullOrUndef(value)) {
+    return '';
+  }
+
+  const decimals = String(value).split('.')[1]?.length ?? 0;
+  return formatNumber(value, fyo, Math.min(precision ?? 2, decimals));
 }
 
 function toDatetime(value: unknown): DateTime | null {
@@ -132,8 +162,15 @@ function formatCurrency(
   doc: FrappeDoc | null,
   fyo: Fyo
 ): string {
-  const currency = getCurrency(field, doc, fyo);
+  return formatCurrencyValue(value, getCurrency(field, doc, fyo), fyo);
+}
 
+/** An amount in the locale's number format, after its currency's symbol. */
+export function formatCurrencyValue(
+  value: unknown,
+  currency: string,
+  fyo: Fyo
+): string {
   let valueString;
   try {
     valueString = formatNumber(value, fyo);
@@ -317,7 +354,7 @@ function getNumberFormatter(fyo: Fyo) {
   const locale =
     (fyo.singles.SystemSettings?.locale as string) ?? DEFAULT_LOCALE;
   const display =
-    (fyo.singles.SystemSettings?.display_precision as number) ??
+    (fyo.singles.SystemSettings?.currency_precision as number) ??
     DEFAULT_DISPLAY_PRECISION;
 
   // Force Latin (Western) digits for all locales by appending the Unicode

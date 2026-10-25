@@ -18,7 +18,7 @@
     >
       <dt class="text-md-medium text-ink-gray-8">{{ t`Grand total` }}</dt>
       <dd class="text-4xl-semibold tabular-nums text-ink-gray-9">
-        {{ fyo.format(sinvDoc?.grand_total ?? fyo.pesa(0), 'Currency') }}
+        {{ fyo.format(payableTotal, 'Currency') }}
       </dd>
     </div>
   </dl>
@@ -28,7 +28,7 @@
 import { t } from 'fyo';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
-import { getCostLines } from 'src/utils/pos';
+import { getCostLines, getPayableTotal } from 'src/utils/pos';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -38,6 +38,10 @@ const props = defineProps<{
 
 const costLines = computed(() =>
   props.sinvDoc ? getCostLines(props.sinvDoc) : []
+);
+
+const payableTotal = computed(() =>
+  props.sinvDoc ? getPayableTotal(props.sinvDoc) : fyo.pesa(0)
 );
 
 const quantityLabel = computed(() => {

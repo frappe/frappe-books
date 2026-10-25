@@ -19,6 +19,8 @@ export function useBooksSession(path = '/books') {
 
   test.beforeEach(async ({ page }) => {
     await page.context().addCookies(cookies);
+    // Frappe adds its Flow launcher to app pages; on phones it covers Books' bottom controls.
+    await page.route('**/flow_launcher.bundle*.js', (route) => route.abort());
     await page.goto(path);
     await waitForBooks(page);
   });

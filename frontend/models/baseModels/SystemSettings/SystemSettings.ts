@@ -18,6 +18,8 @@ const SET_DISPLAY_PRECISION =
  */
 export class SystemSettings extends FrappeDoc {
   static override doctype = 'Books System Settings';
+  // UI settings, kept in accessory mode
+  static override erpnextDoctype = 'Books System Settings';
   static override presentation = {
     label: 'System Settings',
     fields: {
@@ -40,7 +42,7 @@ export class SystemSettings extends FrappeDoc {
 
   declare date_format?: string;
   declare locale?: string;
-  declare display_precision?: number;
+  declare currency_precision?: number;
   declare internal_precision?: number;
   declare currency?: string;
   declare hide_get_started?: boolean;
@@ -49,7 +51,7 @@ export class SystemSettings extends FrappeDoc {
 
   // The server checks it too; mirrored to show the message at the field.
   validations: ValidationMap = {
-    display_precision(value: DocValue) {
+    currency_precision(value: DocValue) {
       if (
         Number.isInteger(value) &&
         (value as number) >= 0 &&
@@ -59,7 +61,7 @@ export class SystemSettings extends FrappeDoc {
       }
 
       throw new ValidationError(
-        t`Display Precision should have a value between 0 and 9.`
+        t`Currency Precision should have a value between 0 and 9.`
       );
     },
   };
@@ -67,7 +69,7 @@ export class SystemSettings extends FrappeDoc {
   readOnly: ReadOnlyMap = {
     date_format: () => !this.canWriteSystemSettings,
     locale: () => !this.canWriteSystemSettings,
-    display_precision: () => !this.canWriteSystemSettings,
+    currency_precision: () => !this.canWriteSystemSettings,
   };
 
   get canWriteSystemSettings(): boolean {
@@ -82,9 +84,9 @@ export class SystemSettings extends FrappeDoc {
   override async beforeSync() {
     await super.beforeSync();
     // Only a change goes, so a stale copy neither sets it back nor needs the right to.
-    if (this.isChanged('display_precision')) {
+    if (this.isChanged('currency_precision')) {
       await call(SET_DISPLAY_PRECISION, {
-        display_precision: this.display_precision,
+        currency_precision: this.currency_precision,
       });
     }
   }

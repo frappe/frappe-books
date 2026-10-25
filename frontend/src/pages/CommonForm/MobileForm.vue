@@ -48,11 +48,61 @@
       :primary-action="{ label: t`Show`, onClick: () => showFirstError() }"
     />
 
-    <MobileFormSection
+    <FormErrorPanel
+      v-if="errorPanel"
+      class="mx-4 mt-3"
+      :action="errorPanel.action"
+      :messages="errorPanel.messages"
+      @dismiss="$emit('dismiss-error')"
+    />
+    <FrappeAlert
+      v-else-if="doc.previewError && !failedSection && !isAccessory"
+      class="mx-4 mt-3"
+      theme="red"
+      :title="t`Not saved`"
+      :description="doc.previewError"
+    />
+
+    <template
       v-for="([section, fields], index) of activeSections"
       :key="activeTab + section"
-      :title="section"
-      :fields="fields"
+    >
+      <!-- A failed preview shows above the section whose rows it failed on. -->
+      <FrappeAlert
+        v-if="doc.previewError && section === failedSection && !isAccessory"
+        class="mx-4 mt-3"
+        theme="red"
+        :title="t`Not saved`"
+        :description="doc.previewError"
+      />
+      <MobileFormSection
+        :title="section"
+        :description="doc.getSectionDescription(section)"
+        :open="doc.isSectionOpen(section)"
+        :fields="fields"
+        :doc="doc"
+        :errors="errors"
+        @value-change="(field, value) => $emit('value-change', field, value)"
+        @row-change="
+          (field, value, parentfield) =>
+            $emit('row-change', field, value, parentfield)
+        "
+        @editrow="(row) => $emit('editrow', row)"
+      >
+        <!-- Currency follows the party and dates; scanning adds item rows. -->
+        <template
+          v-if="$slots['exchange-rate'] && index === 0 && isFirstTab"
+          #end
+        >
+          <slot name="exchange-rate" />
+        </template>
+        <template v-if="$slots.barcode && hasItemsTable(fields)" #table>
+          <slot name="barcode" />
+        </template>
+      </MobileFormSection>
+    </template>
+    <MobileExtraFields
+      v-if="isAccessory && isFirstTab"
       :doc="doc"
       :errors="errors"
       @value-change="(field, value) => $emit('value-change', field, value)"
@@ -61,21 +111,15 @@
           $emit('row-change', field, value, parentfield)
       "
       @editrow="(row) => $emit('editrow', row)"
-    >
-      <!-- Currency follows the party and dates; scanning adds item rows. -->
-      <template
-        v-if="$slots['exchange-rate'] && index === 0 && isFirstTab"
-        #end
-      >
-        <slot name="exchange-rate" />
-      </template>
-      <template v-if="$slots.barcode && hasItemsTable(fields)" #table>
-        <slot name="barcode" />
-      </template>
-    </MobileFormSection>
+    />
+    <LinkedRecordsSection
+      v-if="linkedRecords && isFirstTab"
+      :doc="doc"
+      :config="linkedRecords"
+    />
 
     <div class="h-10 flex-none" />
-    <MobileFooter v-if="canPrint || doc.canSave || doc.canSubmit || footerStep">
+    <MobileFooter v-if="canPrint || showsSave || doc.canSubmit || footerStep">
       <FrappeButton
         v-if="canPrint"
         class="flex-1"
@@ -85,12 +129,12 @@
         @click="$emit('print')"
       />
       <FrappeButton
-        v-if="doc.canSave"
+        v-if="showsSave"
         class="flex-1"
         size="lg"
         variant="solid"
         :label="t`Save`"
-        :disabled="doc.isSyncing"
+        :disabled="doc.isSyncing || !doc.canSave"
         @click="$emit('sync')"
       />
       <FrappeButton
@@ -121,6 +165,7 @@ import {
   type DropdownOptions,
 } from 'frappe-ui';
 import { t } from 'fyo';
+import { fyo } from 'src/initFyo';
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { Action } from 'fyo/model/types';
@@ -134,7 +179,12 @@ import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
 import { computed, nextTick, useTemplateRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { isAccessoryMode } from 'src/frappe/mode';
+import type { ServerMessage } from 'src/web/api';
+import FormErrorPanel from './FormErrorPanel.vue';
+import MobileExtraFields from './MobileExtraFields.vue';
 import MobileFormSection from './MobileFormSection.vue';
+import LinkedRecordsSection from './LinkedRecordsSection.vue';
 
 type FormAction = Pick<Action, 'label' | 'group' | 'theme' | 'nextStep'> & {
   action: (doc: FrappeDoc, router: ReturnType<typeof useRouter>) => unknown;
@@ -149,6 +199,8 @@ const props = defineProps<{
   missingFields: Field[];
   canPrint: boolean;
   canShowLinks: boolean;
+  /** Accessory mode: why the last save, submit or preview failed. */
+  errorPanel?: { action: 'save' | 'submit'; messages: ServerMessage[] } | null;
 }>();
 
 const emit = defineEmits<{
@@ -160,7 +212,10 @@ const emit = defineEmits<{
   submit: [];
   print: [];
   'show-links': [];
+  'dismiss-error': [];
 }>();
+
+const isAccessory = isAccessoryMode();
 
 const router = useRouter();
 
@@ -182,6 +237,11 @@ const activeSections = computed(() => {
   const tab = props.groupedFields?.get(props.activeTab);
   return [...(tab ?? props.groupedFields?.values().next().value ?? new Map())];
 });
+
+// Records the model lists on its saved documents, e.g. an item's prices.
+const linkedRecords = computed(() =>
+  (props.doc.constructor as typeof FrappeDoc).getLinkedRecords(fyo)
+);
 
 const isFirstTab = computed(
   () => props.activeTab === (tabOptions.value[0]?.value ?? props.activeTab)
@@ -217,9 +277,13 @@ const errorTabs = computed(() => {
 
 const actions = computed(() => getActionsForDoc(props.doc) as FormAction[]);
 
+const showsSave = computed(
+  () => props.doc.canSave || props.doc.showsDisabledSave
+);
+
 /** The next step runs from the footer unless saving or submitting comes first. */
 const footerStep = computed(() =>
-  props.doc.canSave || props.doc.canSubmit
+  showsSave.value || props.doc.canSubmit
     ? undefined
     : actions.value.find((action) => action.nextStep)
 );
@@ -254,6 +318,24 @@ const menuOptions = computed<DropdownOptions>(() => {
         onClick: () => run(action),
       })),
     }));
+});
+
+/** The section of the table whose edited rows the last preview failed on. */
+const failedSection = computed(() => {
+  if (!props.doc.previewError) {
+    return undefined;
+  }
+
+  const failed = activeSections.value.find(([, fields]) =>
+    fields.some(
+      (field: Field) =>
+        field.fieldtype === 'Table' &&
+        ((props.doc[field.fieldname] ?? []) as FrappeDoc[]).some(
+          (row: FrappeDoc) => props.doc.isRowFailed(row)
+        )
+    )
+  );
+  return failed?.[0];
 });
 
 function hasItemsTable(fields: Field[]) {

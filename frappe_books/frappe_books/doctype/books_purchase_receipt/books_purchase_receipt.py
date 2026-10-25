@@ -22,18 +22,21 @@ class BooksPurchaseReceipt(StockTransferController):
 		)
 
 		amended_from: DF.Link | None
-		attachment: DF.Attach | None
-		back_reference: DF.Link | None
-		date: DF.Datetime
+		company: DF.Link | None
 		grand_total: DF.Currency
-		is_fully_billed: DF.Check
-		is_returned: DF.Check
+		is_return: DF.Check
 		items: DF.Table[BooksPurchaseReceiptItem]
-		number_series: DF.Link
+		naming_series: DF.Link
+		per_billed: DF.Percent
+		per_returned: DF.Percent
+		posting_date: DF.Date
+		posting_time: DF.Time | None
 		return_against: DF.Link | None
-		status: DF.Literal["Saved", "Submitted", "Return", "Return Issued", "Cancelled"]
+		status: DF.Literal[
+			"Draft", "To Bill", "Partly Billed", "Completed", "Return", "Return Issued", "Cancelled"
+		]
 		supplier: DF.Link
-		terms: DF.Text | None
+		terms: DF.TextEditor | None
 	# end: auto-generated types
 
 	transfer_type = "purchase"

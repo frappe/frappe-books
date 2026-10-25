@@ -79,14 +79,22 @@ export class MobileFilters {
       return t`All`;
     }
 
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
     return this.report.fyo.format(value, field);
   }
 }
 
-/** Empty values compare equal, and checks compare as booleans. */
+/** Empty values compare equal, checks compare as booleans and lists by their items. */
 function normalize(value: DocValue, field: Field) {
   if (field.fieldtype === 'Check') {
     return Boolean(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.length ? value.join('\n') : null;
   }
 
   return value === undefined || value === '' ? null : value;

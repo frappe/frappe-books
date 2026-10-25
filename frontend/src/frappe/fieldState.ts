@@ -28,7 +28,8 @@ const docFieldMaps = new WeakMap<DocTypeMeta, Record<string, DocField>>();
 const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
 
 /**
- * A field's state on `doc`, decided in this order:
+ * A field's state on `doc`, decided in this order; a saved document hides
+ * its insert-only fields first:
  * 1. Read only, before all else: a set-once field of a saved document, a
  *    name the server gives or that is saved, a submitted or cancelled
  *    document, or no right to write it.
@@ -42,7 +43,8 @@ const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
  */
 export function getFieldState(doc: FrappeDoc, field: Field): FieldState {
   return {
-    hidden: isRuleOn(doc, field, 'hidden'),
+    hidden:
+      (!!field.insertOnly && doc.inserted) || isRuleOn(doc, field, 'hidden'),
     readOnly: isLocked(doc, field) || isRuleOn(doc, field, 'readOnly'),
     required: isRuleOn(doc, field, 'required'),
   };
@@ -71,6 +73,11 @@ export function getMissingMessage(doc: FrappeDoc): string {
 
   const table = parentdoc.fieldMap[parentFieldname];
   return `${table.label} Row ${(doc.idx ?? 0) + 1}: ${message}`;
+}
+
+/** Whether the field's DocField depends_on hides it on `doc`, e.g. in one row of a table. */
+export function isHiddenByCondition(doc: FrappeDoc, field: Field): boolean {
+  return isConditionOn(doc, field.fieldname, 'hidden');
 }
 
 /** Edits may not change the field, whatever its own rules say. */
@@ -114,13 +121,19 @@ function isConditionOn(
   }
 
   let evalDoc = getEvalDoc(doc);
-  if (rule === 'readOnly') {
-    // A field locks on its saved value, so an unsaved edit never locks it.
+  // A field locks on its saved value, so an unsaved edit never locks it; a table's rows are not a value.
+  if (rule === 'readOnly' && doc.fieldMap[fieldname]?.fieldtype !== 'Table') {
     evalDoc = { ...evalDoc, [fieldname]: doc._getSavedFrappeValue(fieldname) };
   }
 
   const parent = doc.parentdoc && getEvalDoc(doc.parentdoc);
-  const isMet = evaluateCondition(condition, evalDoc, parent);
+  // A condition only Desk can evaluate shows the field, and neither locks nor requires it.
+  const isMet = evaluateCondition(
+    condition,
+    evalDoc,
+    parent,
+    rule === 'hidden'
+  );
   return rule === 'hidden' ? !isMet : isMet;
 }
 
@@ -140,7 +153,7 @@ function getDocFields(doc: FrappeDoc): Record<string, DocField> {
  * `doc.getEvalDoc()`, worked out again only after a value of the document
  * or its rows changes, however it changed: Vue tracks what it read.
  */
-function getEvalDoc(doc: FrappeDoc): EvalDoc {
+export function getEvalDoc(doc: FrappeDoc): EvalDoc {
   const raw = toRaw(doc);
   let evalDoc = evalDocs.get(raw);
   if (!evalDoc) {

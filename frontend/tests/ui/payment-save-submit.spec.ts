@@ -93,7 +93,7 @@ test('a failed Submit retains the draft and panel for correction and retry', asy
   await page.evaluate(async () => {
     const fixture = (window as any).paymentFlow;
     fixture.failSubmit = false;
-    await fixture.payment.set('reference_id', 'Corrected reference');
+    await fixture.payment.set('reference_no', 'Corrected reference');
   });
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   expect(await state(page)).toMatchObject({ submissions: 1, refreshes: 0 });
@@ -196,8 +196,9 @@ async function installPaymentFixture(page: Page) {
     const invoice = {
       name: 'PAYMENT-FLOW-INVOICE',
       supplier: 'Flow Supplier',
-      account: 'Flow Creditors',
-      date: '2026-09-30 10:00:00',
+      credit_to: 'Flow Creditors',
+      posting_date: '2026-09-30',
+      posting_time: '10:00:00',
       docstatus: 1,
       grand_total: 100,
       base_grand_total: 100,
@@ -216,28 +217,28 @@ async function installPaymentFixture(page: Page) {
       'POST /api/method/frappe.model.mapper.make_mapped_doc': () =>
         answer({
           message: {
-            doctype: 'Books Payment',
+            doctype: 'Books Payment Entry',
             party_type: 'Books Supplier',
             party: invoice.supplier,
-            date: '2026-09-30 10:00:00',
+            posting_date: '2026-09-30',
             payment_type: 'Pay',
-            payment_method: 'Cash',
-            account: 'Flow Creditors',
-            payment_account: 'Flow Cash',
-            amount: 100,
-            payment_references: [
+            mode_of_payment: 'Cash',
+            paid_from: 'Flow Cash',
+            paid_to: 'Flow Creditors',
+            paid_amount: 100,
+            references: [
               {
-                reference_type: 'Books Purchase Invoice',
+                reference_doctype: 'Books Purchase Invoice',
                 reference_name: invoice.name,
-                amount: 100,
+                allocated_amount: 100,
               },
             ],
           },
         }),
       'POST /api/v2/method/run_doc_method': ({ method, document }) => {
         if (method === 'preview') {
-          const number_series = document.number_series || 'PAY-';
-          return answer({ docs: [{ ...document, number_series }] });
+          const naming_series = document.naming_series || 'PAY-';
+          return answer({ docs: [{ ...document, naming_series }] });
         }
 
         fixture.submissions++;
@@ -245,7 +246,7 @@ async function installPaymentFixture(page: Page) {
         fixture.stored = { ...document, docstatus: 1, modified };
         return answer({ docs: [fixture.stored] });
       },
-      'POST /api/v2/document/Books Payment': (values) => {
+      'POST /api/v2/document/Books Payment Entry': (values) => {
         fixture.inserts++;
         if (fixture.failSave) return reject('Payment save rejected');
         fixture.stored = {
@@ -256,11 +257,11 @@ async function installPaymentFixture(page: Page) {
         };
         return answer({ data: fixture.stored });
       },
-      'PUT /api/v2/document/Books Payment/PAY-FLOW': (values) => {
+      'PUT /api/v2/document/Books Payment Entry/PAY-FLOW': (values) => {
         fixture.stored = { ...values, docstatus: 0, modified };
         return answer({ data: fixture.stored });
       },
-      'GET /api/v2/document/Books Payment/PAY-FLOW': () =>
+      'GET /api/v2/document/Books Payment Entry/PAY-FLOW': () =>
         answer({ data: fixture.stored }),
       [`GET /api/v2/document/Books Purchase Invoice/${invoice.name}`]: () => {
         fixture.refreshes++;
@@ -297,7 +298,7 @@ async function installPaymentFixture(page: Page) {
     // The quick edit mounts after the action returns.
     fixture.findPayment = () => {
       const root = app._container._vnode.component;
-      fixture.payment = findOpenDoc(root, 'Payment');
+      fixture.payment = findOpenDoc(root, 'PaymentEntry');
       return !!fixture.payment;
     };
     await router.push(`/edit/PurchaseInvoice/${invoice.name}`);

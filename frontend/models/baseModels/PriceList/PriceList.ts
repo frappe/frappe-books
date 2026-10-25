@@ -1,24 +1,33 @@
-import { ListViewSettings } from 'fyo/model/types';
+import type { Fyo } from 'fyo';
+import { LinkedRecords, ListViewSettings } from 'fyo/model/types';
+import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import {
   getIsDocEnabledColumn,
   getPriceListStatusColumn,
 } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
-import { PriceListItem } from './PriceListItem';
 
-/** Books Price List, served by Frappe. Its preview fills each row's unit from the item. */
+/** Books Price List, served by Frappe. Its preview fills the company currency; its prices are Item Prices. */
 export class PriceList extends FrappeDoc {
   static override doctype = 'Books Price List';
-  static override presentation = {
-    label: 'Price List',
-    nameField: { label: 'Name' },
-  };
+  static override presentation = { label: 'Price List' };
   static override previewMethod = 'preview';
-  static override rowModels = { price_list_item: PriceListItem };
+
+  static override getLinkedRecords(fyo: Fyo): LinkedRecords | undefined {
+    return getItemPrices(
+      fyo,
+      'price_list',
+      fyo.t`No item prices in this price list`
+    );
+  }
 
   static getListViewSettings(): ListViewSettings {
     return {
-      columns: ['name', getIsDocEnabledColumn(), getPriceListStatusColumn()],
+      columns: [
+        'name',
+        getIsDocEnabledColumn('enabled'),
+        getPriceListStatusColumn(),
+      ],
     };
   }
 }

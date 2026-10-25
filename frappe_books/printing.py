@@ -10,6 +10,7 @@ import frappe
 from babel import Locale
 from babel.numbers import parse_pattern
 from frappe import _
+from frappe.contacts.doctype.address.address import render_address
 from frappe.custom.doctype.property_setter.property_setter import delete_property_setter, make_property_setter
 from frappe.model import no_value_fields, table_fields
 from frappe.model.meta import get_field_precision
@@ -17,24 +18,32 @@ from frappe.utils import flt, formatdate, money_in_words
 from frappe.www.printview import get_font, get_print_style, get_rendered_template
 from jinja2 import TemplateError
 
+from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting import settlement
-from frappe_books.accounting.invoice import InvoiceController, PostingInvoiceController
+from frappe_books.accounting.invoice import (
+	InvoiceController,
+	PostingInvoiceController,
+	gross_amount,
+	item_discount,
+)
 from frappe_books.accounting.money import as_decimal, company_currency, sum_decimal
 from frappe_books.accounting.payment import PaymentController, tax_share
+from frappe_books.company import company_value
 from frappe_books.inventory.transaction import StockEntryController, StockTransferController
 
-TAX_ID_FIELDS = ("gstin", "tax_id")
+# The tax IDs print formats show, by the doctype that holds each.
+TAX_ID_FIELDS = {"gstin": "Books Accounting Settings", "tax_id": "Books Company"}
 
 
 def get_print_settings() -> dict[str, Any]:
 	"""Books Print Settings with the company address and tax IDs, and Frappe's print font, for print formats."""
 	settings = frappe.get_cached_doc("Books Print Settings")
-	accounting = frappe.get_cached_doc("Books Accounting Settings")
-	address = settings.address and frappe.db.get_value("Books Address", settings.address, "address_display")
+	address = render_address(settings.address, check_permissions=False)
 	return {
 		**settings.as_dict(no_default_fields=True),
 		"address": address,
-		**{fieldname: accounting.get(fieldname) for fieldname in TAX_ID_FIELDS},
+		"gstin": frappe.db.get_single_value("Books Accounting Settings", "gstin"),
+		"tax_id": company_value("tax_id"),
 		# The font-family Frappe prints in, for templates that set their own
 		"font": get_font(frappe.get_cached_doc("Print Settings")),
 	}
@@ -56,7 +65,7 @@ def books_format(value, fieldtype: str, currency: str | None = None) -> str:
 
 def format_amount(value, currency: str, settings) -> str:
 	"""The currency symbol, then the number to the display precision."""
-	number = format_number(value, settings.display_precision, settings)
+	number = format_number(value, settings.currency_precision, settings)
 	symbol = frappe.db.get_value("Currency", currency, "symbol", cache=True)
 	return f"{symbol} {number}" if symbol else number
 
@@ -85,7 +94,7 @@ def get_print_totals(doc) -> dict[str, Any]:
 	if isinstance(doc, StockTransferController):
 		return _amount_totals(doc.grand_total, company_currency())
 	if isinstance(doc, StockEntryController):
-		return _amount_totals(doc.amount, company_currency())
+		return _amount_totals(doc.total_amount, company_currency())
 	return {}
 
 
@@ -94,9 +103,11 @@ def _amount_totals(amount, currency) -> dict[str, Any]:
 
 
 def _invoice_totals(invoice) -> dict[str, Any]:
-	tax = sum_decimal(row.amount for row in invoice.taxes)
+	"""Also the rows' total before their discounts, and the discounts, which the rows' amounts are net of."""
 	totals = _amount_totals(invoice.grand_total, invoice.currency)
-	totals["sub_total"] = as_decimal(invoice.grand_total) - tax
+	totals["sub_total"] = as_decimal(invoice.grand_total) - as_decimal(invoice.total_taxes_and_charges)
+	totals["gross_total"] = sum_decimal(gross_amount(invoice, row) for row in invoice.items)
+	totals["discount"] = item_discount(invoice)
 	if isinstance(invoice, PostingInvoiceController):
 		totals["payment_details"] = _payment_details(invoice)
 	return totals
@@ -108,19 +119,19 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 	The balances count back from the invoice's outstanding amount, so the last one always matches it.
 	"""
 	allocations = frappe.get_list(
-		"Books Payment For",
-		filters={"reference_type": invoice.doctype, "reference_name": invoice.name, "docstatus": 1},
-		fields=["parent", "amount"],
-		parent_doctype="Books Payment",
+		"Books Payment Entry Reference",
+		filters={"reference_doctype": invoice.doctype, "reference_name": invoice.name, "docstatus": 1},
+		fields=["parent", "allocated_amount"],
+		parent_doctype="Books Payment Entry",
 	)
 	allocated = defaultdict(as_decimal)
 	for row in allocations:
-		allocated[row.parent] += as_decimal(row.amount)
+		allocated[row.parent] += as_decimal(row.allocated_amount)
 	payments = frappe.get_list(
-		"Books Payment",
+		"Books Payment Entry",
 		filters={"name": ["in", list(allocated)]},
-		fields=["name", "payment_method", "amount_paid"],
-		order_by="date asc, name asc",
+		fields=["name", "mode_of_payment", "paid_amount"],
+		order_by="posting_date asc, name asc",
 	)
 	balance = settlement.due(invoice) + sum_decimal(allocated[payment.name] for payment in payments)
 	details = []
@@ -128,9 +139,9 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 		balance -= allocated[payment.name]
 		details.append(
 			{
-				"amount": allocated[payment.name],
-				"amount_paid": payment.amount_paid,
-				"payment_method": payment.payment_method,
+				"allocated_amount": allocated[payment.name],
+				"paid_amount": payment.paid_amount,
+				"mode_of_payment": payment.mode_of_payment,
 				"outstanding_amount": balance,
 			}
 		)
@@ -140,9 +151,11 @@ def _payment_details(invoice) -> list[dict[str, Any]]:
 def _payment_totals(payment) -> dict[str, Any]:
 	taxes = _payment_taxes(payment)
 	currency = company_currency()
-	totals = _amount_totals(payment.amount, currency)
-	totals["sub_total"] = as_decimal(payment.amount) - sum_decimal(tax["amount"] for tax in taxes)
-	totals["amount_paid_in_words"] = amount_in_words(payment.amount_paid, currency)
+	settled = payment.party_amount
+	totals = _amount_totals(settled, currency)
+	totals["settled_amount"] = settled
+	totals["sub_total"] = settled - sum_decimal(tax["amount"] for tax in taxes)
+	totals["paid_amount_in_words"] = amount_in_words(payment.paid_amount, currency)
 	totals["taxes"] = taxes
 	return totals
 
@@ -150,15 +163,15 @@ def _payment_totals(payment) -> dict[str, Any]:
 def _payment_taxes(payment) -> list[dict[str, Any]]:
 	"""Each tax of the paid invoices: the amount the payment realised, else the share it settles."""
 	realised = defaultdict(as_decimal)
-	for row in payment.taxes:
+	for row in payment.realised_taxes:
 		realised[row.from_account] += as_decimal(row.amount)
 	shares = defaultdict(as_decimal)
-	for row in payment.payment_references:
-		invoice = frappe.get_doc(row.reference_type, row.reference_name)
+	for row in payment.references:
+		invoice = frappe.get_doc(row.reference_doctype, row.reference_name)
 		if not as_decimal(invoice.base_grand_total):
 			continue
 		for tax in invoice.taxes:
-			shares[tax.account] += tax_share(invoice, tax, as_decimal(row.amount))
+			shares[tax.account_head] += tax_share(invoice, tax, as_decimal(row.allocated_amount))
 	return [{"account": account, "amount": realised.get(account, share)} for account, share in shares.items()]
 
 
@@ -194,6 +207,7 @@ def validate_print_format(print_format: str | None, doctype: str) -> None:
 @frappe.whitelist(methods=["POST"])
 def preview_print_format(doctype: str, name: str, html: str, css: str | None = None) -> dict[str, str]:
 	"""Render unsaved print format HTML for a document, as Frappe's print preview does."""
+	forbid_in_accessory_mode()
 	frappe.has_permission("Print Format", "write", throw=True)
 	print_format = frappe.get_doc(
 		{
@@ -220,13 +234,16 @@ def template_error_message(error: TemplateError) -> str:
 @frappe.whitelist()
 def get_print_hints(doctype: str) -> dict[str, Any]:
 	"""The values a print format for `doctype` can show, with their labels."""
+	forbid_in_accessory_mode()
 	frappe.has_permission(doctype, "read", throw=True)
-	accounting = frappe.get_meta("Books Accounting Settings")
 	return {
 		"doc": {"name": _("Name"), **field_hints(frappe.get_meta(doctype))},
 		"print": {
 			**field_hints(frappe.get_meta("Books Print Settings")),
-			**{fieldname: _(accounting.get_label(fieldname)) for fieldname in TAX_ID_FIELDS},
+			**{
+				fieldname: _(frappe.get_meta(doctype).get_label(fieldname))
+				for fieldname, doctype in TAX_ID_FIELDS.items()
+			},
 		},
 	}
 

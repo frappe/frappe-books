@@ -16,6 +16,7 @@ from frappe_books.reports.stock import VALUE_COLUMNS
 from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
+	make_address,
 	make_customer,
 	make_item,
 	root_group,
@@ -56,7 +57,7 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		_post("2044-12-31", self.sales.name, 0, 100, voucher)
 		_post("2045-01-01", self.cash.name, 20, 0, voucher)
 
-		rows = self._ledger(reference_name=voucher, group_by="account", ascending=True)
+		rows = self._ledger(voucher_no=voucher, group_by="account", ascending=True)
 
 		totals = [row["balance"] for row in rows if row.get("type") == "total"]
 		self.assertEqual(totals, [Decimal(120), Decimal(-100)])
@@ -68,13 +69,13 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 
 	def test_general_ledger_filters_and_shows_documents_by_doctype(self):
 		_post("2045-01-05", self.cash.name, 50, 0)
-		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment")
+		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment Entry")
 
-		rows = self._ledger(account=self.cash.name, reference_type="Books Payment")
+		rows = self._ledger(account=self.cash.name, voucher_type="Books Payment Entry")
 
 		entries = [row for row in rows if row.get("type") == "entry"]
 		self.assertEqual(
-			[(row["reference_type"], row["debit"]) for row in entries], [("Books Payment", Decimal(30))]
+			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment Entry", Decimal(30))]
 		)
 
 	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):
@@ -210,7 +211,7 @@ def _account(label, root_type, parent=None, is_group=0):
 			"account_name": unique_name(label),
 			"root_type": root_type,
 			"is_group": is_group,
-			"parent_books_account": parent.name if parent else None,
+			"parent_account": parent.name if parent else None,
 		}
 	).insert()
 
@@ -218,7 +219,7 @@ def _account(label, root_type, parent=None, is_group=0):
 def _post(date, account, debit, credit, voucher=None, voucher_type=VOUCHER):
 	frappe.get_doc(
 		{
-			"doctype": "Books Ledger Entry",
+			"doctype": "Books GL Entry",
 			"posting_date": date,
 			"account": account,
 			"debit": debit,
@@ -270,18 +271,18 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		self.received = make_account("Stock Report Received", root_type="Liability")
 		self.item = self._item()
 		now = now_datetime()
-		move(self.item, "MaterialReceipt", 4, 10, add_to_date(now, days=-3))
-		move(self.item, "MaterialReceipt", 2, 20, add_to_date(now, days=-2))
-		move(self.item, "MaterialIssue", 5, 99, now)
+		move(self.item, "Material Receipt", 4, 10, add_to_date(now, days=-3))
+		move(self.item, "Material Receipt", 2, 20, add_to_date(now, days=-2))
+		move(self.item, "Material Issue", 5, 99, now)
 
 	def test_stock_ledger_reads_the_stored_fifo_balances(self):
-		rows = _run("Books Stock Ledger", item=self.item, ascending=True)
+		rows = _run("Books Stock Ledger", item_code=self.item, ascending=True)
 
 		columns = (
-			"quantity",
-			"balance_quantity",
-			"value_change",
-			"balance_value",
+			"actual_qty",
+			"qty_after_transaction",
+			"stock_value_difference",
+			"stock_value",
 			"incoming_rate",
 			"valuation_rate",
 		)
@@ -296,47 +297,52 @@ class IntegrationTestStockReports(IntegrationTestCase):
 
 	def test_stock_users_see_quantities_but_not_values(self):
 		with self.set_user(ensure_user("books-stock-reports@example.com", "Books User")):
-			for report in ("Books Stock Ledger", "Books Stock Balance"):
+			for report, quantity in (
+				("Books Stock Ledger", "qty_after_transaction"),
+				("Books Stock Balance", "balance_quantity"),
+			):
 				with self.subTest(report=report):
-					result = run(report, {"item": self.item})
+					result = run(report, {"item_code": self.item})
 					fieldnames = {column["fieldname"] for column in result["columns"]}
-					self.assertIn("balance_quantity", fieldnames)
+					self.assertIn(quantity, fieldnames)
 					self.assertFalse(fieldnames & VALUE_COLUMNS)
 					self.assertFalse(set().union(*result["result"]) & VALUE_COLUMNS)
 
 	def test_stock_ledger_dates_are_iso_datetimes(self):
-		rows = _run("Books Stock Ledger", item=self.item)
+		rows = _run("Books Stock Ledger", item_code=self.item)
 
 		for row in rows:
 			self.assertRegex(row["date"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?[+-]\d{2}:\d{2}$")
 
 	def test_stock_ledger_filters_and_shows_documents_by_doctype(self):
-		rows = _run("Books Stock Ledger", item=self.item, reference_type="Books Stock Entry")
+		rows = _run("Books Stock Ledger", item_code=self.item, voucher_type="Books Stock Entry")
 
-		self.assertEqual([row["reference_type"] for row in rows], ["Books Stock Entry"] * 3)
-		self.assertEqual(_run("Books Stock Ledger", item=self.item, reference_type="Books Delivery Note"), [])
+		self.assertEqual([row["voucher_type"] for row in rows], ["Books Stock Entry"] * 3)
+		self.assertEqual(
+			_run("Books Stock Ledger", item_code=self.item, voucher_type="Books Delivery Note"), []
+		)
 
 	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
 		other = self._item()
 		for item, day in ((self.item, 1), (other, 2), (self.item, 3)):
-			move(item, "MaterialReceipt", 1, 10, f"2061-01-0{day} 10:00:00")
+			move(item, "Material Receipt", 1, 10, f"2061-01-0{day} 10:00:00")
 
 		rows = _run(
 			"Books Stock Ledger",
 			from_date="2061-01-01",
 			to_date="2061-01-03",
-			group_by="item",
+			group_by="item_code",
 			ascending=True,
 		)
 
 		self.assertEqual(
-			[(row.get("index"), row.get("item")) for row in rows],
+			[(row.get("index"), row.get("item_code")) for row in rows],
 			[(1, self.item), (2, self.item), (None, None), (3, other)],
 		)
 
 	def test_stock_balance_splits_opening_and_period_movement(self):
 		today = nowdate()
-		rows = _run("Books Stock Balance", item=self.item, from_date=today, to_date=today)
+		rows = _run("Books Stock Balance", item_code=self.item, from_date=today, to_date=today)
 
 		self.assertEqual(len(rows), 1)
 		columns = (
@@ -352,12 +358,12 @@ class IntegrationTestStockReports(IntegrationTestCase):
 	def test_stock_balance_ignores_serial_numbers_while_they_are_off(self):
 		frappe.db.set_single_value("Books Inventory Settings", "enable_serial_number", 0)
 
-		rows = _run("Books Stock Balance", item=self.item, show_serial_numbers=1)
+		rows = _run("Books Stock Balance", item_code=self.item, show_serial_numbers=1)
 
 		self.assertEqual([row["balance_quantity"] for row in rows], [1])
 
 	def _item(self):
-		return make_item(self.income.name, self.received.name, track_item=1).name
+		return make_item(self.income.name, self.received.name, is_stock_item=1).name
 
 
 class IntegrationTestGSTR(IntegrationTestCase):
@@ -597,18 +603,11 @@ class IntegrationTestGSTR(IntegrationTestCase):
 		return get_gstr_json("Books GSTR-1", filters)
 
 	def _party(self, state, **values):
-		address = frappe.get_doc(
-			{
-				"doctype": "Books Address",
-				"name": unique_name("Address"),
-				"address_line1": "1 Road",
-				"city": "City",
-				"state": state,
-				"country": "India",
-			}
-		).insert()
-		gst_type = "Registered Regular" if values.get("gstin") else "Unregistered"
-		return make_customer(self.receivable.name, address=address.name, gst_type=gst_type, **values)
+		address = make_address(state=state)
+		gst_category = "Registered Regular" if values.get("gstin") else "Unregistered"
+		return make_customer(
+			self.receivable.name, customer_primary_address=address.name, gst_category=gst_category, **values
+		)
 
 	def _invoice(self, *rows, date=None):
 		return (
@@ -616,15 +615,15 @@ class IntegrationTestGSTR(IntegrationTestCase):
 				{
 					"doctype": "Books Sales Invoice",
 					"customer": self.party.name,
-					"account": self.receivable.name,
-					"date": date or now_datetime(),
+					"debit_to": self.receivable.name,
+					"posting_date": date or nowdate(),
 					"items": [
 						{
-							"item": self.item,
-							"account": self.income.name,
-							"tax": tax,
-							"rate": rate,
-							"quantity": quantity,
+							"item_code": self.item,
+							"income_account": self.income.name,
+							"item_tax_template": tax,
+							"price_list_rate": rate,
+							"qty": quantity,
 						}
 						for tax, rate, quantity in rows
 					],
@@ -637,7 +636,7 @@ class IntegrationTestGSTR(IntegrationTestCase):
 	def _credit_note(self, invoice, date):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_invoice_returns", 1)
 		note = map_return(invoice.doctype, invoice.name)
-		note.date = date
+		note.posting_date = date
 		return note.insert().submit()
 
 	def _rows(self, invoice):
@@ -651,7 +650,7 @@ def _tax_account(name, gst_head):
 		{
 			"doctype": "Books Account",
 			"account_name": name,
-			"parent_books_account": root_group("Liability"),
+			"parent_account": root_group("Liability"),
 			"account_type": "Tax",
 			"gst_head": gst_head,
 		}
@@ -662,9 +661,9 @@ def _tax(*details):
 	return (
 		frappe.get_doc(
 			{
-				"doctype": "Books Tax",
-				"name": unique_name("GST"),
-				"details": [{"account": account, "rate": rate} for account, rate in details],
+				"doctype": "Books Item Tax Template",
+				"title": unique_name("GST"),
+				"taxes": [{"tax_type": account, "tax_rate": rate} for account, rate in details],
 			}
 		)
 		.insert()
@@ -750,9 +749,7 @@ class IntegrationTestReportPeriods(IntegrationTestCase):
 
 
 def _set_fiscal_year(start, end):
-	frappe.db.set_single_value(
-		"Books Accounting Settings", {"fiscal_year_start": start, "fiscal_year_end": end}
-	)
+	frappe.db.set_single_value("Books Accounting Settings", {"year_start_date": start, "year_end_date": end})
 
 
 def _dates(*dates):

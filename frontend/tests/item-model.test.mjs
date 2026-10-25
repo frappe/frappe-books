@@ -21,7 +21,8 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels({ Item: frappeModels.Item });
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 
 test('the Item form shows the fields, labels, placeholders and sections it showed', () => {
   const layout = getSchema('Item')
@@ -31,26 +32,29 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     );
   assert.deepEqual(layout, [
     'image | Image |  | Default',
-    'name | Item Name | Item Name | Default',
-    'item_code | Item Code | Item Code | Default',
+    'item_code | Item Code |  | Default',
+    'item_name | Item Name |  | Default',
     'item_group | Item Group | Item Group | Default',
     'item_type | Type | Type | Default',
-    'unit | Unit Type | Unit Type | Details',
-    'rate | Rate |  | Details',
+    'stock_uom | Default Unit of Measure | Default Unit of Measure | Details',
+    'standard_rate | Rate |  | Details',
     'description | Description | Item Description | Details',
-    'income_account | Sales Acc. | Income | Accounts',
-    'expense_account | Purchase Acc. | Expense | Accounts',
-    'tax | Tax | Tax | Accounts',
-    'hsn_code | HSN/SAC | HSN/SAC Code | Inventory',
-    'barcode | Barcode | Barcode | Inventory',
-    'track_item | Track Inventory |  | Inventory',
-    'has_batch | Has Batch |  | Inventory',
-    'batch_series | Batch Series |  | Inventory',
-    'has_serial_number | Has Serial Number |  | Inventory',
-    'serial_number_series | Serial Number Series |  | Inventory',
-    'uom_conversions | UOM Conversions |  | Inventory',
+    'item_defaults | Item Defaults |  | Accounting',
+    'income_account | Income Account |  | Accounting',
+    'expense_account | Expense Account |  | Accounting',
+    'taxes | Taxes |  | Taxes',
+    'gst_hsn_code | HSN/SAC | HSN/SAC Code | Inventory',
+    'is_stock_item | Maintain Stock |  | Inventory',
+    'default_warehouse | Default Warehouse |  | Inventory',
+    'has_batch_no | Has Batch No |  | Inventory',
+    'create_new_batch | Automatically Create New Batch |  | Inventory',
+    'batch_number_series | Batch Number Series |  | Inventory',
+    'has_serial_no | Has Serial No |  | Inventory',
+    'serial_no_series | Serial Number Series |  | Inventory',
+    'uoms | UOM Conversions |  | Inventory',
+    'barcodes | Barcodes |  | Barcodes',
   ]);
-  assert.deepEqual(getSchema('UomConversionItem').tableFields, [
+  assert.deepEqual(getSchema('UOMConversionDetail').tableFields, [
     'uom',
     'conversion_factor',
   ]);
@@ -59,76 +63,114 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
 test('item fields hide by the item and by the features turned on', async () => {
   fyo.singles.AccountingSettings = { enable_inventory: true };
   fyo.singles.InventorySettings = { enable_serial_number: true };
-  const item = newFrappeDoc('Item', { name: 'Tea' });
+  const item = newFrappeDoc('Item', { item_code: 'Tea' });
 
-  assert.equal(hidden(item, 'track_item'), false);
-  assert.equal(hidden(item, 'has_serial_number'), true);
-  assert.equal(hidden(item, 'barcode'), true);
-  assert.equal(hidden(item, 'has_batch'), true);
+  assert.equal(hidden(item, 'is_stock_item'), false);
+  assert.equal(hidden(item, 'has_serial_no'), true);
+  assert.equal(hidden(item, 'barcodes'), true);
+  assert.equal(hidden(item, 'has_batch_no'), true);
   assert.equal(hidden(item, 'item_group'), true);
-  await item.set('track_item', true);
-  assert.equal(hidden(item, 'has_serial_number'), false);
-  assert.equal(hidden(item, 'serial_number_series'), true);
-  await item.set('has_serial_number', true);
-  assert.equal(hidden(item, 'serial_number_series'), false);
+  await item.set('is_stock_item', true);
+  assert.equal(hidden(item, 'has_serial_no'), false);
+  assert.equal(hidden(item, 'serial_no_series'), true);
+  await item.set('has_serial_no', true);
+  assert.equal(hidden(item, 'serial_no_series'), false);
 
   await item.set('item_type', 'Service');
-  assert.equal(hidden(item, 'track_item'), true);
+  assert.equal(hidden(item, 'is_stock_item'), true);
   fyo.singles.AccountingSettings = {};
   await item.set('item_type', 'Product');
-  assert.equal(hidden(item, 'track_item'), true);
+  assert.equal(hidden(item, 'is_stock_item'), true);
 });
 
 test('Has Batch shows only for items that track inventory', async () => {
   fyo.singles.AccountingSettings = { enable_inventory: true };
   fyo.singles.InventorySettings = { enable_batches: true };
-  const item = newFrappeDoc('Item', { name: 'Chai' });
+  const item = newFrappeDoc('Item', { item_code: 'Chai' });
 
-  assert.equal(hidden(item, 'has_batch'), true);
-  await item.set('track_item', true);
-  assert.equal(hidden(item, 'has_batch'), false);
+  assert.equal(hidden(item, 'has_batch_no'), true);
+  await item.set('is_stock_item', true);
+  assert.equal(hidden(item, 'has_batch_no'), false);
 });
 
 test('a saved item keeps its set-once fields and hides tracking it did not use', async () => {
   fyo.singles.AccountingSettings = { enable_inventory: true };
-  const item = newFrappeDoc('Item', { name: 'Kettle', track_item: false });
+  const item = newFrappeDoc('Item', {
+    name: 'Kettle',
+    item_code: 'Kettle',
+    is_stock_item: false,
+  });
   await loadSaved(item);
-  for (const fieldname of ['unit', 'item_type', 'track_item', 'has_batch']) {
+  for (const fieldname of [
+    'stock_uom',
+    'item_type',
+    'is_stock_item',
+    'has_batch_no',
+  ]) {
     assert.equal(item.getFieldState(item.fieldMap[fieldname]).readOnly, true);
   }
-  assert.equal(item.getFieldState(item.fieldMap.rate).readOnly, false);
-  assert.equal(hidden(item, 'track_item'), true);
+  assert.equal(item.getFieldState(item.fieldMap.standard_rate).readOnly, false);
+  assert.equal(hidden(item, 'is_stock_item'), true);
 });
 
 test('the item form shows bad values at their fields, as the server refuses them', async () => {
   fyo.singles.AccountingSettings = { country: 'India' };
-  const item = newFrappeDoc('Item', { name: 'Mug' });
-  await assert.rejects(item.set('barcode', '123'), errors.ValidationError);
-  await assert.rejects(item.set('hsn_code', '12A'), errors.ValidationError);
-  await assert.rejects(item.set('rate', fyo.pesa(-1)), errors.ValidationError);
+  const item = newFrappeDoc('Item', { item_code: 'Mug' });
+  await assert.rejects(item.set('gst_hsn_code', '12A'), errors.ValidationError);
+  await assert.rejects(
+    item.set('standard_rate', fyo.pesa(-1)),
+    errors.ValidationError
+  );
 });
 
 test('HSN/SAC shows and is checked only for an Indian company', async () => {
   fyo.singles.AccountingSettings = { country: 'United States' };
-  const item = newFrappeDoc('Item', { name: 'Kettle' });
+  const item = newFrappeDoc('Item', { item_code: 'Kettle' });
 
-  assert.equal(hidden(item, 'hsn_code'), true);
-  await item.set('hsn_code', '12A');
+  assert.equal(hidden(item, 'gst_hsn_code'), true);
+  await item.set('gst_hsn_code', '12A');
   fyo.singles.AccountingSettings = { country: 'India' };
-  assert.equal(hidden(item, 'hsn_code'), false);
-  await assert.rejects(item.set('hsn_code', '12B'), errors.ValidationError);
+  assert.equal(hidden(item, 'gst_hsn_code'), false);
+  await assert.rejects(item.set('gst_hsn_code', '12B'), errors.ValidationError);
 });
 
 test('item links filter and create items by Frappe fieldnames', async () => {
   const SalesInvoiceItem = frappeModels.SalesInvoice.rowModels.items;
-  const StockEntryItem = frappeModels.StockEntry.rowModels.items;
-  assert.equal(SalesInvoiceItem.filters.item, undefined);
-  assert.equal(SalesInvoiceItem.createFilters.item, undefined);
-  assert.deepEqual(StockEntryItem.filters.item(), [['track_item', '=', 1]]);
-  assert.deepEqual(StockEntryItem.createFilters.item(), [
-    ['track_item', '=', 1],
+  const StockEntryDetail = frappeModels.StockEntry.rowModels.items;
+  assert.equal(SalesInvoiceItem.filters.item_code, undefined);
+  assert.equal(SalesInvoiceItem.createFilters.item_code, undefined);
+  assert.deepEqual(StockEntryDetail.filters.item_code(), [
+    ['is_stock_item', '=', 1],
+  ]);
+  assert.deepEqual(StockEntryDetail.createFilters.item_code(), [
+    ['is_stock_item', '=', 1],
     ['item_type', '=', 'Product'],
   ]);
+});
+
+test('item default accounts filter by the item tracking, as the server checks them', async () => {
+  fyo.singles.AccountingSettings = {};
+  const item = newFrappeDoc('Item', { item_code: 'Kettle' });
+  await item.append('item_defaults', {});
+  const [row] = item.item_defaults;
+  const { filters } = frappeModels.Item.rowModels.item_defaults;
+
+  assert.deepEqual(filters.income_account(row), [
+    ['is_group', '=', 0],
+    ['root_type', '=', 'Income'],
+  ]);
+  assert.deepEqual(filters.expense_account(row)[1], [
+    'root_type',
+    '=',
+    'Expense',
+  ]);
+  await item.set('is_stock_item', true);
+  assert.deepEqual(filters.expense_account(row)[1], [
+    'root_type',
+    '=',
+    'Liability',
+  ]);
+  assert.equal(hidden(row, 'default_warehouse'), true);
 });
 
 test('a saved item makes both sales and purchase invoices', () => {
@@ -138,4 +180,60 @@ test('a saved item makes both sales and purchase invoices', () => {
       .map(({ label }) => label);
   assert.deepEqual(labels(false), ['Sales Invoice', 'Purchase Invoice']);
   assert.deepEqual(labels(true), []);
+});
+
+test('item defaults show as fields of the company row, made by a value and gone with the last', async () => {
+  fyo.singles.AccountingSettings = { enable_inventory: true };
+  const item = newFrappeDoc('Item', { item_code: 'Kettle' });
+  assert.equal(item.income_account, null);
+
+  await item.set('income_account', 'Sales');
+  await item.set('default_warehouse', 'Stores');
+  assert.equal(item.item_defaults.length, 1);
+  assert.equal(item.item_defaults[0].income_account, 'Sales');
+  assert.equal(item.item_defaults[0].default_warehouse, 'Stores');
+
+  await item.set('income_account', null);
+  assert.equal(item.item_defaults.length, 1);
+  await item.set('default_warehouse', null);
+  assert.deepEqual(item.item_defaults, []);
+  // Files hold the table, not the fields.
+  assert.equal(item.fieldMap.income_account.clientOnly, true);
+});
+
+test("accounts the server filled are refilled after an edit, and a user's are kept", async () => {
+  const sent = [];
+  stubFrappe(({ body }) => {
+    sent.push(body.document);
+    const { item_type = 'Product' } = body.document;
+    const row = body.document.item_defaults?.[0] ?? {};
+    const income = item_type === 'Product' ? 'Sales' : 'Service';
+    return {
+      docs: [
+        {
+          ...body.document,
+          item_defaults: [
+            {
+              ...row,
+              company: 'Books Co',
+              income_account: row.income_account ?? income,
+            },
+          ],
+        },
+      ],
+    };
+  });
+  const item = newFrappeDoc('Item', { item_code: 'Tea' });
+  await item.preview();
+  assert.equal(item.income_account, 'Sales');
+
+  await item.set('item_type', 'Service');
+  await item.whenFilled();
+  assert.equal(sent.at(-1).item_defaults[0].income_account, undefined);
+  assert.equal(item.income_account, 'Service');
+
+  await item.set('income_account', 'Consulting');
+  await item.set('item_type', 'Product');
+  await item.whenFilled();
+  assert.equal(item.income_account, 'Consulting');
 });

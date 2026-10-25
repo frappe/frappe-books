@@ -22,18 +22,18 @@ const stockLedgerColumns = (
   [
     ['index', '#', 'Int', 60],
     ['date', 'Date', 'Datetime', 150],
-    ['item', 'Item', 'Link'],
-    ['location', 'Location', 'Link'],
-    ['batch', 'Batch', 'Link'],
-    ['serial_number', 'Serial Number', 'Data'],
-    ['quantity', 'Quantity', 'Float'],
-    ['balance_quantity', 'Balance Qty.', 'Float'],
+    ['item_code', 'Item', 'Link'],
+    ['warehouse', 'Warehouse', 'Link'],
+    ['batch_no', 'Batch', 'Link'],
+    ['serial_no', 'Serial Number', 'Data'],
+    ['actual_qty', 'Quantity', 'Float'],
+    ['qty_after_transaction', 'Balance Qty.', 'Float'],
     ['incoming_rate', 'Incoming rate', 'Currency'],
     ['valuation_rate', 'Valuation Rate', 'Currency'],
-    ['balance_value', 'Balance Value', 'Currency'],
-    ['value_change', 'Value Change', 'Currency'],
-    ['reference_name', 'Ref Name', 'Data'],
-    ['reference_type', 'Ref Type', 'Data'],
+    ['stock_value', 'Balance Value', 'Currency'],
+    ['stock_value_difference', 'Value Change', 'Currency'],
+    ['voucher_no', 'Ref Name', 'Data'],
+    ['voucher_type', 'Ref Type', 'Data'],
   ] as const
 ).map(([fieldname, label, fieldtype, width]) =>
   toColumnField({ fieldname, label, fieldtype, width })
@@ -52,12 +52,12 @@ function makeReport(ReportClass = StockLedger) {
     const values: Record<string, string> = {
       index: String(index + 1),
       date: 'Sep 6, 2026 07:45:32',
-      item: index === 50 ? lastItemName : itemName,
-      location: 'Retail Floor',
-      batch: '',
-      serial_number: 'DEMO-SERIAL-WIRELESS-KEYBOARD-000001',
-      quantity: '-1.00',
-      balance_quantity: '1.00',
+      item_code: index === 50 ? lastItemName : itemName,
+      warehouse: 'Retail Floor',
+      batch_no: '',
+      serial_no: 'DEMO-SERIAL-WIRELESS-KEYBOARD-000001',
+      actual_qty: '-1.00',
+      qty_after_transaction: '1.00',
       incoming_rate: '1,369.00',
     };
     return {
@@ -68,7 +68,7 @@ function makeReport(ReportClass = StockLedger) {
           column.fieldtype === 'Float' || column.fieldtype === 'Currency'
             ? ('right' as const)
             : ('left' as const),
-        color: column.fieldname === 'quantity' ? ('red' as const) : undefined,
+        color: column.fieldname === 'actual_qty' ? ('red' as const) : undefined,
       })),
     };
   });

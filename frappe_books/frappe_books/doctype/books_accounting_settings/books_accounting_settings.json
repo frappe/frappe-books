@@ -8,16 +8,10 @@
  "field_order": [
   "default_section_break_1",
   "fullname",
-  "company_name",
   "bank_name",
   "country",
-  "email",
-  "accounts_section_break_7",
-  "write_off_account",
-  "round_off_account",
-  "discount_account",
   "features_section_break_11",
-  "enable_discounting",
+  "enable_discounts_and_margin",
   "enable_inventory",
   "enable_price_list",
   "enable_invoice_returns",
@@ -25,17 +19,16 @@
   "enable_lead",
   "enable_pricing_rule",
   "enable_item_enquiry",
-  "enable_loyalty_program",
+  "enable_loyalty_point_program",
   "enable_coupon_code",
-  "enableitem_group",
+  "enable_item_group",
   "enable_point_of_sale_with_out_inventory",
   "enable_partial_payment",
   "fiscal_year_section_break_26",
-  "fiscal_year_start",
-  "fiscal_year_end",
+  "year_start_date",
+  "year_end_date",
   "setup_complete",
   "default_section_break_30",
-  "tax_id",
   "gstin"
  ],
  "fields": [
@@ -49,14 +42,6 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Full Name",
-   "reqd": 1
-  },
-  {
-   "fieldname": "company_name",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Company Name",
-   "read_only": 1,
    "reqd": 1
   },
   {
@@ -77,47 +62,16 @@
    "read_only": 1
   },
   {
-   "fieldname": "email",
-   "fieldtype": "Data",
-   "label": "Email",
-   "options": "Email",
-   "reqd": 1
-  },
-  {
-   "fieldname": "accounts_section_break_7",
-   "fieldtype": "Section Break",
-   "label": "Accounts"
-  },
-  {
-   "fieldname": "write_off_account",
-   "fieldtype": "Link",
-   "label": "Write Off Account",
-   "options": "Books Account"
-  },
-  {
-   "fieldname": "round_off_account",
-   "fieldtype": "Link",
-   "label": "Round Off Account",
-   "options": "Books Account"
-  },
-  {
-   "depends_on": "enable_discounting",
-   "fieldname": "discount_account",
-   "fieldtype": "Link",
-   "label": "Discount Account",
-   "options": "Books Account"
-  },
-  {
    "fieldname": "features_section_break_11",
    "fieldtype": "Section Break",
    "label": "Features"
   },
   {
    "default": "0",
-   "fieldname": "enable_discounting",
+   "fieldname": "enable_discounts_and_margin",
    "fieldtype": "Check",
-   "label": "Enable Discount Accounting",
-   "read_only_depends_on": "enable_discounting"
+   "label": "Enable Discounts and Margin",
+   "read_only_depends_on": "enable_discounts_and_margin"
   },
   {
    "default": "0",
@@ -154,7 +108,7 @@
   },
   {
    "default": "0",
-   "depends_on": "enable_discounting",
+   "depends_on": "enable_discounts_and_margin",
    "fieldname": "enable_pricing_rule",
    "fieldtype": "Check",
    "label": "Enable Pricing Rule"
@@ -167,10 +121,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enable_loyalty_program",
+   "fieldname": "enable_loyalty_point_program",
    "fieldtype": "Check",
-   "label": "Enable Loyalty Program",
-   "read_only_depends_on": "enable_loyalty_program"
+   "label": "Enable Loyalty Point Program",
+   "read_only_depends_on": "enable_loyalty_point_program"
   },
   {
    "default": "0",
@@ -181,10 +135,10 @@
   },
   {
    "default": "0",
-   "fieldname": "enableitem_group",
+   "fieldname": "enable_item_group",
    "fieldtype": "Check",
    "label": "Enable Item Group",
-   "read_only_depends_on": "enableitem_group"
+   "read_only_depends_on": "enable_item_group"
   },
   {
    "default": "0",
@@ -205,15 +159,15 @@
    "label": "Fiscal Year"
   },
   {
-   "fieldname": "fiscal_year_start",
+   "fieldname": "year_start_date",
    "fieldtype": "Date",
-   "label": "Fiscal Year Start Date",
+   "label": "Year Start Date",
    "reqd": 1
   },
   {
-   "fieldname": "fiscal_year_end",
+   "fieldname": "year_end_date",
    "fieldtype": "Date",
-   "label": "Fiscal Year End Date",
+   "label": "Year End Date",
    "reqd": 1
   },
   {
@@ -229,13 +183,6 @@
    "label": "Default"
   },
   {
-   "depends_on": "eval:doc.country == \"Switzerland\"",
-   "fieldname": "tax_id",
-   "fieldtype": "Data",
-   "label": "Tax ID",
-   "placeholder": "CHE-123.456.789"
-  },
-  {
    "depends_on": "eval:doc.country == \"India\"",
    "fieldname": "gstin",
    "fieldtype": "Data",
@@ -247,7 +194,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

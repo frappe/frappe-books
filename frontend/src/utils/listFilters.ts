@@ -13,6 +13,20 @@ import {
 } from './filterQuery';
 
 /** The editable filters of one list, shared by its filter UIs. */
+/** Filters for rows whose `fieldnames` contain `text`, which a list ORs together. */
+export function getSearchFilters(fieldnames: string[], text: string): Filter[] {
+  const query = text.trim();
+  if (!query) {
+    return [];
+  }
+
+  return fieldnames.map((fieldname): Filter => [
+    fieldname,
+    'like',
+    `%${query}%`,
+  ]);
+}
+
 export class ListFilters {
   filterSet = new FilterSet();
   /** The explicit rows of the last successful `apply`. */

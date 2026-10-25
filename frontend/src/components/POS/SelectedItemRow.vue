@@ -6,15 +6,18 @@
       :aria-expanded="isExpanded"
       @click="selectRow"
     >
-      <span class="truncate text-base-medium text-ink-gray-8" :title="row.item">
-        {{ row.item }}
+      <span
+        class="truncate text-base-medium text-ink-gray-8"
+        :title="row.item_name || row.item_code"
+      >
+        {{ row.item_name || row.item_code }}
       </span>
       <span
         v-if="row.is_free_item"
         class="truncate text-xs text-ink-green-5"
-        :title="String(row.pricing_rule ?? '')"
+        :title="pricingRule"
       >
-        {{ row.pricing_rule }}
+        {{ pricingRule }}
       </span>
       <span v-else class="truncate text-xs tabular-nums text-ink-gray-5">
         {{ rateLabel }}
@@ -52,9 +55,9 @@
   <FrappeListCell class="justify-end">
     <span
       class="truncate text-base tabular-nums text-ink-gray-8"
-      :title="fyo.format(row.amount, 'Currency')"
+      :title="amountLabel"
     >
-      {{ fyo.format(row.amount, 'Currency') }}
+      {{ amountLabel }}
     </span>
   </FrappeListCell>
   <FrappeListCell>
@@ -76,16 +79,16 @@
       <Float
         :df="{
           fieldtype: 'Float',
-          fieldname: 'transfer_quantity',
-          label: fieldLabel('transfer_quantity'),
+          fieldname: 'qty',
+          label: fieldLabel('qty'),
         }"
         size="medium"
         :border="true"
         :show-label="true"
-        :value="row.transfer_quantity"
-        :read-only="isFieldReadOnly('transfer_quantity')"
-        @click="openKeypad('transfer_quantity')"
-        @change="(value: number) => editInline('transfer_quantity', value)"
+        :value="row.qty"
+        :read-only="isFieldReadOnly('qty')"
+        @click="openKeypad('qty')"
+        @change="(value: number) => editInline('qty', value)"
       />
     </div>
 
@@ -94,17 +97,17 @@
       class="min-w-0"
     >
       <AutoComplete
-        :key="row.item"
+        :key="row.item_code"
         :df="{
           fieldtype: 'AutoComplete',
-          fieldname: 'transfer_unit',
+          fieldname: 'uom',
           label: t`Transfer Unit`,
           options: transferUnitOptions,
         }"
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.transfer_unit ?? ''"
+        :value="row.uom ?? ''"
         :read-only="isReadOnly"
         @change="setUnit"
       />
@@ -113,18 +116,18 @@
     <div class="min-w-0">
       <Float
         :df="{
-          fieldname: 'quantity',
+          fieldname: 'stock_qty',
           fieldtype: 'Float',
-          label: t`Quantity`,
+          label: fieldLabel('stock_qty'),
         }"
         size="medium"
         :min="0"
         :border="true"
         :show-label="true"
-        :value="row.quantity"
-        :read-only="isFieldReadOnly('quantity')"
-        @click="openKeypad('quantity')"
-        @change="(value: number) => editInline('quantity', value)"
+        :value="row.stock_qty"
+        :read-only="isFieldReadOnly('stock_qty')"
+        @click="openKeypad('stock_qty')"
+        @change="(value: number) => editInline('stock_qty', value)"
       />
     </div>
 
@@ -132,16 +135,16 @@
       <Currency
         :df="{
           fieldtype: 'Currency',
-          fieldname: 'transfer_rate',
+          fieldname: 'price_list_rate',
           label: t`Rate`,
         }"
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.transfer_rate"
-        :read-only="isFieldReadOnly('transfer_rate')"
-        @click="openKeypad('transfer_rate')"
-        @change="(value: Money) => editInline('transfer_rate', value)"
+        :value="row.price_list_rate"
+        :read-only="isFieldReadOnly('price_list_rate')"
+        @click="openKeypad('price_list_rate')"
+        @change="(value: Money) => editInline('price_list_rate', value)"
       />
     </div>
 
@@ -156,10 +159,10 @@
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.item_discount_amount"
-        :read-only="isFieldReadOnly('item_discount_amount')"
-        @click="openKeypad('item_discount_amount')"
-        @change="(value: Money) => editInline('item_discount_amount', value)"
+        :value="row.discount_amount"
+        :read-only="isFieldReadOnly('discount_amount')"
+        @click="openKeypad('discount_amount')"
+        @change="(value: Money) => editInline('discount_amount', value)"
       />
     </div>
 
@@ -173,28 +176,28 @@
         size="medium"
         :show-label="true"
         :border="true"
-        :value="row.item_discount_percent"
-        :read-only="isFieldReadOnly('item_discount_percent')"
-        @click="openKeypad('item_discount_percent')"
-        @change="(value: number) => editInline('item_discount_percent', value)"
+        :value="row.discount_percentage"
+        :read-only="isFieldReadOnly('discount_percentage')"
+        @click="openKeypad('discount_percentage')"
+        @change="(value: number) => editInline('discount_percentage', value)"
       />
     </div>
 
     <div v-if="hasBatch" class="min-w-0">
       <Link
         :df="{
-          fieldname: 'batch',
+          fieldname: 'batch_no',
           fieldtype: 'Link',
           target: 'Batch',
           label: t`Batch`,
-          filters: [['item', '=', row.item]],
+          filters: [['item', '=', row.item_code]],
         }"
         size="medium"
-        :value="row.batch"
+        :value="row.batch_no"
         :border="true"
         :show-label="true"
         :read-only="isSaleSubmitted"
-        @change="(value: string) => row.set('batch', value)"
+        @change="(value: string) => row.set('batch_no', value)"
       />
     </div>
 
@@ -222,7 +225,7 @@
           fieldtype: 'Text',
           fieldname: 'serialNumber',
         }"
-        :value="String(row.serial_number ?? '')"
+        :value="String(row.serial_no ?? '')"
         :show-label="true"
         :border="true"
         :required="hasSerialNumber"
@@ -244,6 +247,7 @@
 import { Button as FrappeButton } from 'frappe-ui';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
+import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { Money } from 'pesa';
 import AutoComplete from 'src/components/Controls/AutoComplete.vue';
 import Currency from 'src/components/Controls/Currency.vue';
@@ -253,7 +257,12 @@ import Text from 'src/components/Controls/Text.vue';
 import { t } from 'fyo';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
-import { getPOSRowItem, POSRowItem } from 'src/utils/pos';
+import {
+  getPOSRowItem,
+  getRowGrossAmount,
+  getRowPricingRule,
+  POSRowItem,
+} from 'src/utils/pos';
 import {
   getCartRowQuantity,
   getPOSRowFieldLabel,
@@ -315,7 +324,7 @@ export default defineComponent({
       return this.layout === 'Classic';
     },
     isUOMConversionEnabled(): boolean {
-      return !!fyo.singles.InventorySettings?.enable_uom_conversions;
+      return fyo.isFeatureOn('enable_uom_conversions');
     },
     isSaleSubmitted(): boolean {
       return !!this.row.parentdoc?.isSubmitted;
@@ -335,16 +344,24 @@ export default defineComponent({
         value: unit,
       }));
     },
+    /** The amount before the discount, which the rate label lists. */
+    amountLabel(): string {
+      const sale = this.row.parentdoc as SalesInvoice;
+      return fyo.format(getRowGrossAmount(sale, this.row), 'Currency');
+    },
+    pricingRule(): string {
+      return getRowPricingRule(this.row);
+    },
     /** The rate per unit, its unit in Classic, and any item discount. */
     rateLabel(): string {
-      const rate = fyo.format(this.row.transfer_rate, 'Currency');
+      const rate = fyo.format(this.row.price_list_rate, 'Currency');
       const parts = [
         this.isClassic
-          ? t`${rate} per ${this.row.transfer_unit || this.row.unit || ''}`
+          ? t`${rate} per ${this.row.uom || this.row.stock_uom || ''}`
           : t`${rate} each`,
       ];
-      if (this.row.item_discount_percent) {
-        parts.push(t`${this.row.item_discount_percent}% off`);
+      if (this.row.discount_percentage) {
+        parts.push(t`${this.row.discount_percentage}% off`);
       }
 
       return parts.join(' · ');
@@ -359,7 +376,7 @@ export default defineComponent({
         this.isExpanded = false;
       }
     },
-    'row.batch': {
+    'row.batch_no': {
       handler(batch?: string) {
         if (batch) {
           this.isExpanded = true;
@@ -368,7 +385,7 @@ export default defineComponent({
       },
       immediate: true,
     },
-    'row.item': {
+    'row.item_code': {
       async handler(item?: string) {
         this.itemSettings = await getPOSRowItem(item);
       },
@@ -376,7 +393,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.permissions = await getPOSPermissions();
+    this.permissions = await getPOSPermissions(this.row.parentdoc);
   },
   methods: {
     toggleExpand() {
@@ -431,7 +448,7 @@ export default defineComponent({
       }
 
       await this.changeRow(async () => {
-        await this.row.set('serial_number', serialNumber);
+        await this.row.set('serial_no', serialNumber);
         validateSerialNumberCount(this.row);
       });
     },

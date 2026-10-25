@@ -47,8 +47,8 @@ export function getRowDetails(report: Report, row: ReportRow): RowDetail[] {
 export function getRowReference(report: Report, row: ReportRow) {
   const getRaw = (fieldname: string) =>
     row.cells[getColumnIndex(report, fieldname)]?.rawValue;
-  const doctype = getRaw('reference_type');
-  const name = getRaw('reference_name');
+  const doctype = getRaw('voucher_type');
+  const name = getRaw('voucher_no');
   if (typeof doctype !== 'string' || typeof name !== 'string' || !name) {
     return null;
   }

@@ -2,29 +2,39 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:uom_name",
  "creation": "2026-08-27 22:09:40.302216",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "is_whole"
+  "uom_name",
+  "must_be_whole_number"
  ],
  "fields": [
   {
+   "fieldname": "uom_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "UOM Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
    "default": "0",
-   "fieldname": "is_whole",
+   "fieldname": "must_be_whole_number",
    "fieldtype": "Check",
-   "label": "Is Whole"
+   "label": "Must be Whole Number"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
- "name": "Books Uom",
+ "name": "Books UOM",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {

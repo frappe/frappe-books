@@ -6,13 +6,15 @@ import {
   getServerError,
   leaveIfSessionExpired,
   reachServer,
+  type ServerMessage,
 } from 'src/web/api';
 
 /** A document or row as Frappe sends it: Frappe fieldnames and raw values. */
 export type DocValues = Record<string, unknown>;
 
-/** A Frappe list filter, `[fieldname, operator, value]`. */
-export type Filter = [string, string, unknown];
+/** A Frappe list filter, `[fieldname, operator, value]`, or `[table doctype, fieldname, operator, value]` on its rows. */
+export type Filter =
+  [string, string, unknown] | [string, string, string, unknown];
 
 export interface ListQuery {
   /** Fieldnames, or `{ table: [fieldnames] }` for a table's rows. */
@@ -26,7 +28,9 @@ export interface ListQuery {
 type ResponseBody<T> = {
   data: T;
   docs?: DocValues[];
-  errors?: { type?: string; message?: string }[];
+  errors?: { type?: string; message?: string; title?: string }[];
+  /** Messages the server logged besides the error, in order. */
+  messages?: ServerMessage[];
 };
 
 export async function getDocument(
@@ -82,6 +86,42 @@ export async function runDocMethod(
     running
   );
   return docs![0];
+}
+
+/** Fields edited since the last preview: the document's, and its rows' by row name. */
+export interface PreviewEdits {
+  doc: string[];
+  rows: Record<string, string[]>;
+}
+
+/**
+ * What ERPNext fills in a document on save, without saving it. Edits name
+ * what the user changed, so a new party or item refreshes what follows it;
+ * `kwargs` are the preview's options, like `check_coupons`.
+ */
+export async function previewERPNextDocument(
+  document: DocValues,
+  edits: PreviewEdits,
+  kwargs?: Record<string, unknown>
+): Promise<DocValues> {
+  return await call<DocValues>('frappe_books.accessory.preview.preview', {
+    ...kwargs,
+    doc: document,
+    changed: edits,
+  });
+}
+
+/** Cancels `docs`, then the document they link to, as Desk's Cancel All does. */
+export async function cancelAllLinkedDocs(
+  doctype: string,
+  name: string,
+  docs: { doctype: string; name: string }[]
+): Promise<void> {
+  await call('frappe.desk.form.linked_with.cancel_all_linked_docs', {
+    docs,
+    root_doctype: doctype,
+    root_name: name,
+  });
 }
 
 export async function getDocuments(
@@ -181,12 +221,26 @@ async function request<T>(
   const body = (await response.json()) as ResponseBody<T>;
   if (!response.ok) {
     await leaveIfSessionExpired(response.status);
-    const [error] = body.errors ?? [];
-    const message = error?.message ?? error?.type ?? response.statusText;
-    throw getServerError(message, error?.type, response.status);
+    throw toServerError(body, response);
   }
 
   return body;
+}
+
+/** A failed response's error; a mandatory error says what is missing only in its messages. */
+function toServerError(body: ResponseBody<unknown>, response: Response) {
+  const [error] = body.errors ?? [];
+  const messages = [...(body.messages ?? [])];
+  if (error?.message) {
+    messages.push({ message: error.message, title: error.title });
+  }
+
+  const message =
+    error?.message ??
+    (messages.map((m) => m.message).join('\n') ||
+      error?.type ||
+      response.statusText);
+  return getServerError(message, error?.type, response.status, messages);
 }
 
 /** Frappe refuses a copy older than the saved one; /books says so in its own words. */

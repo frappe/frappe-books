@@ -19,39 +19,46 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from frappe_books.frappe_books.doctype.books_item_wise_tax_detail.books_item_wise_tax_detail import (
+			BooksItemWiseTaxDetail,
+		)
 		from frappe_books.frappe_books.doctype.books_purchase_invoice_item.books_purchase_invoice_item import (
 			BooksPurchaseInvoiceItem,
 		)
-		from frappe_books.frappe_books.doctype.books_tax_summary.books_tax_summary import (
-			BooksTaxSummary,
+		from frappe_books.frappe_books.doctype.books_purchase_taxes_and_charges.books_purchase_taxes_and_charges import (
+			BooksPurchaseTaxesandCharges,
 		)
 
-		account: DF.Link
 		amended_from: DF.Link | None
-		attachment: DF.Attach | None
-		back_reference: DF.Link | None
 		base_grand_total: DF.Currency
+		buying_price_list: DF.Link | None
+		company: DF.Link | None
+		conversion_rate: DF.Float
+		credit_to: DF.Link
 		currency: DF.Link | None
-		date: DF.Datetime
 		discount_after_tax: DF.Check
-		exchange_rate: DF.Float
 		grand_total: DF.Currency
 		is_fully_returned: DF.Check
-		is_returned: DF.Check
+		is_return: DF.Check
+		item_wise_tax_details: DF.Table[BooksItemWiseTaxDetail]
 		items: DF.Table[BooksPurchaseInvoiceItem]
 		make_auto_payment: DF.Check
 		make_auto_stock_transfer: DF.Check
+		naming_series: DF.Link
 		net_total: DF.Currency
-		number_series: DF.Link
 		outstanding_amount: DF.Currency
-		price_list: DF.Link | None
+		per_received: DF.Percent
+		posting_date: DF.Date
+		posting_time: DF.Time | None
 		return_against: DF.Link | None
-		status: DF.Literal["Saved", "Unpaid", "Partly Paid", "Paid", "Return", "Return Issued", "Cancelled"]
-		stock_not_transferred: DF.Float
+		status: DF.Literal[
+			"Draft", "Unpaid", "Partly Paid", "Paid", "Return", "Debit Note Issued", "Cancelled"
+		]
 		supplier: DF.Link
-		taxes: DF.Table[BooksTaxSummary]
-		terms: DF.Text | None
-		total_discount: DF.Currency
+		taxes: DF.Table[BooksPurchaseTaxesandCharges]
+		taxes_and_charges: DF.Link | None
+		terms: DF.TextEditor | None
+		total_taxes_and_charges: DF.Currency
 	# end: auto-generated types
 
 	transaction_type = "purchase"
@@ -59,6 +66,7 @@ class BooksPurchaseInvoice(PostingInvoiceController):
 	party_type = "Books Supplier"
 	party_field = "supplier"
 	party_account_type = "Payable"
+	party_account_field = "credit_to"
 	item_account_field = "expense_account"
 
 	def create_batches(self):

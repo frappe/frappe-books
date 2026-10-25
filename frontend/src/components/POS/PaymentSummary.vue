@@ -15,7 +15,7 @@
     </div>
     <div class="flex justify-between gap-4 px-3 py-2.5 text-base-medium text-ink-gray-9">
       <dt>{{ t`Grand total` }}</dt>
-      <dd>{{ formatAmount(sinvDoc.grand_total) }}</dd>
+      <dd>{{ formatAmount(getPayableTotal(sinvDoc)) }}</dd>
     </div>
     <div
       v-if="hasOutstanding"
@@ -46,7 +46,7 @@
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { Money } from 'pesa';
 import { fyo } from 'src/initFyo';
-import { CostLine, getCostLines } from 'src/utils/pos';
+import { CostLine, getCostLines, getPayableTotal } from 'src/utils/pos';
 import type { Settlement } from 'src/utils/posCheckout';
 import { defineComponent, PropType } from 'vue';
 
@@ -83,6 +83,7 @@ export default defineComponent({
     },
   },
   methods: {
+    getPayableTotal,
     formatAmount(value: Money | undefined): string {
       return fyo.format(value ?? fyo.pesa(0), 'Currency');
     },

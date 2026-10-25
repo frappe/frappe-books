@@ -12,6 +12,10 @@ import { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 import { JournalEntryAccount } from '../JournalEntryAccount/JournalEntryAccount';
 
+// The amounts a row's user enters; the server copies them to its company amounts.
+const DEBIT = 'debit_in_account_currency';
+const CREDIT = 'credit_in_account_currency';
+
 /**
  * Books Journal Entry, served by Frappe. Its controller fills the number
  * series and checks that debits equal credits.
@@ -23,15 +27,13 @@ export class JournalEntry extends FrappeDoc {
     nameField: { label: 'Entry No' },
     fileFields: [
       'name',
-      'number_series',
-      'entry_type',
+      'naming_series',
+      'voucher_type',
       'posting_date',
       'accounts',
-      'reference_number',
-      'reference_date',
+      'cheque_no',
+      'cheque_date',
       'user_remark',
-      'attachment',
-      'status',
     ],
   };
   static override previewMethod = 'preview';
@@ -51,20 +53,20 @@ export class JournalEntry extends FrappeDoc {
 
   /** Mirrors Books: the first row without amounts takes what balances the entry. The server checks the balance. */
   fillBalancingAmount() {
-    const debit = this.getSum('accounts', 'debit', false) as Money;
-    const difference = debit.sub(this.getSum('accounts', 'credit', false));
+    const debit = this.getSum('accounts', DEBIT, false) as Money;
+    const difference = debit.sub(this.getSum('accounts', CREDIT, false));
     const row = ((this.accounts ?? []) as FrappeDoc[]).find(
       (row) =>
-        !isDocValueTruthy(row.debit as DocValue) &&
-        !isDocValueTruthy(row.credit as DocValue)
+        !isDocValueTruthy(row[DEBIT] as DocValue) &&
+        !isDocValueTruthy(row[CREDIT] as DocValue)
     );
     if (row && !difference.isZero()) {
-      row[difference.isNegative() ? 'debit' : 'credit'] = difference.abs();
+      row[difference.isNegative() ? DEBIT : CREDIT] = difference.abs();
     }
   }
 
   static filters: FiltersMap = {
-    number_series: () => [['reference_type', '=', 'JournalEntry']],
+    naming_series: () => [['reference_type', '=', 'JournalEntry']],
   };
 
   static getActions(fyo: Fyo): Action[] {
@@ -77,8 +79,8 @@ export class JournalEntry extends FrappeDoc {
         'name',
         getDocStatusListColumn(),
         'posting_date',
-        'entry_type',
-        'reference_number',
+        'voucher_type',
+        'cheque_no',
       ],
     };
   }

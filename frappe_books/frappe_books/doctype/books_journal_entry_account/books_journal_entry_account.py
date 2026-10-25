@@ -16,10 +16,14 @@ class BooksJournalEntryAccount(Document):
 
 		account: DF.Link
 		credit: DF.Currency
+		credit_in_account_currency: DF.Currency
 		debit: DF.Currency
+		debit_in_account_currency: DF.Currency
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data
+		party: DF.DynamicLink | None
+		party_type: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Journal Entry Account"

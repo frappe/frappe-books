@@ -24,7 +24,9 @@ import {
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModalName } from 'src/components/POS/types';
 import { getCount, type Filter } from 'src/frappe/api';
+import { toActiveDoctype } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
+import { getProfileFilters } from 'src/utils/pos';
 import {
   isCouponOffered,
   isLoyaltyOffered,
@@ -57,13 +59,17 @@ watch(open, async (isOpen) => {
     const filters = [
       ['is_pos', '=', 1],
       ['docstatus', '=', 0],
+      ...getProfileFilters(sinvDoc.value),
     ] as Filter[];
-    savedCount.value = await getCount('Books Sales Invoice', filters, []);
+    savedCount.value = await getCount(
+      toActiveDoctype('Books Sales Invoice'),
+      filters,
+      []
+    );
   }
 });
 
 const actions = computed(() => {
-  const settings = fyo.singles.AccountingSettings;
   const all: MenuAction[] = [
     {
       name: 'SavedInvoice',
@@ -100,7 +106,7 @@ const actions = computed(() => {
       name: 'ItemEnquiry',
       label: t`Item enquiry`,
       icon: 'lucide-package-search',
-      hidden: !settings?.enable_item_enquiry,
+      hidden: !fyo.isFeatureOn('enable_item_enquiry'),
     },
   ];
   return all.filter(({ hidden }) => !hidden);

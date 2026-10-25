@@ -2,56 +2,62 @@
  "actions": [],
  "allow_bulk_edit": 1,
  "allow_rename": 1,
- "autoname": "Prompt",
+ "autoname": "field:price_list_name",
  "creation": "2026-08-27 22:09:40.006644",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "is_enabled",
-  "is_sales",
-  "is_purchase",
-  "item_prices_section_break_4",
-  "price_list_item"
+  "price_list_name",
+  "currency",
+  "selling",
+  "buying",
+  "enabled"
  ],
  "fields": [
   {
-   "default": "1",
-   "fieldname": "is_enabled",
-   "fieldtype": "Check",
-   "label": "Is Price List Enabled"
+   "fieldname": "price_list_name",
+   "fieldtype": "Data",
+   "label": "Price List Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "currency",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1
   },
   {
    "default": "1",
-   "fieldname": "is_sales",
+   "fieldname": "selling",
    "fieldtype": "Check",
-   "label": "For Sales"
+   "label": "Selling"
   },
   {
    "default": "0",
-   "fieldname": "is_purchase",
+   "fieldname": "buying",
    "fieldtype": "Check",
-   "label": "For Purchase"
+   "label": "Buying"
   },
   {
-   "fieldname": "item_prices_section_break_4",
-   "fieldtype": "Section Break",
-   "label": "Item Prices"
-  },
-  {
-   "fieldname": "price_list_item",
-   "fieldtype": "Table",
-   "label": "Item Prices",
-   "options": "Books Price List Item"
+   "default": "1",
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-05 14:00:00.000000",
+ "modified": "2026-10-24 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Price List",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -89,6 +95,7 @@
  ],
  "row_format": "Dynamic",
  "rows_threshold_for_grid_search": 20,
+ "search_fields": "currency",
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],

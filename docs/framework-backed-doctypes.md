@@ -61,11 +61,11 @@ A value that the user entered and the server only corrected, such as the sign of
 
 A document method gets the client copy with its `name`, `modified`, `docstatus`, `creation` and `owner`, because Frappe refuses a copy that changes them. An insert sends no name unless the doctype is named by the user.
 
-The naming rule of the DocType decides how a new document is named. A doctype named by a field (`field:<fieldname>`, for example Books Account and Currency) shows that field as its name. The form asks for it on a new document and keeps it once saved. A doctype with a `number_series` field, or one that its controller names by script, gets a temporary name like `New Sales Invoice 01` until the server names it from the series.
+The naming rule of the DocType decides how a new document is named. A doctype named by a field (`field:<fieldname>`, for example Books Account and Currency) shows that field as its name. The form asks for it on a new document and keeps it once saved. A doctype with a `naming_series` field, or one that its controller names by script, gets a temporary name like `New Sales Invoice 01` until the server names it from the series.
 
 A submittable list filters by Submitted and Cancelled, which become `docstatus` filters. The `name` of a server-named document is a list filter field.
 
-A single loads at startup under its schema name. Its open document is `fyo.singles[schemaName]`, so every reader reads the same values, by Frappe fieldnames; `getFrappeDoc` returns the same open document. A value that another doctype keeps is a virtual field with a controller property, for example the System Settings currency and display precision (Frappe's currency precision), the Accounting Settings country, the Print Settings font (Frappe's print font) and the Defaults print formats. A save never sets a virtual field: before frappe#43435, Frappe stored a single's virtual values, so a loaded copy held stale ones. A virtual field that /books edits has its own whitelisted method, which the model calls before it saves, for example `set_print_formats` for the Defaults print formats. A value that a Frappe settings single owns, like the display precision (`set_display_precision`) and the print font (`set_font`), goes only when it changed, and is read only to users who cannot write that single. A save of the Books date format or locale also sets Frappe's date or number format.
+A single loads at startup under its schema name. Its open document is `fyo.singles[schemaName]`, so every reader reads the same values, by Frappe fieldnames; `getFrappeDoc` returns the same open document. A value that another doctype keeps is a virtual field with a controller property, for example the System Settings currency and currency precision (Frappe's), the Accounting Settings country, the Print Settings font (Frappe's print font) and the Defaults print formats. A save never sets a virtual field: before frappe#43435, Frappe stored a single's virtual values, so a loaded copy held stale ones. A virtual field that /books edits has its own whitelisted method, which the model calls before it saves, for example `set_print_formats` for the Defaults print formats. A value that a Frappe settings single owns, like the currency precision (`set_display_precision`) and the print font (`set_font`), goes only when it changed, and is read only to users who cannot write that single. A save of the Books date format or locale also sets Frappe's date or number format.
 
 ## Guards
 
@@ -74,6 +74,18 @@ These node tests catch common mistakes after a merge:
 - `tests/settings-readers.test.mjs`: each `fyo.singles.X.field` read names a field of the Frappe-backed single.
 - `tests/settings-models.test.mjs`: the filters, hidden, read-only and validation rules of each Frappe-backed model name fields of its DocType.
 - `tests/link-create.test.mjs`: each Link of a form or row offers Create as it did before phase 2 (`tests/helpers/previousForms.mjs` keeps what the old schema files showed).
+
+## Accessory mode
+
+With ERPNext on the site, a System Manager turns on accessory mode in Settings → ERPNext (Books ERPNext Settings: `default_company`, `accessory_mode`). The boot sends `books.accessory_mode` and, as `books.company`, the ERPNext company; it falls back to standalone when ERPNext or the company is gone. `src/frappe/mode.ts` gives the active doctype of each model: its `doctype` without `Books `, or its `erpnextDoctype`. A model whose `erpnextDoctype` is `null` is standalone only and is not registered, so its lists, sidebar items and routes go away. Feature switches are read through `fyo.isFeatureOn`, which is on in accessory mode for every feature ERPNext has. A site whose ERPNext is set up and whose Books never was starts in accessory mode on its first boot.
+
+ERPNext documents run ERPNext's own code, from `frappe_books/accessory/`:
+
+- Preview: `preview.preview` starts from `frappe.new_doc` (or the saved draft), sets the client's values, and runs `set_missing_values` and `calculate_taxes_and_totals` in a savepoint that is rolled back. The client sends the fields edited since the last preview, so a new party takes `get_party_details` and a new item starts its row afresh, as in Desk. A typed rate stays.
+- Create actions: `mappers.make_mapped_doc` maps each Books mapper name to ERPNext's mapper, e.g. `make_return` on a Sales Invoice to `make_sales_return`, and `make_payment` to `get_payment_entry`.
+- Linked entries use Frappe's `linked_with`; cancel offers every submitted linked document and runs `cancel_all_linked_docs`.
+- The search index holds the ERPNext twins of the Books doctypes, and is rebuilt when the mode changes.
+- Amounts go to Frappe as numbers, and ERPNext documents keep their company, hidden, as the accessory company.
 
 ## Custom forms
 

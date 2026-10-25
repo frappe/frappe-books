@@ -5,12 +5,14 @@ import {
 } from 'models/baseModels/Account/types';
 import { FrappeDoc } from 'src/frappe/document';
 
-/** Books Pos Settings, served by Frappe. */
+/** Books POS Settings, served by Frappe. */
 export class POSSettings extends FrappeDoc {
-  static override doctype = 'Books Pos Settings';
+  static override doctype = 'Books POS Settings';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = { label: 'POS Settings' };
 
-  declare inventory?: string;
+  declare warehouse?: string;
   declare pos_profile?: string;
   declare cash_account?: string;
   declare write_off_account?: string;
@@ -21,8 +23,8 @@ export class POSSettings extends FrappeDoc {
   declare item_code_digits?: number;
   declare item_weight_digits?: number;
   declare item_visibility?: string;
-  declare can_change_rate?: boolean;
-  declare can_edit_discount?: boolean;
+  declare allow_rate_change?: boolean;
+  declare allow_discount_change?: boolean;
   declare hide_unavailable_items?: boolean;
   declare ignore_pricing_rule?: boolean;
 
@@ -44,12 +46,9 @@ export class POSSettings extends FrappeDoc {
 
   // Fields of features turned off in other settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
-    weight_enabled_barcode: () =>
-      !this.fyo.singles.InventorySettings?.enable_barcodes,
-    check_digits: () => !this.fyo.singles.InventorySettings?.enable_barcodes,
-    item_code_digits: () =>
-      !this.fyo.singles.InventorySettings?.enable_barcodes,
-    item_weight_digits: () =>
-      !this.fyo.singles.InventorySettings?.enable_barcodes,
+    weight_enabled_barcode: () => !this.fyo.isFeatureOn('show_barcode_field'),
+    check_digits: () => !this.fyo.isFeatureOn('show_barcode_field'),
+    item_code_digits: () => !this.fyo.isFeatureOn('show_barcode_field'),
+    item_weight_digits: () => !this.fyo.isFeatureOn('show_barcode_field'),
   };
 }

@@ -1,13 +1,12 @@
-import type { ChangeArg, FiltersMap } from 'fyo/model/types';
+import type { FiltersMap } from 'fyo/model/types';
 import { addItem } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { getMappedValues } from 'src/frappe/documents';
 import { withoutCreate } from 'src/frappe/schema';
 
 /** Delivery note and purchase receipt fields: links that offer no Create, and items edited in the row editor. */
 export const transferFields = {
-  ...withoutCreate(['back_reference', 'return_against']),
+  ...withoutCreate(['return_against']),
   items: { edit: true },
 };
 
@@ -15,14 +14,12 @@ export const transferFields = {
 export function getTransferFileFields(partyField: string): string[] {
   return [
     'name',
-    'number_series',
+    'naming_series',
     partyField,
-    'date',
+    'posting_date',
     'items',
     'grand_total',
     'terms',
-    'attachment',
-    'back_reference',
     'return_against',
     'status',
   ];
@@ -30,13 +27,10 @@ export function getTransferFileFields(partyField: string): string[] {
 
 /**
  * A shipment or purchase receipt, served by Frappe. Its `preview` fills the
- * number series, terms, row units, rates, locations and the grand total.
+ * number series, terms, row units, rates, warehouses and the grand total.
  */
 export abstract class StockTransfer extends FrappeDoc {
   static override previewMethod = 'preview';
-  /** The invoice a transfer is made from, and its mapper. */
-  static invoiceSchemaName: ModelNameEnum;
-  static invoiceMapper: string;
   static override partyField: string;
 
   get isSales() {
@@ -48,41 +42,10 @@ export abstract class StockTransfer extends FrappeDoc {
   }
 
   static filters: FiltersMap = {
-    number_series: (doc) => [['reference_type', '=', doc.schemaName]],
-    back_reference: () => [
-      ['stock_not_transferred', '!=', 0],
-      ['docstatus', '=', 1],
-    ],
+    naming_series: (doc) => [['reference_type', '=', doc.schemaName]],
   };
 
   async addItem(name: string, quantity?: number) {
     return await addItem(name, this, quantity);
-  }
-
-  override async change(arg: ChangeArg) {
-    await super.change(arg);
-    if (arg.changed === 'back_reference') {
-      await this.setFromBackReference();
-    }
-  }
-
-  /** Takes the party, return and rows the picked invoice's mapper gives a transfer. */
-  async setFromBackReference() {
-    if (!this.back_reference) {
-      return;
-    }
-
-    const { invoiceSchemaName, invoiceMapper, partyField } = this
-      .constructor as typeof StockTransfer;
-    const mapped = this.toDocValues(
-      await getMappedValues(
-        invoiceSchemaName,
-        this.back_reference as string,
-        invoiceMapper
-      )
-    );
-    await this.set(partyField, mapped[partyField]);
-    await this.set('return_against', mapped.return_against);
-    await this.set('items', mapped.items);
   }
 }

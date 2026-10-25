@@ -81,7 +81,14 @@ test('a required filter left empty keeps the report from running', async () => {
   assert.equal(report.missingFilter.fieldname, 'period_start_date');
 });
 
-test("ERPNext's error shows instead of the rows", async () => {
+test("ERPNext's error shows instead of the rows", async (t) => {
+  // Node has no DOMParser; this one reads a message's text as a browser does.
+  globalThis.DOMParser = class {
+    parseFromString(html) {
+      return { body: { textContent: html.replace(/<[^>]*>/g, '') } };
+    }
+  };
+  t.after(() => delete globalThis.DOMParser);
   stubERPNext(() => ({
     status: 417,
     body: {

@@ -249,7 +249,10 @@ export default defineComponent({
         return this.required;
       }
 
-      return this.fieldState?.required ?? !!this.df.required;
+      // As in Desk, a field no one can fill, e.g. on a submitted document, is not marked.
+      return (
+        !this.isReadOnly && (this.fieldState?.required ?? !!this.df.required)
+      );
     },
   },
   mounted() {

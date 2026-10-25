@@ -1,4 +1,5 @@
 import type { Field } from 'schemas/types';
+import { isFieldShown } from 'src/utils/doc';
 import { getIsNullOrUndef } from 'utils';
 import { reactive, toRaw } from 'vue';
 import { sortEndTabs } from './accessoryLayout';
@@ -104,7 +105,7 @@ function getShown(doc: FrappeDoc): Set<string> {
 
 function getVisible(doc: FrappeDoc): Field[] {
   return doc.schema.fields.filter(
-    (field) => !field.meta && !doc.getFieldState(field).hidden
+    (field) => !field.meta && isFieldShown(doc, field)
   );
 }
 

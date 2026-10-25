@@ -17,7 +17,6 @@ STATUS_DOCTYPES = (
 	"Books Delivery Note",
 	"Books Purchase Receipt",
 	"Books Quotation",
-	"Books Journal Entry",
 	"Books Payment Entry",
 	"Books Lead",
 	"Books Serial No",

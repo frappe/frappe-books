@@ -27,10 +27,10 @@ import { PartyAccount } from './PartyAccount';
 type PartyKey = 'customer' | 'supplier';
 
 /**
- * What a new party's primary Address is made from, as ERPNext's quick entry
- * asks; the server reads them on insert.
+ * What a new party's (or lead's) primary Address is made from, as ERPNext's
+ * quick entry asks; the server reads them on insert.
  */
-const ADDRESS_FIELDS = [
+export const ADDRESS_FIELDS = [
   { fieldname: 'address_line1', fieldtype: 'Data', label: 'Address Line 1' },
   { fieldname: 'address_line2', fieldtype: 'Data', label: 'Address Line 2' },
   { fieldname: 'city', fieldtype: 'Data', label: 'City' },
@@ -146,6 +146,15 @@ export abstract class Party extends FrappeDoc {
     }
 
     return undefined;
+  }
+
+  // Contact and address can only be filled before the first save.
+  override isSectionOpen(section: string): boolean | undefined {
+    const sections = [
+      this.getSection(this.primaryContactField),
+      this.getSection(this.primaryAddressField),
+    ];
+    return this.notInserted && sections.includes(section) ? true : undefined;
   }
 
   getSection(fieldname: string): string {

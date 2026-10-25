@@ -94,7 +94,7 @@ export type ColumnConfig = {
   label: string;
   fieldtype: FieldType;
   fieldname: string;
-  badge?: (doc: RenderData) => BadgeData;
+  badge?: (doc: RenderData) => BadgeData | undefined;
   display?: (value: unknown, fyo: Fyo) => string;
 };
 
@@ -111,6 +111,8 @@ export interface LinkedRecords {
   emptyMessage: string;
   /** A from and to date pair that a phone row shows as one range. */
   dateRange?: [string, string];
+  /** The records link to documents by their `links` rows, as Frappe's Addresses do, so `linkField` is `links`. */
+  dynamicLink?: boolean;
 }
 /** What an empty list says, where it says more than "No entries found". */
 export interface ListEmptyState {

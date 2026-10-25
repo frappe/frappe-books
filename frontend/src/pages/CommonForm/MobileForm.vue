@@ -78,6 +78,7 @@
       <MobileFormSection
         :title="section"
         :description="doc.getSectionDescription(section)"
+        :open="doc.isSectionOpen(section)"
         :fields="fields"
         :doc="doc"
         :errors="errors"

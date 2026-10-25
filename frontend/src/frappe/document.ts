@@ -314,6 +314,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     return undefined;
   }
 
+  /** Whether a phone form's collapsible section starts open; undefined: when it holds a value. */
+  isSectionOpen(_section: string): boolean | undefined {
+    return undefined;
+  }
+
   get isSubmitted() {
     return !!this.submitted && !this.cancelled;
   }

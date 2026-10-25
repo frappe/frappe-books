@@ -135,6 +135,7 @@ import {
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
 import type { LinkedRecords, RenderData } from 'fyo/model/types';
+import type { Filter } from 'src/frappe/api';
 import { FieldTypeEnum } from 'schemas/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { getFrappeListPage } from 'src/frappe/list';
@@ -228,8 +229,16 @@ export default defineComponent({
       this.rows = rows;
       this.total = total;
     },
-    filters(): [string, string, unknown][] {
-      return [[this.config.linkField, '=', this.doc.name]];
+    filters(): Filter[] {
+      const { doctype, name } = this.doc;
+      if (this.config.dynamicLink) {
+        return [
+          ['Dynamic Link', 'link_doctype', '=', doctype],
+          ['Dynamic Link', 'link_name', '=', name],
+        ];
+      }
+
+      return [[this.config.linkField, '=', name]];
     },
     getValue(row: RenderData, column: ListColumn): string {
       return formatColumnValue(row, column);
@@ -265,8 +274,12 @@ export default defineComponent({
       await routeTo(getFormRoute(this.config.schemaName, row.name as string));
     },
     async add() {
+      const { doctype, name } = this.doc;
+      const link = this.config.dynamicLink
+        ? [{ link_doctype: doctype, link_name: name }]
+        : name;
       await openNewDoc(this.config.schemaName, {
-        [this.config.linkField]: this.doc.name,
+        [this.config.linkField]: link,
       });
     },
     async viewAll() {

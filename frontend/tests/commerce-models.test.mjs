@@ -203,12 +203,18 @@ test('an address lists Indian states for India and has no place of supply', () =
   assert.equal(address.fieldMap.pos, undefined);
 });
 
-test('the lead form and list show what they showed, status coloured by state', () => {
+test('the lead form and list show what they showed, a new lead its address, status coloured by state', () => {
   assert.deepEqual(getLayout('Lead'), [
     'lead_name | Full Name | Full Name | Default',
     'status | Status |  | Default',
     'email_id | Email | john@doe.com | Contacts',
     'mobile_no | Mobile No | Mobile | Contacts',
+    'address_line1 | Address Line 1 |  | Address',
+    'address_line2 | Address Line 2 |  | Address',
+    'city | City |  | Address',
+    'state | State |  | Address',
+    'pincode | Postal Code |  | Address',
+    'country | Country |  | Address',
   ]);
   assert.deepEqual(getColumns('Lead'), [
     'name',

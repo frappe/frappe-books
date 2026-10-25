@@ -150,13 +150,18 @@ export function toSchema(
   presentation: Presentation,
   context: SchemaContext
 ): Schema {
+  // An insert field takes the place of the DocType's field of its name, like
+  // an ERPNext Lead's city, which the insert then saves too.
+  const insertFields = getInsertFields(presentation);
   const docFields = withClientFields(
-    getDocFields(meta, context, presentation),
+    getDocFields(meta, context, presentation).filter(
+      ({ fieldname }) => !insertFields.some((f) => f.fieldname === fieldname)
+    ),
     presentation
   );
   const fields = [
     ...getNameFields(meta, presentation, docFields),
-    ...getInsertFields(presentation),
+    ...insertFields,
     ...getMetaFields(meta),
   ].map((field) => ({ ...field, schemaName: name }) as Field);
 

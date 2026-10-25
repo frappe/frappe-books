@@ -18,6 +18,7 @@
       <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
       }}</FrappeButton>
+      <OpenInERPNextButton :get-url="() => getDeskTreeUrl('Account')" />
     </PageHeader>
     <div v-if="error" class="px-4 pt-4 sm:px-5">
       <FrappeAlert theme="red" :title="error" />
@@ -187,7 +188,9 @@ import {
 import Skeleton from 'src/components/Skeleton.vue';
 import { ModelNameEnum } from 'models/types';
 import EmptyState from 'src/components/EmptyState.vue';
+import OpenInERPNextButton from 'src/components/OpenInERPNextButton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
+import { getDeskTreeUrl } from 'src/frappe/desk';
 import { getDocType } from 'src/frappe/doctypes';
 import { getLinkLabel } from 'src/frappe/link';
 import { getAccessoryCompany, isAccessoryMode } from 'src/frappe/mode';
@@ -255,6 +258,7 @@ function getFirstBranch(roots: AccountItem[]): string[] {
 
 export default defineComponent({
   components: {
+    OpenInERPNextButton,
     EmptyState,
     FrappeAlert,
     FrappeBadge,
@@ -361,6 +365,7 @@ export default defineComponent({
     docsPathRef.value = '';
   },
   methods: {
+    getDeskTreeUrl,
     accountLabel(name: string) {
       return getLinkLabel(ModelNameEnum.Account, name);
     },

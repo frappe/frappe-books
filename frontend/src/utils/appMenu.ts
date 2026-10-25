@@ -1,5 +1,7 @@
 import { t } from 'fyo';
 import type { DropdownOptions } from 'frappe-ui';
+import { openInDesk } from 'src/frappe/desk';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 import { docsPathRef } from './refs';
 import { deskTheme, setDeskTheme, type DeskTheme } from './theme';
@@ -43,6 +45,15 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
           icon: 'lucide-layout-grid',
           onClick: () => window.location.assign('/apps'),
         },
+        ...(isAccessoryMode()
+          ? [
+              {
+                label: t`Open ERPNext`,
+                icon: 'lucide-external-link',
+                onClick: () => openInDesk('/desk'),
+              },
+            ]
+          : []),
         { label: t`Log out`, icon: 'lucide-log-out', onClick: logOut },
       ],
     },

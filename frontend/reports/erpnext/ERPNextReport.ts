@@ -7,6 +7,7 @@ import type { ServerFilters } from 'reports/serverReport';
 import type { ColumnField, ReportCell, ReportRow } from 'reports/types';
 import type { Field, FieldType, RawValue } from 'schemas/types';
 import { formatCurrencyValue } from 'fyo/utils/format';
+import { getDeskReportUrl } from 'src/frappe/desk';
 import { toFrappeValue } from 'src/frappe/values';
 import { getAccessoryCompany } from 'src/frappe/mode';
 import { serverHtmlToText } from 'src/utils/serverHtml';
@@ -205,6 +206,11 @@ export abstract class ERPNextReport extends Report {
 
   getActions(): Action[] {
     return getCommonExportActions(this);
+  }
+
+  /** The report in Desk, run with these filters. */
+  getDeskUrl(): string {
+    return getDeskReportUrl(this.definition.reportName, this.filterMap);
   }
 
   /** Account trees indent and fold; quoted rows are ERPNext's totals; Frappe's total row too. */

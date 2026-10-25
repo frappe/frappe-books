@@ -273,7 +273,7 @@ import {
   loadPricingRuleTitles,
 } from 'src/utils/pos';
 import {
-  clearReturnPayments,
+  clearPayments,
   posCheckoutKey,
   usePOSCheckout,
 } from 'src/utils/posCheckout';
@@ -755,7 +755,7 @@ export default defineComponent({
         'make_return'
       )) as SalesInvoice;
       if (isAccessoryMode()) {
-        await clearReturnPayments(this.sinvDoc);
+        await clearPayments(this.sinvDoc);
         await this.previewInvoice();
       }
     },

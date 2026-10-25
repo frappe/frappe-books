@@ -17,80 +17,100 @@
     @closemodal="cancelTransaction"
   >
     <div v-if="sinvDoc.fieldMap" class="flex flex-col gap-4">
-      <PaymentMethodSelector
-        :methods="posCheckout.methods"
-        :selected="posCheckout.tender.mode_of_payment"
-        @select="posCheckout.selectMethod"
-      />
-
-      <div class="flex flex-col gap-1.5">
-        <Currency
-          :df="{
-            ...getField('PaymentEntryReference', 'allocated_amount')!,
-            label: sinvDoc.isReturn ? t`Refund amount` : t`Amount paid`,
-          }"
-          :show-label="true"
-          :read-only="false"
-          :border="true"
-          :value="posCheckout.tender.amount"
-          size="xlarge"
-          @change="posCheckout.setAmount"
+      <div
+        v-for="(tender, index) in posCheckout.tenders"
+        :key="index"
+        class="flex flex-col gap-4"
+        :class="{ 'border-t border-outline-gray-1 pt-4': index }"
+      >
+        <PaymentMethodSelector
+          :methods="posCheckout.getMethods(index)"
+          :selected="tender.mode_of_payment"
+          :label="getTenderLabel(index)"
+          :removable="isSplit"
+          @select="(name: string) => posCheckout.selectMethod(index, name)"
+          @remove="posCheckout.removeTender(index)"
         />
-        <!-- Round cash amounts; other tenders only have the exact one. -->
+
+        <div class="flex flex-col gap-1.5">
+          <Currency
+            :df="amountField"
+            :show-label="true"
+            :read-only="false"
+            :border="true"
+            :value="tender.amount"
+            size="xlarge"
+            @change="posCheckout.setAmount(index, $event)"
+          />
+          <!-- Round cash amounts; other tenders only have the exact one. -->
+          <div
+            v-if="posCheckout.getQuickAmounts(index).length > 1"
+            class="flex flex-wrap gap-1.5"
+          >
+            <FrappeButton
+              v-for="amount in posCheckout.getQuickAmounts(index)"
+              :key="amount.float"
+              size="xs"
+              :variant="amount.eq(tender.amount) ? 'subtle' : 'outline'"
+              :aria-pressed="amount.eq(tender.amount)"
+              :label="
+                amount.eq(posCheckout.getRest(index))
+                  ? t`Exact`
+                  : fyo.format(amount, 'Currency')
+              "
+              @click="posCheckout.setAmount(index, amount)"
+            />
+          </div>
+        </div>
+
         <div
-          v-if="posCheckout.quickAmounts.length > 1"
-          class="flex flex-wrap gap-1.5"
+          v-if="
+            posCheckout.getRequirements(index).requiresReferenceId ||
+            posCheckout.getRequirements(index).requiresClearanceDate
+          "
+          class="grid grid-cols-2 gap-3"
         >
-          <FrappeButton
-            v-for="amount in posCheckout.quickAmounts"
-            :key="amount.float"
-            size="xs"
-            :variant="
-              amount.eq(posCheckout.tender.amount) ? 'subtle' : 'outline'
+          <Data
+            v-if="posCheckout.getRequirements(index).requiresReferenceId"
+            :df="getField('PaymentEntry', 'reference_no')!"
+            :show-label="true"
+            :border="true"
+            :required="true"
+            :read-only="false"
+            :value="tender.reference_no"
+            :class="
+              posCheckout.getRequirements(index).requiresClearanceDate
+                ? ''
+                : 'col-span-2'
             "
-            :aria-pressed="amount.eq(posCheckout.tender.amount)"
-            :label="
-              amount.eq(posCheckout.due)
-                ? t`Exact`
-                : fyo.format(amount, 'Currency')
+            @change="
+              (reference: string) => posCheckout.setReference(index, reference)
             "
-            @click="posCheckout.setAmount(amount)"
+          />
+
+          <DateControl
+            v-if="posCheckout.getRequirements(index).requiresClearanceDate"
+            :df="getField('PaymentEntry', 'clearance_date')!"
+            :show-label="true"
+            :border="true"
+            :required="true"
+            :read-only="false"
+            :value="tender.clearance_date"
+            @change="(date: Date) => posCheckout.setClearanceDate(index, date)"
           />
         </div>
       </div>
 
-      <div
-        v-if="
-          posCheckout.requirements.requiresReferenceId ||
-          posCheckout.requirements.requiresClearanceDate
-        "
-        class="grid grid-cols-2 gap-3"
+      <FrappeButton
+        v-if="posCheckout.canAddTender"
+        class="self-start"
+        icon-left="lucide-plus"
+        size="md"
+        variant="ghost"
+        @click="posCheckout.addTender"
       >
-        <Data
-          v-if="posCheckout.requirements.requiresReferenceId"
-          :df="getField('PaymentEntry', 'reference_no')!"
-          :show-label="true"
-          :border="true"
-          :required="true"
-          :read-only="false"
-          :value="posCheckout.tender.reference_no"
-          :class="
-            posCheckout.requirements.requiresClearanceDate ? '' : 'col-span-2'
-          "
-          @change="posCheckout.setReference"
-        />
-
-        <DateControl
-          v-if="posCheckout.requirements.requiresClearanceDate"
-          :df="getField('PaymentEntry', 'clearance_date')!"
-          :show-label="true"
-          :border="true"
-          :required="true"
-          :read-only="false"
-          :value="posCheckout.tender.clearance_date"
-          @change="posCheckout.setClearanceDate"
-        />
-      </div>
+        {{ t`Add payment` }}
+      </FrappeButton>
 
       <PaymentSummary
         :sinv-doc="sinvDoc"
@@ -132,6 +152,7 @@
 <script lang="ts">
 import Modal from 'src/components/POS/POSDialog.vue';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
+import type { Field } from 'schemas/types';
 import Currency from 'src/components/Controls/Currency.vue';
 import Data from 'src/components/Controls/Data.vue';
 import DateControl from 'src/components/Controls/Date.vue';
@@ -169,6 +190,17 @@ export default defineComponent({
     };
   },
   computed: {
+    isSplit(): boolean {
+      return this.posCheckout.tenders.length > 1;
+    },
+    amountField(): Field {
+      return {
+        ...getField('PaymentEntryReference', 'allocated_amount')!,
+        label: this.sinvDoc.isReturn
+          ? this.fyo.t`Refund amount`
+          : this.fyo.t`Amount paid`,
+      };
+    },
     paymentTitle(): string {
       return this.sinvDoc.isReturn ? this.fyo.t`Refund` : this.fyo.t`Payment`;
     },
@@ -186,6 +218,9 @@ export default defineComponent({
   },
   methods: {
     getField,
+    getTenderLabel(index: number): string | undefined {
+      return this.isSplit ? this.fyo.t`Payment ${index + 1}` : undefined;
+    },
     submitTransaction() {
       this.$emit('createTransaction');
     },

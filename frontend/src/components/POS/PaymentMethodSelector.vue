@@ -1,8 +1,19 @@
 <template>
   <div class="flex flex-col gap-1.5">
-    <span :id="labelId" class="text-sm text-ink-gray-6">
-      {{ t`Payment method` }}
-    </span>
+    <div class="flex items-center justify-between gap-2">
+      <span :id="labelId" class="text-sm text-ink-gray-6">
+        {{ label ?? t`Payment method` }}
+      </span>
+      <FrappeButton
+        v-if="removable"
+        icon="lucide-x"
+        variant="ghost"
+        size="xs"
+        :tooltip="t`Remove payment`"
+        :aria-label="t`Remove ${label ?? ''}`"
+        @click="$emit('remove')"
+      />
+    </div>
     <!-- 64px tiles: RadioGroup rows stop at 32px (frappe/frappe-ui#1257). -->
     <div
       role="radiogroup"
@@ -34,13 +45,19 @@
 </template>
 
 <script setup lang="ts">
-import { Icon as FrappeIcon } from 'frappe-ui';
+import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
 import { t } from 'fyo';
 import { useId } from 'vue';
 import { PaymentMethodOption, paymentMethodIcons } from './types';
 
-defineProps<{ methods: PaymentMethodOption[]; selected?: string }>();
-defineEmits<{ select: [method: string] }>();
+defineProps<{
+  methods: PaymentMethodOption[];
+  selected?: string;
+  /** A split payment names each tender ("Payment 2"), which it can remove. */
+  label?: string;
+  removable?: boolean;
+}>();
+defineEmits<{ select: [method: string]; remove: [] }>();
 
 const labelId = useId();
 </script>

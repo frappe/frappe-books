@@ -41,7 +41,7 @@ export type Tender = {
   clearance_date?: Date;
 };
 
-/** What the tender leaves due, or the cash change it hands back. */
+/** What the tenders leave due, the cash change they hand back, or what non-cash pays too much. */
 export type Settlement = { label: string; amount: Money; isChange: boolean };
 
 /** A done checkout; `payments` names its payments, and failing to name them leaves the sale done. */
@@ -50,21 +50,31 @@ export type POSCheckoutResult = {
   payments: Promise<string[]>;
 };
 
+/** The tenders of a POS sale, one per payment method; actions take a tender's index. */
 export interface POSCheckout {
-  /** Changed only through the actions below. */
-  readonly tender: Readonly<Tender>;
+  /** Changed only through the actions below; there is always one. */
+  readonly tenders: readonly Readonly<Tender>[];
   readonly methods: PaymentMethodOption[];
-  /** What the chosen method needs with its payment. */
-  readonly requirements: PaymentMethodRequirements;
   readonly due: Money;
-  readonly quickAmounts: Money[];
   readonly settlement: Settlement | null;
-  /** Whether the tender is complete enough to pay with; the server checks it again. */
+  /** Whether the tenders are complete enough to pay with; the server checks them again. */
   readonly canPay: boolean;
-  selectMethod(name: string): void;
-  setAmount(amount: Money | null): void;
-  setReference(reference: string): void;
-  setClearanceDate(date: Date): void;
+  /** Whether another tender can pay what is left: a balance remains and a method is free. */
+  readonly canAddTender: boolean;
+  /** The methods no other tender has. */
+  getMethods(index: number): PaymentMethodOption[];
+  /** What the tender's method needs with its payment. */
+  getRequirements(index: number): PaymentMethodRequirements;
+  /** What the other tenders leave due. */
+  getRest(index: number): Money;
+  /** The rest, then for cash the round amounts above it; none when nothing is left. */
+  getQuickAmounts(index: number): Money[];
+  selectMethod(index: number, name: string): void;
+  setAmount(index: number, amount: Money | null): void;
+  setReference(index: number, reference: string): void;
+  setClearanceDate(index: number, date: Date): void;
+  addTender(): void;
+  removeTender(index: number): void;
   start(): Promise<void>;
   reset(): void;
   checkout(options: { pay: boolean }): Promise<POSCheckoutResult>;
@@ -74,69 +84,108 @@ export const posCheckoutKey = Symbol(
   'posCheckout'
 ) as InjectionKey<POSCheckout>;
 
-/** The tender of the POS sale `getSale` returns, what it settles, and its checkout. */
+/** The tenders of the POS sale `getSale` returns, what they settle, and its checkout. */
 export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
-  const tender = shallowReactive<Tender>(getEmptyTender());
+  const tenders = shallowReactive<Tender[]>([]);
   const methods = shallowRef<PaymentMethodOption[]>([]);
-  const requirements = computed(() =>
-    getRequirements(methods.value, tender.mode_of_payment)
-  );
   // Every preview fills it; a draft owes its whole total.
   const due = computed(() =>
     (getSale().outstanding_amount ?? fyo.pesa(0)).abs()
   );
-  const isCashSale = computed(
-    () => !getSale().isReturn && requirements.value.isCash
-  );
-  const reset = () => Object.assign(tender, getEmptyTender());
-  // An amount still at what was due follows it, as a coupon or points change it.
+  const isCash = (tender: Tender) =>
+    getRequirements(methods.value, tender.mode_of_payment).isCash;
+  const getRest = (index: number) =>
+    getAtLeastZero(due.value.sub(sumAmounts(tenders, index)));
+  const startTenders = (amount: Money) =>
+    tenders.splice(0, tenders.length, makeTender(amount));
+  const reset = () => startTenders(fyo.pesa(0));
+  reset();
+  // Tenders still at what was due follow it, as a coupon or points change it.
   watch(due, (next, previous) => {
-    if (tender.amount.eq(previous)) {
-      tender.amount = next;
+    const last = tenders.at(-1)!;
+    if (sumAmounts(tenders).eq(previous)) {
+      last.amount = getAtLeastZero(last.amount.add(next.sub(previous)));
     }
   });
 
   const posCheckout = reactive({
-    tender,
+    tenders,
     methods,
-    requirements,
     due,
-    quickAmounts: computed(() =>
-      getPaymentShortcuts(due.value, isCashSale.value)
-    ),
     settlement: computed(() =>
-      getSettlement(tender.amount, due.value, isCashSale.value)
+      getSettlement(tenders, due.value, !!getSale().isReturn, isCash)
     ),
-    canPay: computed(() => isTenderComplete(tender, requirements.value)),
-    selectMethod(name: string) {
+    canPay: computed(
+      () =>
+        tenders.every((tender) =>
+          isTenderComplete(
+            tender,
+            getRequirements(methods.value, tender.mode_of_payment)
+          )
+        ) && !getNonCashExcess(tenders, due.value, isCash).isPositive()
+    ),
+    canAddTender: computed(
+      () =>
+        tenders.every((tender) => tender.mode_of_payment) &&
+        tenders.length < methods.value.length &&
+        sumAmounts(tenders).lt(due.value)
+    ),
+    getMethods: (index: number) =>
+      methods.value.filter(
+        ({ name }) =>
+          !tenders.some(
+            (tender, other) =>
+              other !== index && tender.mode_of_payment === name
+          )
+      ),
+    getRequirements: (index: number) =>
+      getRequirements(methods.value, tenders[index].mode_of_payment),
+    getRest,
+    getQuickAmounts(index: number) {
+      const rest = getRest(index);
+      const isCashSale = !getSale().isReturn && isCash(tenders[index]);
+      return rest.isZero() ? [] : getPaymentShortcuts(rest, isCashSale);
+    },
+    selectMethod(index: number, name: string) {
+      const tender = tenders[index];
       tender.mode_of_payment = name;
-      tender.amount = due.value;
-      dropUnneededDetails(tender, requirements.value);
+      tender.amount = getRest(index);
+      dropUnneededDetails(tender, getRequirements(methods.value, name));
     },
     /** Text that is no number pays nothing, which `canPay` refuses. */
-    setAmount(amount: Money | null) {
-      tender.amount = fyo.pesa(amount?.toString() ?? 0);
+    setAmount(index: number, amount: Money | null) {
+      tenders[index].amount = fyo.pesa(amount?.toString() ?? 0);
     },
-    setReference(reference: string) {
-      tender.reference_no = reference;
+    setReference(index: number, reference: string) {
+      tenders[index].reference_no = reference;
     },
-    setClearanceDate(date: Date) {
-      tender.clearance_date = date;
+    setClearanceDate(index: number, date: Date) {
+      tenders[index].clearance_date = date;
+    },
+    addTender() {
+      tenders.push(makeTender(getRest(tenders.length)));
+    },
+    removeTender(index: number) {
+      if (tenders.length > 1) {
+        tenders.splice(index, 1);
+      }
     },
     async start() {
-      reset();
-      tender.amount = due.value;
+      startTenders(due.value);
       methods.value = await getPaymentMethods(getSale());
     },
     reset,
     checkout: ({ pay }: { pay: boolean }) =>
-      checkOutSale(getSale(), pay ? [{ ...tender }] : []),
+      checkOutSale(
+        getSale(),
+        pay ? tenders.map((tender) => ({ ...tender })) : []
+      ),
   });
   return posCheckout as POSCheckout;
 }
 
-/** ERPNext's return refunds its sale's payments; a POS return leaves the refund to the cashier's tender. */
-export async function clearReturnPayments(sale: SalesInvoice) {
+/** ERPNext's return refunds its sale's payments; a POS sale or return leaves them to the cashier's tenders. */
+export async function clearPayments(sale: SalesInvoice) {
   for (const row of sale.payments ?? []) {
     await row.set('amount', fyo.pesa(0));
   }
@@ -162,13 +211,26 @@ async function checkOutSale(
   return { invoice, payments };
 }
 
-function getEmptyTender(): Tender {
-  return {
+function makeTender(amount: Money): Tender {
+  return shallowReactive({
     mode_of_payment: undefined,
-    amount: fyo.pesa(0),
+    amount,
     reference_no: undefined,
     clearance_date: undefined,
-  };
+  });
+}
+
+/** The tenders' amounts, but for the one at `skip`. */
+function sumAmounts(tenders: Tender[], skip?: number): Money {
+  return tenders.reduce(
+    (total, tender, index) =>
+      index === skip ? total : total.add(tender.amount),
+    fyo.pesa(0)
+  );
+}
+
+function getAtLeastZero(amount: Money): Money {
+  return amount.isNegative() ? fyo.pesa(0) : amount;
 }
 
 function getRequirements(
@@ -195,19 +257,40 @@ function dropUnneededDetails(
   }
 }
 
-/** Cash beyond what is due is change; a short tender leaves a balance. */
-function getSettlement(
-  amount: Money,
+/** What non-cash tenders pay beyond what is due, which only cash may. */
+function getNonCashExcess(
+  tenders: Tender[],
   due: Money,
-  isCashSale: boolean
+  isCash: (tender: Tender) => boolean
+): Money {
+  const nonCash = tenders.filter((tender) => !isCash(tender));
+  return sumAmounts(nonCash).sub(due);
+}
+
+/** Cash beyond what is due is change, unless on a refund; short tenders leave a balance. */
+function getSettlement(
+  tenders: Tender[],
+  due: Money,
+  isReturn: boolean,
+  isCash: (tender: Tender) => boolean
 ): Settlement | null {
-  const change = amount.sub(due);
-  if (isCashSale && change.isPositive()) {
+  const excess = getNonCashExcess(tenders, due, isCash);
+  if (excess.isPositive()) {
+    return {
+      label: t`Non-cash over amount due`,
+      amount: excess,
+      isChange: false,
+    };
+  }
+
+  const paid = sumAmounts(tenders);
+  const change = paid.sub(due);
+  if (!isReturn && change.isPositive()) {
     return { label: t`Change to return`, amount: change, isChange: true };
   }
 
-  const balance = due.sub(amount);
-  if (amount.isPositive() && balance.isPositive()) {
+  const balance = due.sub(paid);
+  if (paid.isPositive() && balance.isPositive()) {
     return { label: t`Balance due`, amount: balance, isChange: false };
   }
 
@@ -264,10 +347,12 @@ async function submitSale(sale: SalesInvoice, tenders: Tender[]) {
 
 /**
  * An ERPNext POS invoice has a payment row per mode of its POS Profile, as
- * its preview lists them; the tenders fill theirs, a refund as a negative amount.
+ * its preview lists them; the tenders fill theirs, a refund as a negative
+ * amount, and the others pay nothing.
  */
 async function setERPNextPayments(sale: SalesInvoice, tenders: Tender[]) {
   const sign = sale.isReturn ? -1 : 1;
+  await clearPayments(sale);
   for (const { amount, ...tender } of tenders) {
     const row = await getPaymentRow(sale, tender.mode_of_payment);
     await row.set({ ...tender, amount: amount.mul(sign) });

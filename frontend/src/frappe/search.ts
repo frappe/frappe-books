@@ -15,9 +15,11 @@ export interface Searchable {
 /**
  * The searchable schemas, by schema name: documents whose DocType names
  * search fields or shows their name in search, as the server indexes them.
+ * The server indexes Books doctypes or their ERPNext twins, not Frappe's own.
  */
 export function getSearchables(): Searchable[] {
   return getFrappeModels()
+    .filter(([, Model]) => Model.doctype.startsWith('Books '))
     .map(([schemaName]) => getDocType(schemaName))
     .filter(
       ({ meta }) =>

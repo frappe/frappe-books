@@ -44,11 +44,6 @@ html {
   justify-content: center;
 }
 
-/* Frappe UI phone toasts cover the bottom tabs; they sit above the tabs instead. */
-body:has([data-slot='mobile-nav']) [data-sonner-toaster] {
-  --mobile-offset-bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
-}
-
 /* Frappe UI menu rows touch, so a selected row and the hovered one merge (frappe/frappe-ui#1265). */
 .menu-content [role^='menuitem'] + [role^='menuitem'] {
   margin-top: 0.125rem;

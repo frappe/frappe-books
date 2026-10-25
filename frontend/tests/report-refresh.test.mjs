@@ -13,6 +13,7 @@ test('a report shown again refetches its data', async () => {
   const calls = [];
   const report = {
     get: () => undefined,
+    getDocumentFilterResets: () => ({}),
     setFilters: async () => {},
     setReportData: async (...args) => calls.push(args),
   };

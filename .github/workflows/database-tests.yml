@@ -139,11 +139,14 @@ jobs:
         if: matrix.erpnext
         working-directory: ${{ runner.temp }}/books-bench
         run: |
+          # A calendar fiscal year, as ERPNext's test bootstrap makes one for each year and
+          # skips those that exist; any other range overlaps its years and stops the bootstrap.
+          year=$(TZ=Asia/Kolkata date +%Y)
           result=$(bench --site books-test.localhost execute frappe.desk.page.setup_wizard.setup_wizard.setup_complete --kwargs '{"args": {
             "language": "English", "country": "India", "timezone": "Asia/Kolkata", "currency": "INR",
             "full_name": "Admin", "email": "admin@example.com", "password": "admin",
             "company_name": "Acme Retail", "company_abbr": "AR", "chart_of_accounts": "Standard",
-            "fy_start_date": "2026-04-01", "fy_end_date": "2027-03-31", "setup_demo": 0}}')
+            "fy_start_date": "'"$year"'-01-01", "fy_end_date": "'"$year"'-12-31", "setup_demo": 0}}')
           echo "$result"
           grep -q '"status": "ok"' <<< "$result"
 

@@ -1,6 +1,11 @@
 import frappe
 from frappe.model.document import Document
-from frappe.search.sqlite_search import SQLiteSearch, SQLiteSearchIndexMissingError, build_index
+from frappe.search.sqlite_search import (
+	SQLiteSearch,
+	SQLiteSearchIndexMissingError,
+	build_index,
+	get_search_classes,
+)
 from frappe.utils.caching import site_cache
 
 from frappe_books.accessory import accessory_company
@@ -177,3 +182,39 @@ def rebuild_search_index():
 	"""Builds the palette's index afresh, as after a mode switch it holds the other mode's documents."""
 	BooksSearch().drop_index()
 	build_search_index()
+
+
+# Frappe's update_doc_index and delete_doc_index stop at the first search class that is off, like
+# ERPNext's item search, which its hooks list before Books'. Until they go on to the next class,
+# Books keeps its own index in step with saves and deletes.
+
+
+def update_doc_index(doc: Document, method=None):
+	"""Queues a saved document Books searches, when Frappe's own update stops before Books' search."""
+	search = get_skipped_search()
+	if not search or doc.doctype not in search.doc_configs:
+		return
+
+	fields = search.doc_configs[doc.doctype].get("fields") or []
+	if any(doc.has_value_changed(field) for field in fields):
+		search.index_doc(doc.doctype, doc.name)
+
+
+def delete_doc_index(doc: Document, method=None):
+	"""Removes a deleted document from Books' index, when Frappe's own delete stops before Books' search."""
+	search = get_skipped_search()
+	if search and doc.doctype in search.doc_configs:
+		search.remove_doc(doc.doctype, doc.name)
+
+
+def get_skipped_search() -> BooksSearch | None:
+	"""Books' search, when it is on and a search class before it is off, which stops Frappe's updates."""
+	for SearchClass in get_search_classes():
+		if SearchClass is BooksSearch:
+			return None
+
+		search = SearchClass()
+		if not (search.is_search_enabled() and search.index_exists()):
+			books = BooksSearch()
+			return books if books.is_search_enabled() and books.index_exists() else None
+	return None

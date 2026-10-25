@@ -142,7 +142,6 @@
           </CommonFormSection>
           <ExtraFields
             v-if="isAccessory && isFirstTab"
-            v-model:active-tab="endTab"
             :doc="doc"
             :errors="errors"
             @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
@@ -219,6 +218,7 @@ import {
   getFieldsGroupedByTabAndSection,
   getFormRoute,
   getGroupedActionsForDoc,
+  getTabOptions,
   isPrintable,
   routeTo,
 } from 'src/utils/ui';
@@ -312,7 +312,6 @@ export default defineComponent({
       useFullWidth: false,
       row: null,
       rowErrors: {},
-      endTab: '',
       formError: null,
       dismissedPreviewError: '',
     } as {
@@ -325,7 +324,6 @@ export default defineComponent({
       useFullWidth: boolean;
       row: null | { index: number; fieldname: string };
       rowErrors: Record<string, string>;
-      endTab: string;
       formError: FormError | null;
       dismissedPreviewError: string;
     };
@@ -495,10 +493,7 @@ export default defineComponent({
       return group;
     },
     tabOptions(): { value: string; label: string }[] {
-      return [...(this.groupedFields?.keys() ?? [])].map((value) => ({
-        value,
-        label: value,
-      }));
+      return getTabOptions(this.groupedFields);
     },
     groupedActions(): ActionGroup[] {
       if (!this.hasDoc) {
@@ -740,11 +735,7 @@ export default defineComponent({
       const tab = [...(this.groupedFields ?? [])].find(([, sections]) =>
         [...sections.values()].flat().some((f) => f.fieldname === fieldname)
       )?.[0];
-      const place = tab ? undefined : getExtraPlace(this.doc, fieldname);
       this.activeTab = tab ?? this.tabOptions[0]?.value ?? this.activeTab;
-      if (place?.tab) {
-        this.endTab = place.tab;
-      }
 
       await nextTick();
       document

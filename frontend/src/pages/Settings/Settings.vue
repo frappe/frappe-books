@@ -32,12 +32,12 @@
         />
       </section>
     </template>
-    <template v-else-if="erpnextTab && activeTab === erpnextTab.value">
-      <ERPNextSettings />
+    <ERPNextSettings v-else-if="erpnextTab && activeTab === erpnextTab.value" />
+    <template v-else-if="posScreenTab && activeTab === posScreenTab.value">
       <section
         v-for="group in posScreenGroups"
         :key="group.title"
-        class="flex flex-col gap-4 border-t border-outline-gray-1 p-4"
+        class="flex flex-col gap-4 border-b border-outline-gray-1 p-4"
       >
         <h2 class="text-lg-semibold text-ink-gray-8">{{ group.title }}</h2>
         <CommonFormSection
@@ -93,7 +93,7 @@ import { canInstall, isInstallSheetOpen } from 'src/web/pwa';
 import { computed, defineComponent, nextTick } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
 import ERPNextSettings from './ERPNextSettings.vue';
-import { getERPNextTab, useSettings } from './useSettings';
+import { getERPNextTab, getPOSScreenTab, useSettings } from './useSettings';
 
 /** Phones; desktop shows settings in SettingsDialog. */
 export default defineComponent({
@@ -106,7 +106,7 @@ export default defineComponent({
     PageHeader,
   },
   provide() {
-    // The ERPNext tab's controls edit the POS screen preferences, whose table is of Defaults.
+    // The POS tab's controls edit the POS screen preferences, whose table is of Defaults.
     const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
     return { doc: computed(() => this.doc ?? posScreen()) };
   },
@@ -115,6 +115,7 @@ export default defineComponent({
       ...useSettings(),
       isInstallSheetOpen,
       erpnextTab: getERPNextTab(),
+      posScreenTab: getPOSScreenTab(),
     };
   },
   data() {
@@ -134,7 +135,7 @@ export default defineComponent({
       },
     },
     tabOptions(): { value: string; label: string }[] {
-      return [...this.tabs, this.erpnextTab]
+      return [...this.tabs, this.posScreenTab, this.erpnextTab]
         .filter((tab) => !!tab)
         .map(({ value, label }) => ({ value, label }));
     },

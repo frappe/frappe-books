@@ -41,6 +41,10 @@ import { SerialNo } from './inventory/SerialNo';
 import { DeliveryNote } from './inventory/DeliveryNote';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockEntry } from './inventory/StockEntry';
+import {
+  POSScreenDefaults,
+  POSScreenSettings,
+} from './inventory/Point of Sale/POSScreenSettings';
 import { POSSettings } from './inventory/Point of Sale/POSSettings';
 import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningEntry } from './inventory/Point of Sale/POSOpeningEntry';
@@ -93,6 +97,8 @@ export const frappeModels: Record<string, FrappeModel> = {
   SerialNo,
   CustomForm,
   POSSettings,
+  POSScreenSettings,
+  POSScreenDefaults,
   POSProfile,
   POSOpeningEntry,
   POSClosingEntry,

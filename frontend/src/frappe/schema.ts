@@ -41,6 +41,8 @@ export interface Presentation {
    * like a tree's nested set, or fields of a Frappe doctype Books does not use.
    */
   omitFields?: string[];
+  /** The only DocType fields /books shows and saves, where it uses a few, like accessory mode's POS screen preferences. */
+  onlyFields?: string[];
   /** Values of omitted fields that each document /books creates gets, e.g. an enabled Currency. */
   insertValues?: Record<string, unknown>;
   /**
@@ -230,9 +232,16 @@ function getDocFields(
     ...(isAccessoryMode() ? [] : SERVER_FIELDS),
     ...(presentation.omitFields ?? []),
   ];
+  const { onlyFields } = presentation;
   const shown = {
     ...meta,
-    fields: meta.fields.filter((field) => !omitted.includes(field.fieldname)),
+    fields: meta.fields.filter(
+      ({ fieldname, fieldtype }) =>
+        !omitted.includes(fieldname) &&
+        (!onlyFields ||
+          onlyFields.includes(fieldname) ||
+          ['Section Break', 'Tab Break'].includes(fieldtype))
+    ),
   };
   const convert = (docfield: DocField) => toField(docfield, fieldContext);
   if (context.layout) {

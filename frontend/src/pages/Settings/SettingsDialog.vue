@@ -89,11 +89,39 @@
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
-      <!-- Saved as it changes, so without Save -->
+      <!-- Company and mode save as they change; the POS screen with Save. -->
       <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
-        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6" />
+        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6">
+          <template v-if="posScreenGroups.length" #actions>
+            <FrappeButton
+              variant="solid"
+              :label="t`Save`"
+              :disabled="!canSave"
+              @click="sync"
+            />
+          </template>
+        </FrappeSettingsHeader>
         <FrappeSettingsBody>
-          <ERPNextSettings />
+          <div class="space-y-11">
+            <ERPNextSettings />
+            <section v-for="group in posScreenGroups" :key="group.title">
+              <h2 class="mb-2 text-lg-semibold text-ink-gray-8">
+                {{ group.title }}
+              </h2>
+              <div class="divide-y divide-outline-gray-1">
+                <SettingsField
+                  v-for="field in group.fields"
+                  :key="field.fieldname"
+                  :field="field"
+                  :doc="group.doc"
+                  :error="errors[field.fieldname]"
+                  @change="
+                    (value: DocValue) => onValueChange(group.doc, field, value)
+                  "
+                />
+              </div>
+            </section>
+          </div>
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
@@ -150,7 +178,9 @@ export default defineComponent({
     SettingsField,
   },
   provide() {
-    return { doc: computed(() => this.doc) };
+    // The ERPNext tab's controls edit the POS screen preferences, whose table is of Defaults.
+    const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
+    return { doc: computed(() => this.doc ?? posScreen()) };
   },
   setup() {
     return { ...useSettings(), settingsDialog, erpnextTab: getERPNextTab() };

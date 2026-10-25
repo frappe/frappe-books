@@ -5,7 +5,7 @@ import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getERPNextLogo, isAccessoryMode } from 'src/frappe/mode';
-import { getSchema } from 'src/frappe/registry';
+import { getFields, getSchema } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { getErrorMessage } from 'src/utils';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -45,6 +45,53 @@ export function getERPNextTab(): SettingsTab | null {
   return { value: ERPNEXT_TAB, label: t`ERPNext`, icon: getERPNextLogo() };
 }
 
+/** A titled group of a single's fields, like the POS screen's button colours. */
+export interface SettingsGroup {
+  title: string;
+  doc: FrappeDoc;
+  fields: Field[];
+}
+
+// The POS screen preferences the ERPNext tab shows, as the standalone tabs hold them.
+const POS_SCREEN_GROUPS: [string, ModelNameEnum, string[]][] = [
+  [
+    t`Button colours`,
+    ModelNameEnum.POSScreenDefaults,
+    ['save', 'cancel', 'held', 'return', 'pay'].map(
+      (a) => `${a}_button_colour`
+    ),
+  ],
+  [
+    t`Cash denominations`,
+    ModelNameEnum.POSScreenDefaults,
+    ['pos_cash_denominations'],
+  ],
+  [t`Item grid`, ModelNameEnum.POSScreenSettings, ['pos_ui']],
+  [t`Item visibility`, ModelNameEnum.POSScreenSettings, ['item_visibility']],
+  [
+    t`Scale barcodes`,
+    ModelNameEnum.POSScreenSettings,
+    [
+      'weight_enabled_barcode',
+      'check_digits',
+      'item_code_digits',
+      'item_weight_digits',
+    ],
+  ],
+];
+
+/** Accessory mode: the POS screen preferences, which only System Managers change. */
+function getPOSScreenDocs(): FrappeDoc[] {
+  const roles = window.frappe.boot?.user?.roles ?? [];
+  if (!isAccessoryMode() || !roles.includes('System Manager')) {
+    return [];
+  }
+
+  return [ModelNameEnum.POSScreenSettings, ModelNameEnum.POSScreenDefaults]
+    .map((name) => fyo.singles[name])
+    .filter((doc): doc is FrappeDoc => !!doc?.canWrite);
+}
+
 /** The settings singles and the one company as tabs of sections, saved together. */
 export function useSettings() {
   const shortcuts = inject(shortcutsKey);
@@ -56,18 +103,23 @@ export function useSettings() {
   const tabs = computed(() =>
     schemas.value.map(({ name }) => getTab(name as ModelNameEnum))
   );
+  const posScreenGroups = shallowRef<SettingsGroup[]>([]);
   const canSave = computed(() =>
-    SETTINGS_SCHEMAS.some((name) => fyo.singles[name]?.canSave)
+    [...SETTINGS_SCHEMAS, ...POS_SCREEN_SCHEMAS].some(
+      (name) => fyo.singles[name]?.canSave
+    )
   );
 
   function update() {
     groupedFields.value = groupFields(schemas.value);
+    posScreenGroups.value = getPOSScreenGroups();
   }
 
   function getDocs(): FrappeDoc[] {
-    return schemas.value
+    const docs = schemas.value
       .map(({ name }) => fyo.singles[name])
       .filter((doc): doc is FrappeDoc => !!doc);
+    return [...docs, ...getPOSScreenDocs()];
   }
 
   async function onValueChange(doc: FrappeDoc, field: Field, value: DocValue) {
@@ -150,6 +202,7 @@ export function useSettings() {
   return {
     errors,
     groupedFields,
+    posScreenGroups,
     tabs,
     canSave,
     onValueChange,
@@ -158,6 +211,23 @@ export function useSettings() {
     setSaveShortcut,
     deleteSaveShortcut,
   };
+}
+
+const POS_SCREEN_SCHEMAS = [
+  ModelNameEnum.POSScreenSettings,
+  ModelNameEnum.POSScreenDefaults,
+];
+
+/** The POS screen groups' fields that show now, e.g. digits once scale barcodes are on. */
+function getPOSScreenGroups(): SettingsGroup[] {
+  const docs = getPOSScreenDocs();
+  return POS_SCREEN_GROUPS.map(([title, schemaName, fieldnames]) => {
+    const doc = docs.find((doc) => doc.schemaName === schemaName);
+    const fields = (doc ? getFields(schemaName, fieldnames) : []).filter(
+      (field) => !doc!.getFieldState(field).hidden
+    );
+    return { title, doc: doc!, fields };
+  }).filter(({ fields }) => fields.length);
 }
 
 /** Accessory mode keeps the settings of the UI only; ERPNext holds the rest. */

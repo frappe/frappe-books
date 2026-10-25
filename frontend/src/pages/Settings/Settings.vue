@@ -32,7 +32,26 @@
         />
       </section>
     </template>
-    <ERPNextSettings v-else-if="erpnextTab && activeTab === erpnextTab.value" />
+    <template v-else-if="erpnextTab && activeTab === erpnextTab.value">
+      <ERPNextSettings />
+      <section
+        v-for="group in posScreenGroups"
+        :key="group.title"
+        class="flex flex-col gap-4 border-t border-outline-gray-1 p-4"
+      >
+        <h2 class="text-lg-semibold text-ink-gray-8">{{ group.title }}</h2>
+        <CommonFormSection
+          switches
+          :fields="group.fields"
+          :doc="group.doc"
+          :errors="errors"
+          @value-change="
+            (field: Field, value: DocValue) =>
+              onValueChange(group.doc, field, value)
+          "
+        />
+      </section>
+    </template>
     <div v-if="showInstallButton" class="p-4">
       <FrappeButton
         class="w-full"
@@ -87,7 +106,9 @@ export default defineComponent({
     PageHeader,
   },
   provide() {
-    return { doc: computed(() => this.doc) };
+    // The ERPNext tab's controls edit the POS screen preferences, whose table is of Defaults.
+    const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
+    return { doc: computed(() => this.doc ?? posScreen()) };
   },
   setup() {
     return {

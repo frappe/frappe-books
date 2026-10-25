@@ -77,8 +77,8 @@ export function getPositionedFields(meta: DocTypeMeta): Positioned[] {
 
 /**
  * An ERPNext DocType's fields as accessory mode lays them out. A field with a
- * Books twin takes the twin's position, label and hidden; its other
- * properties are ERPNext's. Books-only fields are left out. The rest follow in
+ * Books twin takes the twin's tab, section, label and hidden, in ERPNext's
+ * order within the section; its other properties are ERPNext's. Books-only fields are left out. The rest follow in
  * ERPNext order: custom fields in their end tab, others in More details when
  * picked, else only while mandatory and empty (see `FrappeDoc._extrasShown`).
  * Every field stays, so the document keeps all its values when saved.
@@ -93,24 +93,29 @@ export function layOutAccessoryFields(
   const docfields = new Map(
     meta.fields.map((field) => [field.fieldname, field])
   );
-  const fields: Field[] = [];
+  const twinFields: Field[] = [];
   for (const { docfield: twin, section, tab } of getPositionedFields(
     layout.meta
   )) {
     for (const { fieldname, before } of placements) {
       const placed = docfields.get(fieldname);
       if (placed && before === twin.fieldname) {
-        fields.push({ ...toField(placed), section, tab });
+        twinFields.push({ ...toField(placed), section, tab });
       }
     }
 
     const docfield = docfields.get(twin.fieldname);
     if (docfield) {
       const { label, hidden } = twin;
-      fields.push({ ...toField({ ...docfield, label, hidden }), section, tab });
+      twinFields.push({
+        ...toField({ ...docfield, label, hidden }),
+        section,
+        tab,
+      });
     }
   }
 
+  const fields = inERPNextOrder(twinFields, meta, placements);
   const positioned = new Set(fields.map(({ fieldname }) => fieldname));
   for (const { docfield } of getPositionedFields(meta)) {
     if (!positioned.has(docfield.fieldname)) {
@@ -120,6 +125,49 @@ export function layOutAccessoryFields(
 
   return fields;
 }
+
+/**
+ * Orders the fields of each Books section as ERPNext's form does, sections
+ * staying in Books' order. A placed field stays just before the field it is
+ * placed before. Read-only amounts keep Books' order among themselves, so a
+ * totals block still ends on its total.
+ */
+function inERPNextOrder(
+  fields: Field[],
+  meta: DocTypeMeta,
+  placements: AccessoryPlacement[]
+): Field[] {
+  const docfields = new Map(meta.fields.map((f) => [f.fieldname, f]));
+  const indexes = new Map(meta.fields.map((f, index) => [f.fieldname, index]));
+  const anchors = new Map(placements.map((p) => [p.fieldname, p.before]));
+  const rank = ({ fieldname }: Field) => {
+    const anchor = anchors.get(fieldname);
+    return anchor
+      ? (indexes.get(anchor) ?? 0) - 0.5
+      : (indexes.get(fieldname) ?? 0);
+  };
+  const isAmount = ({ fieldname }: Field) => {
+    const docfield = docfields.get(fieldname);
+    return (
+      !!docfield?.read_only && AMOUNT_FIELDTYPES.includes(docfield.fieldtype)
+    );
+  };
+
+  const sections = new Map<string, Field[]>();
+  for (const field of fields) {
+    const key = `${field.tab ?? ''}\u0000${field.section ?? ''}`;
+    sections.set(key, [...(sections.get(key) ?? []), field]);
+  }
+
+  return [...sections.values()].flatMap((section) => {
+    const amounts = section.filter(isAmount);
+    return [...section]
+      .sort((a, b) => rank(a) - rank(b))
+      .map((field) => (isAmount(field) ? amounts.shift()! : field));
+  });
+}
+
+const AMOUNT_FIELDTYPES = ['Currency', 'Float', 'Int', 'Percent'];
 
 /** An ERPNext field the Books twin lacks, placed before the twin field `before`, like a POS Opening Entry's POS Profile. */
 export interface AccessoryPlacement {

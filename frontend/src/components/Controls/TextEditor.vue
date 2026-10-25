@@ -1,7 +1,13 @@
 <template>
   <div class="flex min-w-0 flex-col gap-1.5" :style="containerStyles">
+    <!-- A read value labels itself as ReadOnlyValue does. -->
+    <span
+      v-if="showLabel && isReadOnly && isMobile"
+      class="text-sm text-ink-gray-6"
+      >{{ df.label }}</span
+    >
     <FrappeFormLabel
-      v-if="showLabel"
+      v-else-if="showLabel"
       :label="df.label"
       :required="isRequired && !isReadOnly"
     />
@@ -22,20 +28,10 @@
       @focus="onFocus"
       @blur="onBlur"
     >
-      <template #default="{ editor }">
+      <template #default>
         <EditorContent v-if="isReadOnly" class="break-words text-ink-gray-8" />
-        <!-- TextEditor has no `error` prop, so the red border is drawn here. -->
-        <div
-          v-else
-          class="overflow-hidden rounded-5 border bg-surface-base"
-          :class="
-            invalid || (!isMobile && showMandatory)
-              ? 'border-outline-red-3'
-              : 'border-outline-gray-2'
-          "
-        >
+        <div v-else class="overflow-hidden border" :class="surfaceClasses">
           <EditorFixedMenu
-            v-if="!isMobile"
             class="flex-wrap border-b border-outline-gray-1 p-1.5"
             :items="toolbar"
           />
@@ -43,23 +39,12 @@
             class="max-h-[300px] min-h-[88px] overflow-y-auto break-words px-3 py-2"
           />
         </div>
-        <!-- Phones dock the toolbar above the keyboard while the editor has focus. -->
-        <Teleport v-if="isMobile && focused" to="body">
-          <div
-            class="fixed inset-x-0 z-50 overflow-x-auto border-t border-outline-gray-1 bg-surface-base px-2 py-1.5"
-            :style="{ bottom: `${keyboardInset}px` }"
-            @mousedown.prevent
-          >
-            <EditorFixedMenu :editor="editor" :items="toolbar" />
-          </div>
-        </Teleport>
       </template>
     </FrappeEditor>
   </div>
 </template>
 
 <script lang="ts">
-import { useEventListener } from '@vueuse/core';
 import { FormLabel as FrappeFormLabel, upload } from 'frappe-ui';
 import {
   Blockquote,
@@ -79,7 +64,7 @@ import {
   Separator,
   Strike,
 } from 'frappe-ui/editor';
-import { defineComponent, markRaw, ref } from 'vue';
+import { defineComponent, markRaw } from 'vue';
 import Base from './Base.vue';
 
 // frappe-ui exports no Underline item.
@@ -122,24 +107,28 @@ export default defineComponent({
   components: { EditorContent, EditorFixedMenu, FrappeEditor, FrappeFormLabel },
   extends: Base,
   setup() {
-    // How far the keyboard pushes the visual viewport up from the layout viewport's bottom.
-    const keyboardInset = ref(0);
-    const viewport = window.visualViewport;
-    const updateInset = () => {
-      keyboardInset.value = viewport
-        ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
-        : 0;
-    };
-    useEventListener(viewport, ['resize', 'scroll'], updateInset);
-    return {
-      keyboardInset,
-      updateInset,
-      toolbar: markRaw(toolbar),
-      extensions: markRaw(extensions),
-    };
+    return { toolbar: markRaw(toolbar), extensions: markRaw(extensions) };
   },
   data() {
-    return { focused: false, draft: null as string | null };
+    return { draft: null as string | null };
+  },
+  computed: {
+    /** The box of Textarea's variant: outline on desktop, subtle on phones. Editor has no `error`, so the red border is drawn here. */
+    surfaceClasses(): string[] {
+      const classes = this.isMobile
+        ? [
+            'rounded-5 bg-surface-gray-2 focus-within:bg-surface-base',
+            'border-[--surface-gray-2] focus-within:border-outline-gray-4',
+          ]
+        : [
+            'rounded-4 bg-surface-base hover:border-outline-gray-3',
+            'border-outline-gray-2 focus-within:border-outline-gray-4',
+          ];
+      if (this.invalid || (!this.isMobile && this.showMandatory)) {
+        classes.push('!border-outline-red-3');
+      }
+      return classes;
+    },
   },
   methods: {
     focus() {
@@ -148,13 +137,10 @@ export default defineComponent({
       )?.editor?.commands.focus();
     },
     onFocus(event: FocusEvent) {
-      this.focused = true;
-      this.updateInset();
       this.$emit('focus', event);
     },
     /** Edits are set when the editor loses focus, as other fields set theirs. */
     onBlur() {
-      this.focused = false;
       if (this.draft === null || this.draft === this.value) {
         return;
       }

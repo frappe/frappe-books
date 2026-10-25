@@ -1,5 +1,6 @@
 import { t } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
+import { getMoreDetailsFields } from 'src/frappe/extraFields';
 import { Field, FieldTypeEnum } from 'schemas/types';
 import { getAmountField } from './rowSummary';
 
@@ -10,8 +11,9 @@ export interface RowDetail {
   emphasis: boolean;
 }
 
-/** Every column of a row, including those its summary leaves out. */
+/** Every column of a row, including those its summary leaves out; of accessory mode's extra fields, those More details shows. */
 export function getRowDetails(row: FrappeDoc): RowDetail[] {
+  const extras = new Set(getMoreDetailsFields(row).map((f) => f.fieldname));
   const tableFields = (row.schema.tableFields ?? []).map(
     (fieldname) => row.fieldMap[fieldname]
   );
@@ -19,6 +21,7 @@ export function getRowDetails(row: FrappeDoc): RowDetail[] {
 
   return row.schema.fields
     .filter((field) => isShown(row, field))
+    .filter((field) => !field.moreDetails || extras.has(field.fieldname))
     .map((field) => ({
       key: field.fieldname,
       label: field.label ?? field.fieldname,

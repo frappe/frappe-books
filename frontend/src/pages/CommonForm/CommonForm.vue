@@ -36,20 +36,13 @@
       :doc="doc"
       @close="showLinks = false"
     />
-    <AccessoryRowEditor
-      v-if="row && !showLinks && isAccessory"
+    <RowEditForm
+      v-if="row && !showLinks"
       :doc="doc"
       :fieldname="row.fieldname"
       :index="row.index"
       :errors="rowErrors"
       @close="closeRow"
-    />
-    <RowEditForm
-      v-else-if="row && !showLinks"
-      :doc="doc"
-      :fieldname="row.fieldname"
-      :index="row.index"
-      @close="() => (row = null)"
     />
   </div>
   <FormContainer v-else :use-full-width="useFullWidth">
@@ -162,14 +155,6 @@
             :config="linkedRecords"
           />
         </div>
-        <AccessoryRowEditor
-          v-if="row && !showLinks && isAccessory"
-          :doc="doc"
-          :fieldname="row.fieldname"
-          :index="row.index"
-          :errors="rowErrors"
-          @close="closeRow"
-        />
       </template>
     </template>
     <template #quickedit>
@@ -183,13 +168,14 @@
       </Transition>
       <Transition name="quickedit">
         <RowEditForm
-          v-if="row && !showLinks && !isAccessory"
+          v-if="row && !showLinks"
           :doc="doc"
           :fieldname="row.fieldname"
           :index="row.index"
-          @previous="(i: number) => (row!.index = i)"
-          @next="(i: number) => (row!.index = i)"
-          @close="() => (row = null)"
+          :errors="rowErrors"
+          @previous="showRowAt"
+          @next="showRowAt"
+          @close="closeRow"
         />
       </Transition>
     </template>
@@ -244,7 +230,6 @@ import { noteMissingExtras, showMissingExtras } from 'src/frappe/extraFields';
 import { getMissingFieldsOf } from 'src/frappe/missingMessages';
 import { getServerMessages, type ServerMessage } from 'src/web/api';
 import { syncOrSubmitDoc } from 'src/utils/vueUtils';
-import AccessoryRowEditor from './AccessoryRowEditor.vue';
 import CommonFormSection from './CommonFormSection.vue';
 import ExtraFields from './ExtraFields.vue';
 import { getExtraPlace, getRowBooksFields } from './extraFieldsView';
@@ -263,7 +248,6 @@ interface FormError {
 
 export default defineComponent({
   components: {
-    AccessoryRowEditor,
     ExtraFields,
     FormErrorPanel,
     FrappeAlert,
@@ -743,6 +727,10 @@ export default defineComponent({
     },
     closeRow() {
       this.row = null;
+      this.rowErrors = {};
+    },
+    showRowAt(index: number) {
+      this.row!.index = index;
       this.rowErrors = {};
     },
     /** Selects the tab holding a field, then scrolls to it. */

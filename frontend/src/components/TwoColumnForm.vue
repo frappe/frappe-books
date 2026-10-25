@@ -99,6 +99,11 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       default: () => [1, 1],
     },
+    /** Messages to show by fieldname, e.g. a required field a save found empty. */
+    fieldErrors: {
+      type: Object as PropType<Record<string, string>>,
+      default: () => ({}),
+    },
   },
   setup() {
     return { isMobile };
@@ -122,6 +127,15 @@ export default defineComponent({
   watch: {
     doc() {
       this.setFormFields();
+    },
+    fields() {
+      this.setFormFields();
+    },
+    fieldErrors: {
+      immediate: true,
+      handler(given: Record<string, string>) {
+        Object.assign(this.errors, given);
+      },
     },
   },
   mounted() {

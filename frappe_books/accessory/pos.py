@@ -9,6 +9,8 @@ from frappe import _
 from frappe.utils import flt, getdate, now_datetime, nowdate
 
 from frappe_books.accessory.ui_settings import check_ui_settings_access
+from frappe_books.accounting.money import as_decimal
+from frappe_books.commerce.pos import counter_payment_amounts
 
 # Books' POS screen preferences, by the single that holds them
 POS_SETTINGS_FIELDS = (
@@ -86,15 +88,32 @@ def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	doc.check_permission("read")
 	if not (doc.is_pos and doc.docstatus == 1):
 		frappe.throw(_("Only submitted POS invoices can be paid at the counter."))
-	return [make_payment(doc, frappe._dict(row)) for row in payments]
+	tenders = [frappe._dict(row) for row in payments]
+	validate_profile_modes(doc.pos_profile, tenders)
+	due = abs(as_decimal(doc.outstanding_amount))
+	amounts = counter_payment_amounts(tenders, due, is_cash=is_cash_mode)
+	return [make_payment(doc, tender, paid) for tender, paid in amounts]
 
 
-def make_payment(invoice, tender) -> str:
-	"""A submitted Payment Entry of the tender against the invoice; cash beyond what is owed is change."""
+def validate_profile_modes(pos_profile: str, tenders: list):
+	"""A POS invoice is paid only by the modes of its POS Profile, as ERPNext's POS offers them."""
+	modes = {row.mode_of_payment for row in frappe.get_cached_doc("POS Profile", pos_profile).payments}
+	for tender in tenders:
+		if tender.mode_of_payment not in modes:
+			frappe.throw(_("POS Profile {0} does not take {1}.").format(pos_profile, tender.mode_of_payment))
+
+
+def is_cash_mode(mode_of_payment: str) -> bool:
+	return frappe.get_cached_value("Mode of Payment", mode_of_payment, "type") == "Cash"
+
+
+def make_payment(invoice, tender, paid) -> str:
+	"""A submitted Payment Entry of `paid` of the tender against the invoice; a return's pays it back."""
+	sign = -1 if flt(invoice.outstanding_amount) < 0 else 1
 	entry = get_payment_entry(
 		"Sales Invoice",
 		invoice.name,
-		party_amount=min(flt(tender.amount), flt(invoice.outstanding_amount)),
+		party_amount=sign * flt(paid),
 		reference_date=tender.clearance_date,
 	)
 	entry.mode_of_payment = tender.mode_of_payment

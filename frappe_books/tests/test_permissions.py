@@ -230,7 +230,8 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		party.db_set("email_id", "hidden@example.com")
 		email = frappe.get_meta("Books Customer").get_field("email_id")
 		with patch.object(email, "permlevel", 2), self.set_user(BOOKS_USER):
-			self.assertIsNone(read_doc("Books Customer", party.name).get("email_id"))
+			# Frappe gives a removed Read Only field as "".
+			self.assertFalse(read_doc("Books Customer", party.name).get("email_id"))
 
 	def test_counts_skip_documents_the_user_cannot_read(self):
 		readable, hidden = _seed_delivery_note(), _seed_delivery_note()

@@ -51,7 +51,7 @@
   </div>
   <div
     v-else
-    class="flex items-center justify-between gap-3 rounded-6 border border-dashed border-outline-gray-2 px-3.5 py-3"
+    class="flex items-center justify-between gap-3 rounded-6 border border-outline-gray-1 px-3.5 py-3"
     :data-fieldname="df.fieldname"
   >
     <span class="text-base text-ink-gray-5">{{ df.placeholder }}</span>

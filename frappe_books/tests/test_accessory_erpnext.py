@@ -187,6 +187,95 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 			self.preview(invoice_values(self.customer, self.pen), {})
 
 
+def submitted_invoice(customer, item, qty):
+	invoice = frappe.get_doc(
+		{"doctype": "Sales Invoice", "customer": customer, "items": [{"item_code": item, "qty": qty}]}
+	)
+	return invoice.insert().submit()
+
+
+def cash_account():
+	"""The Cash mode of payment's account for the company, which the setup wizard may not have set."""
+	company = erpnext_default_company()
+	account = frappe.db.get_value("Company", company, "default_cash_account")
+	mode = frappe.get_doc("Mode of Payment", "Cash")
+	if not any(row.company == company for row in mode.accounts):
+		mode.append("accounts", {"company": company, "default_account": account})
+		mode.save()
+	return frappe.db.get_value(
+		"Mode of Payment Account", {"parent": "Cash", "company": company}, "default_account"
+	)
+
+
+def payment_values(customer, paid_amount=0, **reference):
+	values = {
+		"doctype": "Payment Entry",
+		"__islocal": 1,
+		"party_type": "Customer",
+		"party": customer,
+		"paid_amount": paid_amount,
+	}
+	if reference:
+		values["references"] = [{"name": "ref-1", "reference_doctype": "Sales Invoice", **reference}]
+	return values
+
+
+@needs_erpnext
+class IntegrationTestAccessoryFormFills(IntegrationTestCase):
+	def setUp(self):
+		from frappe_books.accessory.preview import preview
+
+		self.preview = preview
+		self.customer = make_customer("Accessory Preview Customer")
+		self.pen = make_item("ACC-PREVIEW-PEN", 20)
+
+	def test_a_mode_of_payment_fills_its_cash_account(self):
+		account = cash_account()
+		values = {**payment_values(self.customer), "mode_of_payment": "Cash"}
+		doc = self.preview(values, {"doc": ["mode_of_payment"]})
+
+		self.assertEqual(doc["paid_to"], account)
+
+	def test_a_chosen_reference_takes_what_is_left_of_the_payment(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		doc = self.preview(
+			payment_values(self.customer, 30, reference_name=invoice.name), {"doc": ["paid_amount"]}
+		)
+
+		self.assertEqual(doc["references"][0]["allocated_amount"], 30)
+
+	def test_a_payment_with_no_amount_takes_the_outstanding_amount(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		doc = self.preview(payment_values(self.customer, reference_name=invoice.name), {"doc": ["party"]})
+
+		self.assertEqual((doc["paid_amount"], doc["references"][0]["allocated_amount"]), (60, 60))
+
+	def test_a_new_amount_is_allocated_again(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		values = payment_values(self.customer, 20, reference_name=invoice.name, allocated_amount=60)
+		doc = self.preview(values, {"doc": ["paid_amount"]})
+
+		self.assertEqual(doc["references"][0]["allocated_amount"], 20)
+
+	def test_a_stock_entry_takes_its_purpose_and_its_rows_their_item_details(self):
+		warehouse = frappe.db.get_value("Warehouse", {"is_group": 0, "company": erpnext_default_company()})
+		values = {
+			"doctype": "Stock Entry",
+			"__islocal": 1,
+			"stock_entry_type": "Material Receipt",
+			"items": [
+				{"name": "row-1", "item_code": self.pen, "qty": 2, "t_warehouse": warehouse},
+				{"name": "row-2"},
+			],
+		}
+		doc = self.preview(values, {"doc": ["stock_entry_type"], "rows": {"row-1": ["item_code"]}})
+
+		row, blank = (frappe._dict(row) for row in doc["items"])
+		self.assertEqual(doc["purpose"], "Material Receipt")
+		self.assertEqual((row.uom, row.conversion_factor, row.transfer_qty), ("Nos", 1, 2))
+		self.assertFalse(blank.item_code)
+
+
 @needs_erpnext
 class IntegrationTestAccessoryMappers(IntegrationTestCase):
 	def setUp(self):

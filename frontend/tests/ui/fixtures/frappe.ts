@@ -1,6 +1,8 @@
 import { frappeModels } from 'models';
 import { registerFrappeModels } from 'src/frappe/doctypes';
 import { loadFrappeDocTypes } from 'src/frappe/registry';
+// Frappe's doctypes that models name, which the app does not ship.
+import { frappeMetas as sharedFrappeMetas } from '../../helpers/frappeMetas.mjs';
 
 type DocField = {
   fieldname: string;
@@ -26,31 +28,7 @@ const doctypes = Object.values(
     import: 'default',
   })
 ) as Meta[];
-
-// Frappe's doctypes that models name, which the app does not ship.
-const frappeMetas: Meta[] = [
-  {
-    name: 'Currency',
-    fields: [{ fieldname: 'currency_name', fieldtype: 'Data' }],
-  },
-  {
-    name: 'Country',
-    autoname: 'field:country_name',
-    fields: [{ fieldname: 'country_name', fieldtype: 'Data' }],
-  },
-  {
-    name: 'Print Format',
-    autoname: 'Prompt',
-    fields: [
-      { fieldname: 'doc_type', fieldtype: 'Link', options: 'DocType' },
-      { fieldname: 'standard', fieldtype: 'Select', options: 'No\nYes' },
-      { fieldname: 'custom_format', fieldtype: 'Check' },
-      { fieldname: 'html', fieldtype: 'Code' },
-      { fieldname: 'css', fieldtype: 'Code' },
-      { fieldname: 'disabled', fieldtype: 'Check' },
-    ],
-  },
-];
+const frappeMetas = sharedFrappeMetas as Meta[];
 
 /**
  * Serves the models from the DocType files, with `customFields` added by

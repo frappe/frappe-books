@@ -16,6 +16,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import default_accounts, run_setup
+from frappe_books.tests import skip_with_erpnext
 from frappe_books.tests.accounting import ensure_user, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
@@ -43,6 +44,7 @@ SETUP_ACCOUNT_RULES = {
 	"cost_of_goods_sold": COMPANY_RULES["default_expense_account"],
 	"stock_adjustment": COMPANY_RULES["stock_adjustment_account"],
 }
+ERPNEXT_WIZARD = "a site with ERPNext is set up by ERPNext's wizard, not Books'"
 
 
 class IntegrationTestBooksSetupWizard(IntegrationTestCase):
@@ -159,6 +161,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				self.assert_settings_accept_default_accounts(load_chart(name))
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
 
+	@skip_with_erpnext(ERPNEXT_WIZARD)
 	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		frappe.db.set_value("Installed Application", {"app_name": "frappe"}, "is_setup_complete", 0)
@@ -197,6 +200,7 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				formats = frappe.db.get_value("System Settings", None, ["date_format", "number_format"])
 				self.assertEqual(formats, frappe_formats)
 
+	@skip_with_erpnext(ERPNEXT_WIZARD)
 	def test_fresh_site_opens_the_books_setup_wizard(self):
 		self.assertEqual(get_setup_wizard_url(), "/books")
 

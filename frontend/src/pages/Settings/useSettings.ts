@@ -24,6 +24,7 @@ const SETTINGS_SCHEMAS = [
 ];
 const SHORTCUT_CONTEXT = 'Settings';
 export const ERPNEXT_TAB = 'ERPNext';
+const POS_SCREEN_TAB = 'POSScreen';
 
 export interface SettingsTab {
   value: string;
@@ -45,6 +46,19 @@ export function getERPNextTab(): SettingsTab | null {
   return { value: ERPNEXT_TAB, label: t`ERPNext`, icon: getERPNextLogo() };
 }
 
+/** Accessory mode: the POS screen preferences' tab, named as standalone's POS tab. */
+export function getPOSScreenTab(): SettingsTab | null {
+  if (!getPOSScreenDocs().length) {
+    return null;
+  }
+
+  return {
+    value: POS_SCREEN_TAB,
+    label: t`POS Settings`,
+    icon: 'lucide-store',
+  };
+}
+
 /** A titled group of a single's fields, like the POS screen's button colours. */
 export interface SettingsGroup {
   title: string;
@@ -52,7 +66,7 @@ export interface SettingsGroup {
   fields: Field[];
 }
 
-// The POS screen preferences the ERPNext tab shows, as the standalone tabs hold them.
+// The POS screen preferences accessory mode's POS tab shows, as the standalone tabs hold them.
 const POS_SCREEN_GROUPS: [string, ModelNameEnum, string[]][] = [
   [
     t`Button colours`,

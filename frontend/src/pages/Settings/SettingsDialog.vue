@@ -10,7 +10,7 @@
     <FrappeSettingsSidebar>
       <FrappeSettingsNavGroup :label="t`Settings`">
         <FrappeSettingsNavItem
-          v-for="tab in tabs"
+          v-for="tab in navTabs"
           :key="tab.value"
           :value="tab.value"
         >
@@ -89,10 +89,9 @@
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
-      <!-- Company and mode save as they change; the POS screen with Save. -->
-      <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
-        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6">
-          <template v-if="posScreenGroups.length" #actions>
+      <FrappeSettingsPanel v-if="posScreenTab" :value="posScreenTab.value">
+        <FrappeSettingsHeader :title="posScreenTab.label" class="pb-6">
+          <template #actions>
             <FrappeButton
               variant="solid"
               :label="t`Save`"
@@ -103,7 +102,6 @@
         </FrappeSettingsHeader>
         <FrappeSettingsBody>
           <div class="space-y-11">
-            <ERPNextSettings />
             <section v-for="group in posScreenGroups" :key="group.title">
               <h2 class="mb-2 text-lg-semibold text-ink-gray-8">
                 {{ group.title }}
@@ -122,6 +120,14 @@
               </div>
             </section>
           </div>
+        </FrappeSettingsBody>
+      </FrappeSettingsPanel>
+
+      <!-- Company and mode save as they change. -->
+      <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
+        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6" />
+        <FrappeSettingsBody>
+          <ERPNextSettings />
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
@@ -159,7 +165,12 @@ import { settingsDialog } from 'src/utils/refs';
 import { computed, defineComponent } from 'vue';
 import ERPNextSettings from './ERPNextSettings.vue';
 import SettingsField from './SettingsField.vue';
-import { getERPNextTab, useSettings } from './useSettings';
+import {
+  getERPNextTab,
+  getPOSScreenTab,
+  useSettings,
+  type SettingsTab,
+} from './useSettings';
 
 export default defineComponent({
   components: {
@@ -178,19 +189,28 @@ export default defineComponent({
     SettingsField,
   },
   provide() {
-    // The ERPNext tab's controls edit the POS screen preferences, whose table is of Defaults.
+    // The POS tab's controls edit the POS screen preferences, whose table is of Defaults.
     const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
     return { doc: computed(() => this.doc ?? posScreen()) };
   },
   setup() {
-    return { ...useSettings(), settingsDialog, erpnextTab: getERPNextTab() };
+    return {
+      ...useSettings(),
+      settingsDialog,
+      erpnextTab: getERPNextTab(),
+      posScreenTab: getPOSScreenTab(),
+    };
   },
   computed: {
+    /** The tabs with Books icons; the ERPNext tab shows ERPNext's logo. */
+    navTabs(): SettingsTab[] {
+      return this.posScreenTab ? [...this.tabs, this.posScreenTab] : this.tabs;
+    },
     /** A tab that is not shown, e.g. Inventory with inventory off, opens the first. */
     activeTab: {
       get(): string {
         const { tab } = settingsDialog;
-        const tabs = [...this.tabs, this.erpnextTab];
+        const tabs = [...this.navTabs, this.erpnextTab];
         return tabs.some((shown) => shown?.value === tab)
           ? tab
           : this.tabs[0].value;

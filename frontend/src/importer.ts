@@ -24,10 +24,13 @@ import { getValueMapFromList } from 'utils/index';
 
 export type TemplateField = Field & TemplateFieldProps;
 
-/** The schemas the Import Wizard offers that the user may import. */
+/** The schemas the Import Wizard offers that the user may import; accessory mode imports in Desk's Data Import. */
 export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
   // Frappe's Data Import imports, so the user must be able to make one.
-  if (!hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')) {
+  if (
+    isAccessoryMode() ||
+    !hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')
+  ) {
     return [];
   }
 
@@ -743,12 +746,9 @@ function isCompanyTable(field: Field, schema: Schema): boolean {
   );
 }
 
-/**
- * Whether a file must give the field. ERPNext fills many of its mandatory
- * fields on save, so accessory mode leaves the check to its Data Import.
- */
+/** Whether a file must give the field. */
 function isFilledByUser(field: Field): boolean {
-  return !!field.required && !isAccessoryMode();
+  return !!field.required;
 }
 
 /**

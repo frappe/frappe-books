@@ -18,33 +18,35 @@
     </PageHeader>
 
     <!-- Phones list the document types on a page of their own. -->
+    <!-- Rows as the phone nav sheet's. -->
     <nav
       v-if="isMobile && !selected"
-      class="pb-4 pt-2"
+      class="flex flex-col gap-0.5 px-2 pb-4 pt-2"
       :aria-label="t`Document types`"
     >
-      <section v-for="group in groups" :key="group.label">
-        <h2 class="px-4 pb-1.5 pt-4 text-xs-medium text-ink-gray-5">
+      <template v-for="group in groups" :key="group.label">
+        <h2 class="px-2 pb-1 pt-4 text-sm text-ink-gray-5">
           {{ group.label }}
         </h2>
-        <RouterLink
+        <FrappeItemListRow
           v-for="name in group.schemaNames"
           :key="name"
+          :as="RouterLink"
           :to="getLocation(name)"
-          class="flex min-h-12 items-center gap-2 border-b border-outline-gray-1 px-4 active:bg-surface-gray-2"
+          size="lg"
         >
-          <span class="flex-1 text-md text-ink-gray-8">
-            {{ getPickerLabel(name) }}
-          </span>
-          <span v-if="getPickCount(name)" class="text-sm text-ink-gray-5">
-            {{ t`${getPickCount(name)} picked` }}
-          </span>
-          <span
-            class="lucide-chevron-right size-4 text-ink-gray-5 rtl-rotate-180"
-            aria-hidden="true"
-          />
-        </RouterLink>
-      </section>
+          <span class="block truncate">{{ getPickerLabel(name) }}</span>
+          <template #suffix>
+            <span v-if="getPickCount(name)" class="text-sm text-ink-gray-5">
+              {{ t`${getPickCount(name)} picked` }}
+            </span>
+            <span
+              class="lucide-chevron-right size-4 text-ink-gray-4 rtl-rotate-180"
+              aria-hidden="true"
+            />
+          </template>
+        </FrappeItemListRow>
+      </template>
     </nav>
     <FieldPickerFields
       v-else-if="isMobile"
@@ -87,6 +89,7 @@
 </template>
 <script setup lang="ts">
 import {
+  ItemListRow as FrappeItemListRow,
   PageHeaderBackButton as FrappePageHeaderBackButton,
   SidebarItem as FrappeSidebarItem,
   SidebarLabel as FrappeSidebarLabel,
@@ -96,7 +99,7 @@ import PageHeader from 'src/components/PageHeader.vue';
 import { toSchemaName } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import { computed } from 'vue';
-import { useRoute, type RouteLocationRaw } from 'vue-router';
+import { RouterLink, useRoute, type RouteLocationRaw } from 'vue-router';
 import FieldPickerActions from './FieldPickerActions.vue';
 import FieldPickerFields from './FieldPickerFields.vue';
 import { getPickCount, getPickerGroups, getPickerLabel } from './fieldPicker';

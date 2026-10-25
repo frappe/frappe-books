@@ -4,20 +4,13 @@
       v-if="isMobile"
       class="flex shrink-0 flex-col gap-2.5 border-b border-outline-gray-1 px-4 py-3"
     >
-      <FrappeTabs v-model="tab">
-        <FrappeTabList
-          variant="subtle"
-          size="md"
-          class="grid w-full grid-cols-2 self-stretch"
-        >
-          <FrappeTabTrigger value="doc" :label="t`Document fields`" />
-          <FrappeTabTrigger
-            value="row"
-            :label="t`Row fields`"
-            :disabled="!canPickRows"
-          />
-        </FrappeTabList>
-      </FrappeTabs>
+      <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
+      <FrappeTabButtons
+        v-model="tab"
+        class="w-full [&>*]:flex-1"
+        size="md"
+        :options="tabOptions"
+      />
       <FrappeSelect
         v-if="tab === 'row'"
         v-model="table"
@@ -42,13 +35,13 @@
         </FrappeTextInput>
         <FrappeSelect
           v-model="filter"
-          class="w-[132px] shrink-0"
+          class="w-32 shrink-0"
           size="lg"
           :options="filterOptions"
           :aria-label="t`Filter`"
         />
       </div>
-      <div class="flex justify-between gap-2 text-xs text-ink-gray-5">
+      <div class="flex justify-between gap-2 text-sm text-ink-gray-5">
         <span>{{ hint }}</span>
         <span class="whitespace-nowrap">{{ summary }}</span>
       </div>
@@ -59,37 +52,26 @@
           <h2 class="text-lg-semibold text-ink-gray-9">{{ label }}</h2>
           <p class="text-base text-ink-gray-5">{{ hint }}</p>
         </div>
-        <FrappeTabs v-model="tab">
-          <FrappeTabList>
-            <FrappeTabTrigger value="doc" :label="t`Document fields`">
-              <template v-if="isReady" #suffix="{ active }">
-                <FrappeBadge
-                  size="sm"
-                  theme="gray"
-                  :variant="active ? 'solid' : 'subtle'"
-                  :label="String(docFieldCount)"
-                />
-              </template>
-            </FrappeTabTrigger>
-            <FrappeTabTrigger
-              value="row"
-              :label="t`Row fields`"
-              :disabled="!canPickRows"
-            />
-          </FrappeTabList>
-        </FrappeTabs>
+        <div class="flex border-b border-outline-gray-1">
+          <FrappeTabButtons
+            v-model="tab"
+            class="-mb-px flex"
+            variant="underline"
+            :options="tabOptions"
+          />
+        </div>
       </div>
       <div class="flex shrink-0 items-center gap-2 px-5 py-3">
         <FrappeSelect
           v-if="tab === 'row'"
           v-model="table"
-          class="w-[260px]"
+          class="w-64"
           :options="tableOptions"
           :aria-label="t`Table`"
         />
         <FrappeTextInput
           v-model="query"
-          class="w-[260px]"
+          class="w-64"
           :placeholder="t`Search by label…`"
           :aria-label="t`Search by label`"
         >
@@ -112,98 +94,105 @@
       </div>
     </template>
 
+    <!-- A list as Books' lists are: header, full dividers, rows mounted as they scroll in. -->
     <div
       v-if="isReady && rows.length"
-      v-bind="containerProps"
-      class="min-h-0 flex-1"
-      :class="isMobile ? '' : 'border-t border-outline-gray-1'"
+      ref="scroller"
+      class="min-h-0 flex-1 overflow-y-auto"
+      :class="isMobile ? '' : 'px-5'"
+    >
+      <FrappeList
+        :columns="isMobile ? undefined : COLUMNS"
+        :row-height="isMobile ? 56 : 48"
+        divider="full"
+        class="text-base list-gap-4"
+        :class="isMobile ? 'list-row-px-4' : '-mx-3 list-row-px-3'"
+      >
+        <FrappeListHeader
+          v-if="!isMobile"
+          class="sticky top-0 z-10 bg-surface-base"
+        >
+          <FrappeListHeaderCell>
+            <span class="sr-only">{{ t`Picked` }}</span>
+          </FrappeListHeaderCell>
+          <FrappeListHeaderCell>{{ t`Label` }}</FrappeListHeaderCell>
+          <FrappeListHeaderCell>{{ t`Section` }}</FrappeListHeaderCell>
+          <FrappeListHeaderCell>{{ t`Type` }}</FrappeListHeaderCell>
+        </FrappeListHeader>
+        <FrappeListRows :items="rows" row-key="key" virtual>
+          <template #default="{ item: field }">
+            <FieldPickerRow
+              :field="field"
+              :picked="picks.has(field.key)"
+              @toggle="togglePick(schemaName, field.key)"
+            />
+          </template>
+        </FrappeListRows>
+      </FrappeList>
+    </div>
+    <div
+      v-else-if="loaded?.status === 'loading'"
+      :class="isMobile ? 'px-4' : 'px-5'"
+      aria-busy="true"
     >
       <div
-        v-if="!isMobile"
-        class="sticky top-0 z-[1] grid h-8 grid-cols-[36px_minmax(0,1.3fr)_minmax(0,1fr)_150px] items-center border-b border-outline-gray-1 bg-surface-gray-1 px-5 text-xs-medium text-ink-gray-5"
+        v-for="row in 8"
+        :key="row"
+        class="flex h-12 items-center border-b border-outline-gray-1"
       >
-        <span />
-        <span>{{ t`Label` }}</span>
-        <span>{{ t`Section` }}</span>
-        <span>{{ t`Type` }}</span>
-      </div>
-      <div v-bind="wrapperProps" role="group" :aria-label="label">
-        <FieldPickerRow
-          v-for="{ data: field } in list"
-          :key="field.key"
-          :field="field"
-          :picked="picks.has(field.key)"
-          @toggle="togglePick(schemaName, field.key)"
-        />
+        <FrappeSkeleton class="h-4 w-full" />
       </div>
     </div>
     <div
-      v-else
-      class="min-h-0 flex-1 overflow-y-auto"
-      :class="isMobile ? '' : 'border-t border-outline-gray-1'"
+      v-else-if="loaded?.status === 'error'"
+      :class="isMobile ? 'p-4' : 'max-w-2xl p-5'"
     >
-      <div
-        v-if="loaded?.status === 'loading'"
-        class="flex items-center justify-center gap-2 px-5 text-base text-ink-gray-5"
-        :class="isMobile ? 'py-[72px]' : 'py-24'"
-      >
-        <FrappeSpinner class="size-4" />
-        <span>{{ t`Loading fields from ERPNext…` }}</span>
-      </div>
-      <div
-        v-else-if="loaded?.status === 'error'"
-        :class="isMobile ? 'p-4' : 'max-w-[640px] p-5'"
-      >
-        <FrappeAlert
-          theme="red"
-          :title="t`Couldn't load ${label} from ERPNext`"
-          :description="errorMessage"
-          :primary-action="{ label: t`Retry`, onClick: retry }"
-        />
-      </div>
-      <div
-        v-else-if="isReady"
-        class="flex flex-col items-center gap-3 text-center"
-        :class="isMobile ? 'px-6 py-[72px]' : 'px-5 py-24'"
-      >
-        <p
-          :class="isMobile ? 'text-md-medium' : 'text-base-medium'"
-          class="text-ink-gray-8"
-        >
-          {{ emptyTitle }}
-        </p>
-        <FrappeButton
-          v-if="query.trim()"
-          variant="subtle"
-          :size="isMobile ? 'lg' : 'sm'"
-          :label="t`Clear search`"
-          @click="query = ''"
-        />
-      </div>
+      <FrappeAlert
+        theme="red"
+        :title="t`Couldn't load ${label} from ERPNext`"
+        :description="errorMessage"
+        :primary-action="{ label: t`Retry`, onClick: retry }"
+      />
     </div>
+    <EmptyState
+      v-else-if="isReady"
+      class="my-auto py-16"
+      icon="lucide-search-x"
+      :title="emptyTitle"
+    >
+      <FrappeButton
+        v-if="query.trim()"
+        :size="isMobile ? 'lg' : 'sm'"
+        :label="t`Clear search`"
+        @click="query = ''"
+      />
+    </EmptyState>
   </div>
 </template>
 <script setup lang="ts">
-import { useVirtualList } from '@vueuse/core';
 import {
   Alert as FrappeAlert,
-  Badge as FrappeBadge,
   Button as FrappeButton,
   Select as FrappeSelect,
-  Spinner as FrappeSpinner,
-  TabList as FrappeTabList,
-  TabTrigger as FrappeTabTrigger,
-  Tabs as FrappeTabs,
+  Skeleton as FrappeSkeleton,
+  TabButtons as FrappeTabButtons,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import {
+  List as FrappeList,
+  ListHeader as FrappeListHeader,
+  ListHeaderCell as FrappeListHeaderCell,
+  ListRows as FrappeListRows,
+} from 'frappe-ui/list';
 import { t } from 'fyo';
 import {
   getPickerFields,
   getPickerTables,
   type PickerField,
 } from 'src/frappe/fieldPicks';
+import EmptyState from 'src/components/EmptyState.vue';
 import { isMobile } from 'src/utils/viewport';
-import { computed, ref, watch } from 'vue';
+import { computed, ref, useTemplateRef, watch } from 'vue';
 import FieldPickerRow from './FieldPickerRow.vue';
 import {
   getFailureText,
@@ -215,6 +204,8 @@ import {
 } from './fieldPicker';
 
 type Filter = 'all' | 'shown' | 'hidden';
+
+const COLUMNS = ['2rem', 'minmax(0,1.3fr)', 'minmax(0,1fr)', '10rem'];
 
 /** A form's ERPNext fields to pick, the document's or a table's rows', with search and a filter. */
 const props = defineProps<{ schemaName: string }>();
@@ -250,9 +241,10 @@ const fields = computed(() => {
 
   return getPickerFields(docType.value, tab.value === 'row' ? table.value : '');
 });
-const docFieldCount = computed(() =>
-  docType.value ? getPickerFields(docType.value).length : 0
-);
+const tabOptions = computed(() => [
+  { value: 'doc', label: t`Document fields` },
+  { value: 'row', label: t`Row fields`, disabled: !canPickRows.value },
+]);
 const rows = computed(() => {
   const text = query.value.trim().toLowerCase();
   return fields.value
@@ -260,10 +252,7 @@ const rows = computed(() => {
     .filter((field) => matchesFilter(field, filter.value));
 });
 
-const { list, containerProps, wrapperProps, scrollTo } = useVirtualList(rows, {
-  itemHeight: () => (isMobile.value ? 56 : 36),
-  overscan: 10,
-});
+const scroller = useTemplateRef<HTMLElement>('scroller');
 
 const hint = computed(() => {
   if (isMobile.value) {
@@ -310,7 +299,7 @@ watch(
   },
   { immediate: true }
 );
-watch([tab, table, query, filter], () => scrollTo(0));
+watch([tab, table, query, filter], () => scroller.value?.scrollTo(0, 0));
 void loadFields(props.schemaName);
 
 function matchesFilter(field: PickerField, shown: Filter): boolean {

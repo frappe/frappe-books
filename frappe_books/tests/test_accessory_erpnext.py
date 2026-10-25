@@ -54,6 +54,42 @@ def invoice_values(customer, item, **row):
 	}
 
 
+def make_default_sales_taxes(title):
+	"""The company's default Sales Taxes and Charges Template, with one 9% row."""
+	company = erpnext_default_company()
+	abbr = frappe.get_cached_value("Company", company, "abbr")
+	account = frappe.db.get_value("Account", {"account_name": title, "company": company})
+	if not account:
+		account = (
+			frappe.get_doc(
+				{
+					"doctype": "Account",
+					"account_name": title,
+					"parent_account": f"Duties and Taxes - {abbr}",
+					"account_type": "Tax",
+					"company": company,
+				}
+			)
+			.insert()
+			.name
+		)
+
+	row = {"charge_type": "On Net Total", "account_head": account, "rate": 9, "description": title}
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Sales Taxes and Charges Template",
+				"title": title,
+				"company": company,
+				"is_default": 1,
+				"taxes": [row],
+			}
+		)
+		.insert()
+		.name
+	)
+
+
 def first_row(doc):
 	return frappe._dict(doc["items"][0])
 
@@ -104,6 +140,23 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 		doc = self.preview({**doc, "__islocal": 1}, {"doc": ["customer"]})
 
 		self.assertEqual(doc["customer_name"], other)
+
+	def test_a_default_tax_template_stays_on_later_previews_with_its_rows(self):
+		template = make_default_sales_taxes("Accessory Preview GST")
+		doc = self.preview(invoice_values(self.customer, self.pen, qty=1), {})
+		doc["taxes"][0]["rate"] = 5
+		# The client sends the template it was given empty.
+		doc = self.preview({**doc, "__islocal": 1, "taxes_and_charges": None}, {"doc": ["customer"]})
+
+		self.assertEqual(doc["taxes_and_charges"], template)
+		self.assertEqual([row["rate"] for row in doc["taxes"]], [5])
+
+	def test_a_preview_drops_what_its_rolled_back_steps_announced(self):
+		frappe.clear_messages()
+		with patch("frappe_books.accessory.preview.fill", lambda *args: frappe.msgprint("Added", alert=True)):
+			self.preview(invoice_values(self.customer, self.pen, qty=1), {"doc": ["customer"]})
+
+		self.assertFalse(frappe.get_message_log())
 
 	def test_an_untouched_new_payment_previews_without_erpnext_refusals(self):
 		frappe.clear_messages()

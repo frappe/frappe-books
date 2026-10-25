@@ -119,15 +119,44 @@ function getRegionalSidebar(): SidebarRoot[] {
   ];
 }
 
-function getPOSSidebar() {
+/** The POS screen, its profiles and its shifts. */
+function getPOSSidebar(): SidebarRoot {
   return {
     label: t`POS`,
     name: 'pos',
     route: '/pos',
     icon: 'lucide-store',
-    hidden: () =>
-      !fyo.isFeatureOn('enable_point_of_sale') ||
-      !fyo.can('POSOpeningEntry', 'create'),
+    hidden: () => !fyo.isFeatureOn('enable_point_of_sale'),
+    items: [
+      {
+        label: t`Point of Sale`,
+        name: 'point-of-sale',
+        icon: 'lucide-monitor-smartphone',
+        route: '/pos',
+        hidden: () => !fyo.can('POSOpeningEntry', 'create'),
+      },
+      {
+        label: t`POS Profile`,
+        name: 'pos-profile',
+        icon: 'lucide-id-card',
+        route: '/list/POSProfile',
+        schemaName: 'POSProfile',
+      },
+      {
+        label: t`POS Opening Entry`,
+        name: 'pos-opening-entry',
+        icon: 'lucide-door-open',
+        route: '/list/POSOpeningEntry',
+        schemaName: 'POSOpeningEntry',
+      },
+      {
+        label: t`POS Closing Entry`,
+        name: 'pos-closing-entry',
+        icon: 'lucide-door-closed',
+        route: '/list/POSClosingEntry',
+        schemaName: 'POSClosingEntry',
+      },
+    ],
   };
 }
 
@@ -364,6 +393,21 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'Item',
         },
         {
+          label: t`Item Group`,
+          name: 'item-group',
+          icon: 'lucide-folder-tree',
+          route: '/list/ItemGroup',
+          schemaName: 'ItemGroup',
+          hidden: () => !fyo.isFeatureOn('enable_item_group'),
+        },
+        {
+          label: t`UOM`,
+          name: 'uom',
+          icon: 'lucide-ruler',
+          route: '/list/UOM',
+          schemaName: 'UOM',
+        },
+        {
           label: t`Warehouse`,
           name: 'warehouse',
           icon: 'lucide-warehouse',
@@ -379,6 +423,23 @@ function getCompleteSidebar(): SidebarConfig {
           route: '/list/StockEntry',
           schemaName: 'StockEntry',
           hidden: isInventoryOff,
+        },
+        {
+          label: t`Batch`,
+          name: 'batch',
+          icon: 'lucide-boxes',
+          route: '/list/Batch',
+          schemaName: 'Batch',
+          hidden: () => isInventoryOff() || !fyo.isFeatureOn('enable_batches'),
+        },
+        {
+          label: t`Serial No`,
+          name: 'serial-no',
+          icon: 'lucide-scan-barcode',
+          route: '/list/SerialNo',
+          schemaName: 'SerialNo',
+          hidden: () =>
+            isInventoryOff() || !fyo.isFeatureOn('enable_serial_number'),
         },
         {
           label: t`Price List`,
@@ -414,6 +475,13 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'chart-of-accounts',
           icon: 'lucide-list-tree',
           route: '/chart-of-accounts',
+        },
+        {
+          label: t`Mode of Payment`,
+          name: 'mode-of-payment',
+          icon: 'lucide-banknote',
+          route: '/list/ModeOfPayment',
+          schemaName: 'ModeOfPayment',
         },
         {
           label: t`Tax Template`,

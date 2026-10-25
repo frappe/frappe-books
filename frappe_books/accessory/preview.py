@@ -11,7 +11,7 @@ from erpnext.accounts.services.taxes import get_default_taxes_and_charges
 from erpnext.stock.doctype.stock_entry.stock_entry import get_uom_details
 from frappe.model import no_value_fields
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, nowdate
 
 from frappe_books.accessory import pos
 from frappe_books.permissions import check_preview_permission
@@ -44,6 +44,7 @@ FORM_FILLS = {
 	"POS Opening Entry": pos.fill_opening_entry,
 	"POS Closing Entry": pos.fill_closing_entry,
 	"Payment Entry": lambda document, edited: fill_transfer_amount(document),
+	"Journal Entry": lambda document, edited: fill_posting_date(document),
 }
 
 
@@ -250,6 +251,12 @@ def reallocate_payment(document: Document, edited: set[str]):
 	paid_by_received = document.payment_type == "Pay" and "received_amount" in edited
 	amount = document.received_amount if paid_by_received else document.paid_amount
 	document.allocate_amount_to_references(flt(amount), True, True)
+
+
+def fill_posting_date(document: Document):
+	"""A new entry is dated today, as Desk's form dates it; ERPNext's DocType has no default."""
+	if document.is_new() and not document.posting_date and not document.amended_from:
+		document.posting_date = nowdate()
 
 
 def fill_transfer_amount(document: Document):

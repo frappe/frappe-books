@@ -973,7 +973,10 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     }
 
     const document = this.getMethodDocument();
-    await this._setSaved(await api.runDocMethod('submit', document), 'submit');
+    const submitted = isAccessoryMode()
+      ? await api.submitERPNextDocument(document)
+      : await api.runDocMethod('submit', document);
+    await this._setSaved(submitted, 'submit');
     await this._notifyAfterAction('submit');
   }
 
@@ -988,11 +991,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
     const cancelled = linkedDocs.length
       ? await this._cancelWithLinkedDocs(linkedDocs)
-      : await api.runDocMethod('cancel', this.getMethodDocument());
+      : await this._cancelAlone();
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
     this.fyo.observer.trigger(`cancel:${this.schemaName}`, this.name);
+  }
+
+  async _cancelAlone(): Promise<DocValues> {
+    return isAccessoryMode()
+      ? await api.cancelERPNextDocument(this.doctype, this.name!)
+      : await api.runDocMethod('cancel', this.getMethodDocument());
   }
 
   /** Frappe's Cancel All cancels the documents, then this one, in one go; a Books controller runs it on its own copy. */

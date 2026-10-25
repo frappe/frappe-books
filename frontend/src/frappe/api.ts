@@ -90,6 +90,29 @@ export async function runDocMethod(
   return docs![0];
 }
 
+/**
+ * Submits an ERPNext document as Desk does, through Frappe's client API:
+ * controllers like the Journal Entry's override `submit` without whitelisting it.
+ */
+export async function submitERPNextDocument(
+  document: DocValues
+): Promise<DocValues> {
+  const submitting = call<DocValues>('frappe.client.submit', { doc: document });
+  return await checkLatest(
+    String(document.doctype),
+    String(document.name),
+    submitting
+  );
+}
+
+/** Cancels an ERPNext document as Desk does; see `submitERPNextDocument`. */
+export async function cancelERPNextDocument(
+  doctype: string,
+  name: string
+): Promise<DocValues> {
+  return await call<DocValues>('frappe.client.cancel', { doctype, name });
+}
+
 /** Fields edited since the last preview: the document's, and its rows' by row name. */
 export interface PreviewEdits {
   doc: string[];

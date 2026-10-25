@@ -95,11 +95,11 @@
     </template>
 
     <!-- A list as Books' lists are: header, full dividers, rows mounted as they scroll in. -->
-    <div
+    <FrappeScrollArea
       v-if="isReady && rows.length"
       ref="scroller"
-      class="min-h-0 flex-1 overflow-y-auto"
-      :class="isMobile ? '' : 'px-5'"
+      class="min-h-0 flex-1"
+      :viewport-class="isMobile ? '' : 'px-5'"
     >
       <FrappeList
         :columns="isMobile ? undefined : COLUMNS"
@@ -129,7 +129,7 @@
           </template>
         </FrappeListRows>
       </FrappeList>
-    </div>
+    </FrappeScrollArea>
     <div
       v-else-if="loaded?.status === 'loading'"
       :class="isMobile ? 'px-4' : 'px-5'"
@@ -173,6 +173,7 @@
 import {
   Alert as FrappeAlert,
   Button as FrappeButton,
+  ScrollArea as FrappeScrollArea,
   Select as FrappeSelect,
   TabButtons as FrappeTabButtons,
   TextInput as FrappeTextInput,
@@ -252,7 +253,8 @@ const rows = computed(() => {
     .filter((field) => matchesFilter(field, filter.value));
 });
 
-const scroller = useTemplateRef<HTMLElement>('scroller');
+const scroller =
+  useTemplateRef<InstanceType<typeof FrappeScrollArea>>('scroller');
 
 const hint = computed(() => {
   if (isMobile.value) {
@@ -299,7 +301,9 @@ watch(
   },
   { immediate: true }
 );
-watch([tab, table, query, filter], () => scroller.value?.scrollTo(0, 0));
+watch([tab, table, query, filter], () =>
+  scroller.value?.viewportElement?.scrollTo(0, 0)
+);
 void loadFields(props.schemaName);
 
 function matchesFilter(field: PickerField, shown: Filter): boolean {

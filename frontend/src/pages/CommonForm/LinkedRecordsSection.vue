@@ -45,21 +45,26 @@
           </FrappeListCell>
         </FrappeListRow>
       </FrappeList>
-      <button
-        v-if="hasMore"
-        class="flex h-11 w-full items-center border-t border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-2"
-        @click="viewAll"
-      >
-        {{ t`View all` }}
-      </button>
-      <button
-        v-if="canCreate"
-        class="flex h-11 w-full items-center gap-2 border-t border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-2"
-        @click="add"
-      >
-        <span class="lucide-plus size-5" aria-hidden="true" />
-        {{ config.addLabel }}
-      </button>
+      <!-- 44px list rows, as a phone table's Add row. -->
+      <FrappeList v-if="hasMore || canCreate" class="list-row-px-3">
+        <FrappeListRow
+          v-if="hasMore"
+          class="min-h-11 border-t border-outline-gray-1 text-md-medium text-ink-gray-8"
+          @click="viewAll"
+        >
+          <FrappeListCell>{{ t`View all` }}</FrappeListCell>
+        </FrappeListRow>
+        <FrappeListRow
+          v-if="canCreate"
+          class="min-h-11 border-t border-outline-gray-1 text-md-medium text-ink-gray-8"
+          @click="add"
+        >
+          <FrappeListCell class="gap-2">
+            <span class="lucide-plus size-5" aria-hidden="true" />
+            {{ config.addLabel }}
+          </FrappeListCell>
+        </FrappeListRow>
+      </FrappeList>
     </div>
   </section>
   <!-- Titled like the form's sections and framed like its tables. -->

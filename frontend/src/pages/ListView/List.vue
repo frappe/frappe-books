@@ -102,7 +102,7 @@
 
     <!-- Pagination Footer -->
     <div v-if="total" class="mt-auto">
-      <hr class="border-outline-gray-1" />
+      <FrappeDivider />
       <Paginator
         ref="paginator"
         :item-count="total"
@@ -133,6 +133,7 @@
 <script lang="ts">
 import {
   Button as FrappeButton,
+  Divider as FrappeDivider,
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
 import Skeleton from 'src/components/Skeleton.vue';
@@ -170,6 +171,7 @@ const mobilePageLength = 20;
 export default defineComponent({
   name: 'List',
   components: {
+    FrappeDivider,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,

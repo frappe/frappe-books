@@ -2,6 +2,7 @@ import { Fyo } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import {
   Action,
+  FiltersMap,
   HiddenMap,
   LinkedRecords,
   ListViewSettings,
@@ -13,11 +14,46 @@ import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
+import type { Field } from 'schemas/types';
+import {
+  getCompanyRowDescription,
+  getCompanyRowValue,
+  setCompanyRowValue,
+} from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
+import type { ClientField, Presentation } from 'src/frappe/schema';
 import { ItemBarcode } from './ItemBarcode';
-import { ItemDefault } from './ItemDefault';
+import {
+  getExpenseAccountFilters,
+  getIncomeAccountFilters,
+  ItemDefault,
+} from './ItemDefault';
 import { ItemTax } from './ItemTax';
 import { UOMConversionDetail } from './UOMConversionDetail';
+
+const DEFAULT_FIELDNAMES = [
+  'income_account',
+  'expense_account',
+  'default_warehouse',
+];
+
+/** A field of the current company's Item Defaults row, shown after the field `after`. */
+function defaultField(
+  fieldname: string,
+  label: string,
+  target: string,
+  after: string
+): ClientField {
+  return {
+    fieldname,
+    fieldtype: 'Link',
+    label,
+    target,
+    create: false,
+    companyTable: 'item_defaults',
+    after,
+  } as ClientField;
+}
 
 /**
  * Books Item, served by Frappe. The DocType owns its fields, defaults and
@@ -25,7 +61,7 @@ import { UOMConversionDetail } from './UOMConversionDetail';
  */
 export class Item extends FrappeDoc {
   static override doctype = 'Books Item';
-  static override presentation = {
+  static override presentation: Presentation = {
     label: 'Item',
     quickEditFields: [
       'standard_rate',
@@ -33,11 +69,37 @@ export class Item extends FrappeDoc {
       'item_type',
       'taxes',
       'description',
-      'item_defaults',
+      ...DEFAULT_FIELDNAMES,
       'barcodes',
       'gst_hsn_code',
       'is_stock_item',
     ],
+    // The fields edit the current company's Item Defaults row.
+    clientFields: [
+      defaultField(
+        'income_account',
+        'Income Account',
+        'Account',
+        'item_defaults'
+      ),
+      defaultField(
+        'expense_account',
+        'Expense Account',
+        'Account',
+        'income_account'
+      ),
+      defaultField(
+        'default_warehouse',
+        'Default Warehouse',
+        'Warehouse',
+        'is_stock_item'
+      ),
+    ],
+    fields: {
+      item_defaults: { hidden: true },
+      taxes: { emptyMessage: 'No taxes' },
+      barcodes: { emptyMessage: 'No barcodes' },
+    },
   };
   static override rowModels = {
     item_defaults: ItemDefault,
@@ -65,8 +127,50 @@ export class Item extends FrappeDoc {
     },
   };
 
+  static filters: FiltersMap = {
+    income_account: () => getIncomeAccountFilters(),
+    expense_account: (doc: FrappeDoc) => getExpenseAccountFilters(doc),
+  };
+
+  get income_account(): DocValue {
+    return getCompanyRowValue(this, 'item_defaults', 'income_account');
+  }
+
+  set income_account(value: DocValue) {
+    setCompanyRowValue(this, 'item_defaults', 'income_account', value);
+  }
+
+  get expense_account(): DocValue {
+    return getCompanyRowValue(this, 'item_defaults', 'expense_account');
+  }
+
+  set expense_account(value: DocValue) {
+    setCompanyRowValue(this, 'item_defaults', 'expense_account', value);
+  }
+
+  get default_warehouse(): DocValue {
+    return getCompanyRowValue(this, 'item_defaults', 'default_warehouse');
+  }
+
+  set default_warehouse(value: DocValue) {
+    setCompanyRowValue(this, 'item_defaults', 'default_warehouse', value);
+  }
+
+  /** The Item Defaults fields name their company, when ERPNext has others. */
+  override getFormFields(fields: Field[]): Field[] {
+    const description = getCompanyRowDescription(this);
+    if (!description) {
+      return fields;
+    }
+
+    return fields.map((field) =>
+      field.companyTable ? { ...field, sub_label: description } : field
+    );
+  }
+
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
+    default_warehouse: () => !this.fyo.isFeatureOn('enable_inventory'),
     gst_hsn_code: () => isHsnCodeHidden(this.fyo),
     is_stock_item: () => !this.fyo.isFeatureOn('enable_inventory'),
     barcodes: () => !this.fyo.isFeatureOn('show_barcode_field'),

@@ -21,10 +21,10 @@
   "description",
   "accounts_section_break_11",
   "item_defaults",
+  "taxes_section_break",
   "taxes",
   "inventory_section_break_15",
   "gst_hsn_code",
-  "barcodes",
   "is_stock_item",
   "has_batch_no",
   "create_new_batch",
@@ -32,6 +32,8 @@
   "has_serial_no",
   "serial_no_series",
   "uoms",
+  "barcodes_section_break",
+  "barcodes",
   "default_section_break_24"
  ],
  "fields": [
@@ -106,7 +108,7 @@
   {
    "fieldname": "accounts_section_break_11",
    "fieldtype": "Section Break",
-   "label": "Accounts"
+   "label": "Accounting"
   },
   {
    "fieldname": "item_defaults",
@@ -114,6 +116,11 @@
    "label": "Item Defaults",
    "options": "Books Item Default",
    "permlevel": 1
+  },
+  {
+   "fieldname": "taxes_section_break",
+   "fieldtype": "Section Break",
+   "label": "Taxes"
   },
   {
    "fieldname": "taxes",
@@ -133,12 +140,6 @@
    "fieldtype": "Data",
    "label": "HSN/SAC",
    "placeholder": "HSN/SAC Code"
-  },
-  {
-   "fieldname": "barcodes",
-   "fieldtype": "Table",
-   "label": "Barcodes",
-   "options": "Books Item Barcode"
   },
   {
    "default": "0",
@@ -191,6 +192,17 @@
    "options": "Books UOM Conversion Detail"
   },
   {
+   "fieldname": "barcodes_section_break",
+   "fieldtype": "Section Break",
+   "label": "Barcodes"
+  },
+  {
+   "fieldname": "barcodes",
+   "fieldtype": "Table",
+   "label": "Barcodes",
+   "options": "Books Item Barcode"
+  },
+  {
    "fieldname": "default_section_break_24",
    "fieldtype": "Section Break",
    "label": "Default"
@@ -199,7 +211,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-24 18:00:00.000000",
+ "modified": "2026-10-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item",

@@ -1,6 +1,10 @@
 import type { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from './document';
-import { getAccessoryCompany, hasOtherCompanies, isAccessoryMode } from './mode';
+import {
+  getAccessoryCompany,
+  hasOtherCompanies,
+  isAccessoryMode,
+} from './mode';
 
 /**
  * Fields a form shows for the company /books works on that live in a

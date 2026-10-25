@@ -22,7 +22,7 @@
   {
    "fieldname": "barcode_type",
    "fieldtype": "Select",
-   "hidden": 1,
+   "in_list_view": 1,
    "label": "Barcode Type",
    "options": "\nEAN\nUPC-A\nCODE-39\nEAN-13\nEAN-8\nGS1\nGTIN\nGTIN-14\nISBN\nISBN-10\nISBN-13\nISSN\nJAN\nPZN\nUPC"
   }
@@ -30,7 +30,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-10-24 18:00:00.000000",
+ "modified": "2026-10-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Item Barcode",

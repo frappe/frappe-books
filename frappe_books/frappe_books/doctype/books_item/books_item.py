@@ -73,7 +73,15 @@ class BooksItem(Document):
 				self.set(fieldname, item_series_pattern(self.get(fieldname)))
 		# A batch series makes the batches its receipts need, as ERPNext's switch says.
 		self.create_new_batch = int(bool(self.has_batch_no and self.batch_number_series))
+		self.sort_taxes()
 		self.set_missing_values()
+
+	def sort_taxes(self):
+		"""The newest Valid From first, as the form lists them; a row without a date goes last."""
+		# ISO dates sort as text; an empty one sorts last.
+		self.taxes.sort(key=lambda row: str(row.valid_from or ""), reverse=True)
+		for idx, row in enumerate(self.taxes, start=1):
+			row.idx = idx
 
 	def set_missing_values(self):
 		"""The one company's row takes the chart's accounts for what it leaves empty."""

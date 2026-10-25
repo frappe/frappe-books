@@ -1,4 +1,5 @@
 import { FiltersMap, HiddenMap } from 'fyo/model/types';
+import type { Filter } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
 import { AccountRootTypeEnum } from '../Account/types';
 
@@ -10,21 +11,27 @@ export class ItemDefault extends FrappeDoc {
     default_warehouse: () => !this.fyo.isFeatureOn('enable_inventory'),
   };
 
-  // A tracked item is bought into stock received but not billed, a liability.
   static filters: FiltersMap = {
-    income_account: () => [
-      ['is_group', '=', 0],
-      ['root_type', '=', AccountRootTypeEnum.Income],
-    ],
-    expense_account: (doc: FrappeDoc) => [
-      ['is_group', '=', 0],
-      [
-        'root_type',
-        '=',
-        doc.parentdoc?.is_stock_item
-          ? AccountRootTypeEnum.Liability
-          : AccountRootTypeEnum.Expense,
-      ],
-    ],
+    income_account: () => getIncomeAccountFilters(),
+    expense_account: (doc: FrappeDoc) =>
+      getExpenseAccountFilters(doc.parentdoc),
   };
+}
+
+export function getIncomeAccountFilters(): Filter[] {
+  return [
+    ['is_group', '=', 0],
+    ['root_type', '=', AccountRootTypeEnum.Income],
+  ];
+}
+
+/** A tracked item is bought into stock received but not billed, a liability. */
+export function getExpenseAccountFilters(item?: FrappeDoc): Filter[] {
+  const rootType = item?.is_stock_item
+    ? AccountRootTypeEnum.Liability
+    : AccountRootTypeEnum.Expense;
+  return [
+    ['is_group', '=', 0],
+    ['root_type', '=', rootType],
+  ];
 }

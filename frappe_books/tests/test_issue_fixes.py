@@ -48,7 +48,9 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 			received.name,
 			make_auto_stock_transfer=1,
 		)
-		invoice.items[0].update({"qty": 1, "price_list_rate": 100, "discount_percentage": 0})
+		invoice.items[0].update(
+			{"qty": 1, "price_list_rate": 100, "discount_percentage": 0, "discount_amount": 0}
+		)
 		invoice.save().submit()
 		receipt = frappe.get_doc(
 			"Books Purchase Receipt",
@@ -73,7 +75,9 @@ class IntegrationTestIssueFixes(IntegrationTestCase):
 		invoices = []
 		for amount in (157.5, 63):
 			invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
-			invoice.items[0].update({"qty": 1, "price_list_rate": amount, "discount_percentage": 0})
+			invoice.items[0].update(
+				{"qty": 1, "price_list_rate": amount, "discount_percentage": 0, "discount_amount": 0}
+			)
 			invoices.append(invoice.save().submit())
 		payment = (
 			frappe.get_doc(

@@ -210,7 +210,12 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 					self.income.name,
 				)
 				invoice.items[0].update(
-					{"price_list_rate": Decimal(rate), "qty": 2, "discount_percentage": 0}
+					{
+						"price_list_rate": Decimal(rate),
+						"qty": 2,
+						"discount_percentage": 0,
+						"discount_amount": 0,
+					}
 				)
 				invoice.save().submit()
 
@@ -230,7 +235,14 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 				self.income.name,
 				conversion_rate=150,
 			)
-			invoice.items[0].update({"price_list_rate": Decimal("10.25"), "qty": 1, "discount_percentage": 0})
+			invoice.items[0].update(
+				{
+					"price_list_rate": Decimal("10.25"),
+					"qty": 1,
+					"discount_percentage": 0,
+					"discount_amount": 0,
+				}
+			)
 			invoice.save().submit()
 
 			self.assertEqual(Decimal(str(invoice.grand_total)), Decimal("10.25"))
@@ -271,7 +283,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		invoice.submit()
 		credit_note = frappe.copy_doc(invoice)
 		credit_note.update({"docstatus": 0, "return_against": invoice.name})
-		credit_note.items[0].update({"qty": -2, "discount_percentage": 0})
+		credit_note.items[0].update({"qty": -2, "discount_percentage": 0, "discount_amount": 0})
 
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()

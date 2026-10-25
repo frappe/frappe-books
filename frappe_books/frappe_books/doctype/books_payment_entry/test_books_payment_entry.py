@@ -41,6 +41,7 @@ class IntegrationTestBooksPaymentEntry(IntegrationTestCase):
 			income.name,
 		)
 		invoice.items[0].discount_percentage = 0
+		invoice.items[0].discount_amount = 0
 		invoice.save()
 		invoice.submit()
 
@@ -84,6 +85,7 @@ class IntegrationTestBooksPaymentEntry(IntegrationTestCase):
 		item = make_item(income.name, expense.name)
 		invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 		invoice.items[0].discount_percentage = 0
+		invoice.items[0].discount_amount = 0
 		invoice.save()
 
 		with self.assertRaisesRegex(frappe.ValidationError, "Submit invoice .* before allocating a payment"):
@@ -131,6 +133,7 @@ class IntegrationTestBooksPaymentEntry(IntegrationTestCase):
 			expense.name,
 		)
 		invoice.items[0].discount_percentage = 0
+		invoice.items[0].discount_amount = 0
 		invoice.save().submit()
 
 		payment = frappe.get_doc(

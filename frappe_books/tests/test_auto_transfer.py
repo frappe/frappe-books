@@ -355,7 +355,9 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			make_auto_stock_transfer=1,
 			conversion_rate=80,
 		)
-		invoice.items[0].update({"qty": 1, "price_list_rate": 100, "discount_percentage": 0})
+		invoice.items[0].update(
+			{"qty": 1, "price_list_rate": 100, "discount_percentage": 0, "discount_amount": 0}
+		)
 		invoice.save().submit()
 
 		receipt = made_transfer(invoice)

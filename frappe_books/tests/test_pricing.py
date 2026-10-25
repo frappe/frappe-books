@@ -405,7 +405,9 @@ class IntegrationTestPricing(IntegrationTestCase):
 					self.item.name,
 					self.income.name,
 				)
-				invoice.items[0].update({"price_list_rate": None, "discount_percentage": 0})
+				invoice.items[0].update(
+					{"price_list_rate": None, "discount_percentage": 0, "discount_amount": 0}
+				)
 				invoice.save()
 				self.assertEqual(row_pricing_rule(invoice.items[0]), rule.name)
 				self.assertEqual(invoice.grand_total, 150 if "discount_percentage" in values else 160)
@@ -438,7 +440,9 @@ class IntegrationTestPricing(IntegrationTestCase):
 					self.income.name,
 					conversion_rate=2,
 				)
-				invoice.items[0].update({"price_list_rate": rate, "qty": 1, "discount_percentage": 0})
+				invoice.items[0].update(
+					{"price_list_rate": rate, "qty": 1, "discount_percentage": 0, "discount_amount": 0}
+				)
 				invoice.save()
 
 				self.assertEqual(invoice.items[0].get(fieldname), expected)
@@ -510,7 +514,13 @@ class IntegrationTestPricing(IntegrationTestCase):
 					selling_price_list=price_list.name,
 				)
 				invoice.items[0].update(
-					{"price_list_rate": None, "uom": box.name, "qty": 2, "discount_percentage": 0}
+					{
+						"price_list_rate": None,
+						"uom": box.name,
+						"qty": 2,
+						"discount_percentage": 0,
+						"discount_amount": 0,
+					}
 				)
 				invoice.save()
 

@@ -39,7 +39,14 @@ class IntegrationTestUnits(IntegrationTestCase):
 			self.income.name,
 		)
 		invoice.items[0].update(
-			{"uom": self.box, "conversion_factor": 5, "qty": 2, "stock_qty": 7, "discount_percentage": 0}
+			{
+				"uom": self.box,
+				"conversion_factor": 5,
+				"qty": 2,
+				"stock_qty": 7,
+				"discount_percentage": 0,
+				"discount_amount": 0,
+			}
 		)
 		invoice.save()
 

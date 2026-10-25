@@ -157,6 +157,8 @@ class IntegrationTestPrFixes(IntegrationTestCase):
 			self.item.name,
 			self.income.name if is_sales else self.expense.name,
 		)
-		invoice.items[0].update({"price_list_rate": 157.5, "qty": 1, "discount_percentage": 0})
+		invoice.items[0].update(
+			{"price_list_rate": 157.5, "qty": 1, "discount_percentage": 0, "discount_amount": 0}
+		)
 		invoice.save()
 		return invoice, account, party

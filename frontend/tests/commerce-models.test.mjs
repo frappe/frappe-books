@@ -43,6 +43,7 @@ test('item group, unit, warehouse, batch and serial number forms show what they 
   assert.deepEqual(getLayout('Warehouse'), [
     'warehouse_name | Warehouse Name |  | Default',
     'address | Address |  | Default',
+    'is_group | Is Group Warehouse |  | Default',
   ]);
   assert.deepEqual(getLayout('Batch'), [
     'batch_id | Batch No |  | Default',
@@ -319,10 +320,10 @@ test('customer and supplier forms and lists show what they showed, without GST f
   const supplierFields = [
     'image | Image |  | Default',
     'supplier_name | Supplier Name | Full Name | Default',
-    'supplier_primary_contact | Primary Contact |  | Contact',
+    'supplier_primary_contact | Primary Contact | No primary contact | Contact',
     'email_id | Email ID | john@doe.com | Contact',
     'mobile_no | Mobile No | Mobile No | Contact',
-    'supplier_primary_address | Primary Address |  | Address',
+    'supplier_primary_address | Primary Address | No primary address | Address',
     'primary_address | Primary Address Preview |  | Address',
     'accounts | Default Accounts |  | Billing',
     'account | Account |  | Billing',
@@ -340,10 +341,10 @@ test('customer and supplier forms and lists show what they showed, without GST f
   assert.deepEqual(getLayout('Customer'), [
     'image | Image |  | Default',
     'customer_name | Customer Name | Full Name | Default',
-    'customer_primary_contact | Customer Primary Contact |  | Contact',
+    'customer_primary_contact | Customer Primary Contact | No primary contact | Contact',
     'email_id | Email Id | john@doe.com | Contact',
     'mobile_no | Mobile No | Mobile No | Contact',
-    'customer_primary_address | Customer Primary Address |  | Address',
+    'customer_primary_address | Customer Primary Address | No primary address | Address',
     'primary_address | Primary Address |  | Address',
     'accounts | Default Accounts |  | Billing',
     'account | Account |  | Billing',

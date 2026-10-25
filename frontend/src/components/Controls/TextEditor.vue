@@ -11,8 +11,9 @@
       :label="df.label"
       :required="isRequired && !isReadOnly"
     />
+    <!-- As ReadOnlyValue: a labelled field reads "Not set", a bare value a dash. -->
     <p v-if="isReadOnly && isEmpty" class="text-base text-ink-gray-4">
-      {{ t`Not set` }}
+      {{ showLabel || isMobile ? t`Not set` : '—' }}
     </p>
     <FrappeEditor
       v-else

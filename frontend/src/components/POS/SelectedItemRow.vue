@@ -118,7 +118,7 @@
         :df="{
           fieldname: 'stock_qty',
           fieldtype: 'Float',
-          label: t`Quantity`,
+          label: fieldLabel('stock_qty'),
         }"
         size="medium"
         :min="0"

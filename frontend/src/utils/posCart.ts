@@ -127,6 +127,11 @@ export function getPOSRowFieldLabel(
     return t`Transfer Quantity`;
   }
 
+  // The stock quantity is the cart's quantity, whatever ERPNext's label for it.
+  if (field === 'stock_qty') {
+    return t`Quantity`;
+  }
+
   return row.fieldMap[field]?.label;
 }
 

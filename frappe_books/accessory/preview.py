@@ -8,7 +8,6 @@ from erpnext.accounts.doctype.payment_entry.payment_entry import get_reference_d
 from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 from erpnext.accounts.party import get_party_details
 from erpnext.accounts.services.taxes import get_default_taxes_and_charges
-from erpnext.stock.doctype.stock_entry.stock_entry import get_uom_details
 from frappe.model import no_value_fields
 from frappe.model.document import Document
 from frappe.utils import flt, nowdate
@@ -28,7 +27,6 @@ FILL_STEPS = {
 		"set_amounts_after_tax",
 	),
 	"Journal Entry": ("set_amounts_in_company_currency", "set_total_debit_credit"),
-	"Stock Entry": ("set_missing_values", "calculate_rate_and_amount"),
 }
 DEFAULT_FILL_STEPS = ("set_missing_values", "calculate_taxes_and_totals")
 # Party fields and the party type they name, as Desk refreshes a document from its party; a
@@ -72,7 +70,6 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 		fetch_links(document)
 		refresh_party(document, edited)
 		refresh_items(document, edited_rows)
-		fill_stock_entry_rows(document)
 		if hasattr(document, "set_use_serial_batch_fields"):
 			# What its save sets, which shows the rows' Batch No and Serial No as Desk's form does
 			document.set_use_serial_batch_fields()
@@ -188,30 +185,6 @@ def refresh_party(document: Document, edited: set[str]):
 		# ERPNext fills the new template's rows into an empty table.
 		document.set("taxes", [])
 	reprice_rows(document, {})
-
-
-def fill_stock_entry_rows(document: Document):
-	"""Stock entry rows take their item's details, as Desk's form asks ERPNext for them once an item is chosen.
-
-	What a row holds stays; a unit other than the stock unit takes its conversion factor.
-	"""
-	if document.doctype != "Stock Entry":
-		return
-
-	for row in document.get("items") or []:
-		if not row.item_code or row.conversion_factor:
-			continue
-
-		args = frappe._dict(
-			item_code=row.item_code,
-			warehouse=row.s_warehouse or row.t_warehouse,
-			qty=row.qty,
-			company=document.company,
-		)
-		details = document.get_item_details(args)
-		if row.uom and row.uom != details.stock_uom:
-			details.update(get_uom_details(row.item_code, row.uom, row.qty))
-		row.update({key: value for key, value in details.items() if value and not row.get(key)})
 
 
 @contextmanager

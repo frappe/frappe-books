@@ -115,42 +115,6 @@ function getRegionalSidebar(): SidebarRoot[] {
   ];
 }
 
-function getInventorySidebar(): SidebarRoot[] {
-  const hasInventory = fyo.isFeatureOn('enable_inventory');
-  if (!hasInventory) {
-    return [];
-  }
-
-  return [
-    {
-      label: t`Inventory`,
-      name: 'inventory',
-      icon: 'lucide-package',
-      route: '/list/StockEntry',
-      items: [
-        {
-          label: t`Stock Entry`,
-          name: 'stock-entry',
-          route: '/list/StockEntry',
-          schemaName: 'StockEntry',
-        },
-        {
-          label: t`Delivery Note`,
-          name: 'shipment',
-          route: '/list/DeliveryNote',
-          schemaName: 'DeliveryNote',
-        },
-        {
-          label: t`Purchase Receipt`,
-          name: 'purchase-receipt',
-          route: '/list/PurchaseReceipt',
-          schemaName: 'PurchaseReceipt',
-        },
-      ],
-    },
-  ];
-}
-
 function getPOSSidebar() {
   return {
     label: t`POS`,
@@ -179,12 +143,15 @@ function getERPNextReportItems(): SidebarItem[] {
     label: report.title,
     name: kebabCase(name),
     route: `/report/${name}`,
-    hidden: () => report.isInventory && !fyo.isFeatureOn('enable_inventory'),
+    hidden: () => report.isInventory && isInventoryOff(),
   }));
 }
 
+function isInventoryOff(): boolean {
+  return !fyo.isFeatureOn('enable_inventory');
+}
+
 function getBooksReportItems(): SidebarItem[] {
-  const isInventoryDisabled = () => !fyo.isFeatureOn('enable_inventory');
   return [
     {
       label: t`General Ledger`,
@@ -210,13 +177,13 @@ function getBooksReportItems(): SidebarItem[] {
       label: t`Stock Ledger`,
       name: 'stock-ledger',
       route: '/report/StockLedger',
-      hidden: isInventoryDisabled,
+      hidden: isInventoryOff,
     },
     {
       label: t`Stock Balance`,
       name: 'stock-balance',
       route: '/report/StockBalance',
-      hidden: isInventoryDisabled,
+      hidden: isInventoryOff,
     },
   ];
 }
@@ -255,6 +222,13 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'sales-invoices',
           route: '/list/SalesInvoice',
           schemaName: 'SalesInvoice',
+        },
+        {
+          label: t`Delivery Note`,
+          name: 'delivery-note',
+          route: '/list/DeliveryNote',
+          schemaName: 'DeliveryNote',
+          hidden: isInventoryOff,
         },
         {
           label: t`Sales Payment`,
@@ -312,6 +286,13 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'PurchaseInvoice',
         },
         {
+          label: t`Purchase Receipt`,
+          name: 'purchase-receipt',
+          route: '/list/PurchaseReceipt',
+          schemaName: 'PurchaseReceipt',
+          hidden: isInventoryOff,
+        },
+        {
           label: t`Purchase Payment`,
           name: 'payments',
           route: `/list/PaymentEntry/${t`Purchase Payment`}`,
@@ -345,6 +326,14 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'Item',
         },
         {
+          // Standalone only; accessory mode has no Stock Entry.
+          label: t`Stock Entry`,
+          name: 'stock-entry',
+          route: '/list/StockEntry',
+          schemaName: 'StockEntry',
+          hidden: isInventoryOff,
+        },
+        {
           label: t`Price List`,
           name: 'price-list',
           route: '/list/PriceList',
@@ -361,7 +350,6 @@ function getCompleteSidebar(): SidebarConfig {
       ] as SidebarItem[],
     },
     getReportSidebar(),
-    getInventorySidebar(),
     getPOSSidebar(),
     getRegionalSidebar(),
     {

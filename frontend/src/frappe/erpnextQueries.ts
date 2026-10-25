@@ -36,8 +36,6 @@ function bootCompany(company: string, field: string): string {
   return `(frappe.boot.docs.find((d) => d.doctype == ":Company" && d.name == ${company}) || {}).${field}`;
 }
 
-const PERPETUAL_INVENTORY = `eval:${bootCompany('parent.company', 'enable_perpetual_inventory')}`;
-
 /** erpnext.queries.party in public/js/queries.js. */
 const party: LinkQuery = {
   query: 'erpnext.controllers.queries.party_query',
@@ -430,49 +428,6 @@ export const ERPNEXT_QUERIES: Record<string, Record<string, LinkQueryRule>> = {
     ]),
     // public/js/controllers/accounts.js
     'taxes.account_head': purchaseTaxAccount,
-  },
-  'Stock Entry': {
-    // stock/doctype/stock_entry/stock_entry.js
-    'items.item_code': {
-      query: ITEM_QUERY,
-      filters: { is_stock_item: 1, company: 'eval:parent.company' },
-    },
-    // stock/doctype/stock_entry/stock_entry.js, less its sample retention warehouse
-    'items.s_warehouse': rowWarehouse,
-    // stock/doctype/stock_entry/stock_entry.js
-    'items.t_warehouse': {
-      filters: {
-        is_group: 0,
-        company: 'eval:parent.company',
-        warehouse_type:
-          'eval:parent.purpose == "Material Transfer" && parent.add_to_transit ? "Transit" : undefined',
-      },
-    },
-    // stock/doctype/stock_entry/stock_entry.js
-    'items.uom': [{ ...rowUom, when: 'eval:doc.item_code' }],
-    // stock/doctype/stock_entry/stock_entry.js
-    'items.batch_no': {
-      query: BATCH_QUERY,
-      filters: {
-        item_code: 'eval:doc.item_code',
-        posting_date: 'eval:parent.posting_date',
-        posting_time: 'eval:parent.posting_time',
-        warehouse:
-          'eval:parent.purpose != "Material Receipt" ? doc.s_warehouse || doc.t_warehouse : undefined',
-        is_inward: 'eval:!doc.s_warehouse && doc.t_warehouse ? 1 : undefined',
-        include_expired_batches:
-          'eval:["Material Receipt", "Material Transfer", "Material Issue"].includes(parent.purpose) ? 1 : undefined',
-      },
-    },
-    // stock/doctype/stock_entry/stock_entry.js
-    'items.expense_account': [
-      {
-        when: PERPETUAL_INVENTORY,
-        filters: { company: 'eval:parent.company', is_group: 0 },
-      },
-    ],
-    // public/js/utils/dimension_tree_filter.js
-    'items.cost_center': rowDimension('cost_center', ['expense_account']),
   },
   'Payment Entry': {
     // accounts/doctype/payment_entry/payment_entry.js

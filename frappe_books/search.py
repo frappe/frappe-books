@@ -8,7 +8,7 @@ from frappe.search.sqlite_search import (
 )
 from frappe.utils.caching import site_cache
 
-from frappe_books.accessory import accessory_company
+from frappe_books.accessory import STANDALONE_ONLY, accessory_company
 
 MODULE = "Frappe Books"
 
@@ -115,7 +115,7 @@ def _get_mode_doctypes(accessory: bool) -> list[str]:
 	if not accessory:
 		return doctypes
 
-	twins = [doctype.removeprefix("Books ") for doctype in doctypes]
+	twins = [doctype.removeprefix("Books ") for doctype in doctypes if doctype not in STANDALONE_ONLY]
 	return frappe.get_all("DocType", filters={"name": ("in", twins), "module": ("!=", MODULE)}, pluck="name")
 
 

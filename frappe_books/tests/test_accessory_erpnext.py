@@ -275,24 +275,6 @@ class IntegrationTestAccessoryFormFills(IntegrationTestCase):
 
 		self.assertEqual(doc["received_amount"], 25)
 
-	def test_a_stock_entry_takes_its_purpose_and_its_rows_their_item_details(self):
-		warehouse = frappe.db.get_value("Warehouse", {"is_group": 0, "company": erpnext_default_company()})
-		values = {
-			"doctype": "Stock Entry",
-			"__islocal": 1,
-			"stock_entry_type": "Material Receipt",
-			"items": [
-				{"name": "row-1", "item_code": self.pen, "qty": 2, "t_warehouse": warehouse},
-				{"name": "row-2"},
-			],
-		}
-		doc = self.preview(values, {"doc": ["stock_entry_type"], "rows": {"row-1": ["item_code"]}})
-
-		row, blank = (frappe._dict(row) for row in doc["items"])
-		self.assertEqual(doc["purpose"], "Material Receipt")
-		self.assertEqual((row.uom, row.conversion_factor, row.transfer_qty), ("Nos", 1, 2))
-		self.assertFalse(blank.item_code)
-
 
 @needs_erpnext
 class IntegrationTestAccessoryMappers(IntegrationTestCase):
@@ -367,6 +349,7 @@ class IntegrationTestAccessoryLinkedEntriesAndSearch(IntegrationTestCase):
 		self.assertIn("Sales Invoice", doctypes)
 		self.assertIn("Customer", doctypes)
 		self.assertNotIn("Books Sales Invoice", doctypes)
+		self.assertNotIn("Stock Entry", doctypes)
 		self.assertIn("Books Sales Invoice", _get_search_doctypes(False))
 
 

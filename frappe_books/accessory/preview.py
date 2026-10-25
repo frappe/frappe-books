@@ -65,6 +65,8 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 	try:
 		refresh_party(document, edited)
 		refresh_items(document, edited_rows)
+		fill_payment_account(document)
+		reallocate_payment(document, edited)
 		if edited & PRICE_SOURCES:
 			reprice_rows(document, edited_rows)
 		if check_coupons and document.get("coupon_code"):
@@ -147,6 +149,29 @@ def refresh_party(document: Document, edited: set[str]):
 		# ERPNext fills the new template's rows into an empty table.
 		document.set("taxes", [])
 	reprice_rows(document, {})
+
+
+def fill_payment_account(document: Document):
+	"""An empty cash or bank account of a payment takes its mode of payment's account for the company, as Desk's
+	form fills it; a mode without one leaves the account to the user.
+	"""
+	if document.doctype != "Payment Entry" or not document.mode_of_payment:
+		return
+
+	field = "paid_to" if document.payment_type == "Receive" else "paid_from"
+	if not document.get(field):
+		filters = {"parent": document.mode_of_payment, "company": document.company}
+		document.set(field, frappe.db.get_value("Mode of Payment Account", filters, "default_account"))
+
+
+def reallocate_payment(document: Document, edited: set[str]):
+	"""A payment's new amount is allocated to its references again, oldest first, as Desk's form does."""
+	if document.doctype != "Payment Entry" or not edited & {"paid_amount", "received_amount"}:
+		return
+
+	paid_by_received = document.payment_type == "Pay" and "received_amount" in edited
+	amount = document.received_amount if paid_by_received else document.paid_amount
+	document.allocate_amount_to_references(flt(amount), True, True)
 
 
 def refresh_items(document: Document, edited_rows: dict[str, list[str]]):

@@ -56,14 +56,14 @@ def counter_payment_account(payment_method):
 	return mode_of_payment_account(payment_method)
 
 
-def counter_payment_amounts(rows, due):
-	"""Return each tendered row with the amount it pays. Cash beyond what is due is change."""
+def counter_payment_amounts(rows, due, is_cash=is_cash_method):
+	"""Return each tendered row with the amount it pays, non-cash rows first. Cash beyond what is due is change."""
 	amounts = []
-	for row in rows:
+	for row in sorted(rows, key=lambda row: is_cash(row.mode_of_payment)):
 		tendered = as_decimal(row.amount)
 		if tendered <= 0:
 			frappe.throw(_("Please enter an amount greater than zero."))
-		if tendered > due and not is_cash_method(row.mode_of_payment):
+		if tendered > due and not is_cash(row.mode_of_payment):
 			frappe.throw(_("Non-cash payment amount cannot exceed the outstanding amount."))
 		paid = min(tendered, due)
 		due -= paid

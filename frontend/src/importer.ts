@@ -714,7 +714,7 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
     return true;
   }
 
-  if (field.hidden) {
+  if (field.hidden && !isCompanyTable(field, schema)) {
     return true;
   }
 
@@ -723,6 +723,13 @@ function shouldSkipField(field: Field, schema: Schema): boolean {
   }
 
   return false;
+}
+
+/** A table the form hides behind a field that edits the current company's row, e.g. a party's accounts. */
+function isCompanyTable(field: Field, schema: Schema): boolean {
+  return schema.fields.some(
+    ({ companyTable }) => companyTable === field.fieldname
+  );
 }
 
 /**

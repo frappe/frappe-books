@@ -32,6 +32,7 @@ import {
   getEndTabLabel,
   sortEndTabs,
 } from 'src/frappe/accessoryLayout';
+import { getMoreDetailsFields } from 'src/frappe/extraFields';
 import { showDialog, showToast } from './interactive';
 import { showSidebar } from './refs';
 import {
@@ -415,7 +416,7 @@ export function getFieldsGroupedByTabAndSection(
       tabbed.set(section, []);
     }
 
-    // Accessory mode's ERPNext fields with no Books position: More details shows these; see `extraFields.ts`.
+    // Accessory mode's ERPNext fields with no Books position: the More details tab shows these; see `extraFields.ts`.
     if (field.meta || field.moreDetails || !isFieldShown(doc, field)) {
       continue;
     }
@@ -448,7 +449,13 @@ export function getFieldsGroupedByTabAndSection(
     }
   }
 
-  // Custom fields and other apps' fields follow as tabs of their own.
+  // Accessory mode's picked and still-missing ERPNext fields follow as a tab, then custom
+  // fields and other apps' fields as tabs of their own.
+  const moreDetails = doc.getFormFields(getMoreDetailsFields(doc));
+  if (moreDetails.length) {
+    grouped.set(t`More details`, new Map([[DEFAULT_SECTION, moreDetails]]));
+  }
+
   for (const tab of sortEndTabs([...appTabs.keys()])) {
     grouped.set(
       getEndTabLabel(tab),

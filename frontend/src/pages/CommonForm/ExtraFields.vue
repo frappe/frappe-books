@@ -1,82 +1,52 @@
 <template>
-  <!-- The row editor's panel lists fields as label and value rows, as it does a row's own. -->
-  <template v-if="compact">
-    <section v-if="moreFields.length">
-      <h3 class="px-3 pb-1 pt-5 text-sm text-ink-gray-5">
-        {{ t`More details` }}
-      </h3>
-      <TwoColumnForm
-        :doc="doc"
-        :fields="moreFields"
-        :field-errors="errors"
-        :column-ratio="[1.1, 2]"
-      />
-    </section>
-    <section v-if="tabOptions.length" class="pt-3">
-      <div class="flex border-b border-outline-gray-1 px-3">
-        <FrappeTabButtons
-          :model-value="shownTab"
-          class="-mb-px flex"
-          :options="tabOptions"
-          variant="underline"
-          @update:model-value="(tab) => $emit('update:activeTab', String(tab))"
-        />
-      </div>
-      <TwoColumnForm
-        :key="shownTab"
-        :doc="doc"
-        :fields="endTabs.get(shownTab) ?? []"
-        :field-errors="errors"
-        :column-ratio="[1.1, 2]"
-      />
-    </section>
-  </template>
-  <template v-else>
-    <CommonFormSection
-      class="py-5"
-      show-title
-      :title="t`More details`"
-      :fields="moreFields"
+  <!-- Label and value rows, as the row editor's panel lists a row's own fields. -->
+  <section v-if="moreFields.length">
+    <h3 class="px-3 pb-1 pt-5 text-sm text-ink-gray-5">
+      {{ t`More details` }}
+    </h3>
+    <TwoColumnForm
       :doc="doc"
-      :errors="errors"
-      @editrow="(row: FrappeDoc) => $emit('editrow', row)"
-      @value-change="
-        (field: Field, value: DocValue) => $emit('value-change', field, value)
-      "
-      @row-change="
-        (field: Field, value: DocValue, parentfield: Field) =>
-          $emit('row-change', field, value, parentfield)
-      "
+      :fields="moreFields"
+      :field-errors="errors"
+      :column-ratio="[1.1, 2]"
     />
-  </template>
+  </section>
+  <section v-if="tabOptions.length" class="pt-3">
+    <div class="flex border-b border-outline-gray-1 px-3">
+      <FrappeTabButtons
+        :model-value="shownTab"
+        class="-mb-px flex"
+        :options="tabOptions"
+        variant="underline"
+        @update:model-value="(tab) => $emit('update:activeTab', String(tab))"
+      />
+    </div>
+    <TwoColumnForm
+      :key="shownTab"
+      :doc="doc"
+      :fields="endTabs.get(shownTab) ?? []"
+      :field-errors="errors"
+      :column-ratio="[1.1, 2]"
+    />
+  </section>
 </template>
 <script setup lang="ts">
 import { TabButtons as FrappeTabButtons } from 'frappe-ui';
 import { t } from 'fyo';
-import { DocValue } from 'fyo/core/types';
-import { Field } from 'schemas/types';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import type { FrappeDoc } from 'src/frappe/document';
 import { computed } from 'vue';
-import CommonFormSection from './CommonFormSection.vue';
 import { getEndTabOptions, useExtraFields } from './extraFieldsView';
 
-/** Accessory mode: More details after a form's Books fields; a row's panel also lists the end tabs, which a form shows as its own tabs. */
+/** Accessory mode, in the row editor's panel: a row's More details and end tabs, which a form shows as its own tabs. */
 const props = defineProps<{
   doc: FrappeDoc;
   errors: Record<string, string>;
-  /** The row panel's selected end tab; the first one when unset or gone. */
+  /** The selected end tab; the first one when unset or gone. */
   activeTab?: string;
-  /** Label and value rows, as the row editor's panel shows a row's fields. */
-  compact?: boolean;
 }>();
 
-defineEmits<{
-  'update:activeTab': [tab: string];
-  'value-change': [field: Field, value: DocValue];
-  'row-change': [field: Field, value: DocValue, parentfield: Field];
-  editrow: [row: FrappeDoc];
-}>();
+defineEmits<{ 'update:activeTab': [tab: string] }>();
 
 const { moreFields, endTabs } = useExtraFields(() => props.doc);
 const tabOptions = computed(() => getEndTabOptions(endTabs.value));

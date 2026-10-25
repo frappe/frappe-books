@@ -140,14 +140,6 @@
               <Barcode @item-selected="addItem" />
             </template>
           </CommonFormSection>
-          <ExtraFields
-            v-if="isAccessory && isFirstTab"
-            :doc="doc"
-            :errors="errors"
-            @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
-            @value-change="onValueChange"
-            @row-change="updateGroupedFields"
-          />
           <LinkedRecordsSection
             v-if="linkedRecords && activeTab === tabOptions[0]?.value"
             :doc="doc"
@@ -231,7 +223,6 @@ import { getMissingFieldsOf } from 'src/frappe/missingMessages';
 import { getServerMessages, type ServerMessage } from 'src/web/api';
 import { syncOrSubmitDoc } from 'src/utils/vueUtils';
 import CommonFormSection from './CommonFormSection.vue';
-import ExtraFields from './ExtraFields.vue';
 import { getExtraPlace, getRowBooksFields } from './extraFieldsView';
 import FormErrorPanel from './FormErrorPanel.vue';
 import FormSkeleton from './FormSkeleton.vue';
@@ -248,7 +239,6 @@ interface FormError {
 
 export default defineComponent({
   components: {
-    ExtraFields,
     FormErrorPanel,
     FrappeAlert,
     FormContainer,
@@ -335,12 +325,6 @@ export default defineComponent({
     /** The values the fields' conditions read; a preview's fills change them after an edit, or with none. */
     conditionValues(): EvalDoc | null {
       return this.hasDoc ? getEvalDoc(this.doc) : null;
-    },
-    isFirstTab(): boolean {
-      const [first] = this.tabOptions;
-      return (
-        !first || this.activeGroup === this.groupedFields?.get(first.value)
-      );
     },
     /** Accessory mode: why the last save, submit or preview failed, until dismissed. */
     errorPanel(): FormError | null {
@@ -542,6 +526,7 @@ export default defineComponent({
       }
       if (doc && this.isAccessory) {
         noteMissingExtras(doc);
+        this.updateGroupedFields();
       }
     },
   },
@@ -702,6 +687,9 @@ export default defineComponent({
         doc,
         missing.map(({ fieldname }) => fieldname)
       );
+      if (!doc.parentdoc) {
+        this.updateGroupedFields();
+      }
       const shown = doc.parentdoc
         ? getRowBooksFields(doc)
         : [...(this.groupedFields?.values() ?? [])].flatMap((tab) =>
@@ -753,6 +741,7 @@ export default defineComponent({
           this.errors[fieldname] = this.t`${label} is required`;
         }
       }
+      this.updateGroupedFields();
     },
     dismissError() {
       this.formError = null;

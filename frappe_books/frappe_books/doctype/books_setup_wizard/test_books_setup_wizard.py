@@ -80,7 +80,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual([(row.tax_type, row.tax_rate) for row in gst.taxes], [("CGST", 9), ("SGST", 9)])
 
 	def test_setup_makes_the_one_company(self):
+		# A fresh site: no company, so no company rows on the seeded modes of payment.
 		frappe.db.delete("Books Company")
+		frappe.db.delete("Books Mode of Payment Account")
 		wizard = self._wizard(company_name="Lin's Things")
 		wizard.save(ignore_permissions=True)
 		run_setup(wizard)

@@ -73,16 +73,7 @@
               : 'text-base text-ink-gray-7'
           "
         >
-          <span v-if="fileName">{{ t`Selected` }} </span>
-          {{ fileName }}{{ fileName ? ',' : '' }}
-          <span v-if="fileName"> {{ t`check values and click on` }} </span
-          >{{ ' ' }}<span v-if="fileName">{{ t`Import Data.` }}</span>
-          <span v-if="hasImporter && importer.valueMatrix.length > 0">{{
-            ' ' +
-            (importer.valueMatrix.length === 1
-              ? t`${importer.valueMatrix.length} row added.`
-              : t`${importer.valueMatrix.length} rows added.`)
-          }}</span>
+          {{ fileStatus }}
         </p>
       </div>
 
@@ -427,6 +418,21 @@ export default defineComponent({
       }
 
       return '';
+    },
+    /** What the selected file gave: rows to check and import, or none, as a template saved here has. */
+    fileStatus(): string {
+      if (!this.fileName) {
+        return '';
+      }
+
+      const rows = this.hasImporter ? this.importer.valueMatrix.length : 0;
+      if (!rows) {
+        return this.t`${this.fileName} has no rows to import. Add rows, or select a file that has some.`;
+      }
+
+      const added =
+        rows === 1 ? this.t`1 row added.` : this.t`${rows} rows added.`;
+      return `${this.t`Selected ${this.fileName}, check values and click on Import data.`} ${added}`;
     },
     canImportData(): boolean {
       if (!this.hasImporter) {

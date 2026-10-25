@@ -72,6 +72,7 @@ function getCustomizeFormItem(): SidebarItem {
     return {
       label: t`Customize Form`,
       name: 'customize-form',
+      icon: 'lucide-layout-template',
       route: '/customize-form',
       hidden: () => !canPickFields(),
     };
@@ -80,6 +81,7 @@ function getCustomizeFormItem(): SidebarItem {
   return {
     label: t`Customize Form`,
     name: 'customize-form',
+    icon: 'lucide-layout-template',
     route: `/list/CustomForm/${t`Customize Form`}`,
     hidden: () =>
       !fyo.isFeatureOn('enable_form_customization') ||
@@ -103,11 +105,13 @@ function getRegionalSidebar(): SidebarRoot[] {
         {
           label: t`GSTR1`,
           name: 'gstr1',
+          icon: 'lucide-file-up',
           route: '/report/GSTR1',
         },
         {
           label: t`GSTR2`,
           name: 'gstr2',
+          icon: 'lucide-file-down',
           route: '/report/GSTR2',
         },
       ],
@@ -137,11 +141,24 @@ function getReportSidebar() {
   };
 }
 
+// Each report's icon, by route name, in both modes
+const REPORT_ICONS: Record<string, string> = {
+  GeneralLedger: 'lucide-chart-column',
+  TrialBalance: 'lucide-scale',
+  ProfitAndLoss: 'lucide-activity',
+  BalanceSheet: 'lucide-chart-pie',
+  StockBalance: 'lucide-boxes',
+  StockLedger: 'lucide-list',
+  AccountsReceivable: 'lucide-arrow-down-left',
+  AccountsPayable: 'lucide-arrow-up-right',
+};
+
 /** Accessory mode lists ERPNext's reports, stock ones only with inventory on. */
 function getERPNextReportItems(): SidebarItem[] {
   return Object.entries(erpnextReports).map(([name, report]) => ({
     label: report.title,
     name: kebabCase(name),
+    icon: REPORT_ICONS[name],
     route: `/report/${name}`,
     hidden: () => report.isInventory && isInventoryOff(),
   }));
@@ -156,32 +173,38 @@ function getBooksReportItems(): SidebarItem[] {
     {
       label: t`General Ledger`,
       name: 'general-ledger',
+      icon: REPORT_ICONS.GeneralLedger,
       route: '/report/GeneralLedger',
     },
     {
       label: t`Profit and Loss`,
       name: 'profit-and-loss',
+      icon: REPORT_ICONS.ProfitAndLoss,
       route: '/report/ProfitAndLoss',
     },
     {
       label: t`Balance Sheet`,
       name: 'balance-sheet',
+      icon: REPORT_ICONS.BalanceSheet,
       route: '/report/BalanceSheet',
     },
     {
       label: t`Trial Balance`,
       name: 'trial-balance',
+      icon: REPORT_ICONS.TrialBalance,
       route: '/report/TrialBalance',
     },
     {
       label: t`Stock Ledger`,
       name: 'stock-ledger',
+      icon: REPORT_ICONS.StockLedger,
       route: '/report/StockLedger',
       hidden: isInventoryOff,
     },
     {
       label: t`Stock Balance`,
       name: 'stock-balance',
+      icon: REPORT_ICONS.StockBalance,
       route: '/report/StockBalance',
       hidden: isInventoryOff,
     },
@@ -214,18 +237,21 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Quotation`,
           name: 'quotation',
+          icon: 'lucide-file-text',
           route: '/list/Quotation',
           schemaName: 'Quotation',
         },
         {
           label: t`Sales Invoice`,
           name: 'sales-invoices',
+          icon: 'lucide-receipt',
           route: '/list/SalesInvoice',
           schemaName: 'SalesInvoice',
         },
         {
           label: t`Delivery Note`,
           name: 'delivery-note',
+          icon: 'lucide-truck',
           route: '/list/DeliveryNote',
           schemaName: 'DeliveryNote',
           hidden: isInventoryOff,
@@ -233,6 +259,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Sales Payment`,
           name: 'payments',
+          icon: 'lucide-wallet',
           route: `/list/PaymentEntry/${t`Sales Payment`}`,
           schemaName: 'PaymentEntry',
           filters: routeFilters.SalesPayments,
@@ -240,12 +267,14 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Customer`,
           name: 'customer',
+          icon: 'lucide-circle-user',
           route: '/list/Customer',
           schemaName: 'Customer',
         },
         {
           label: t`Loyalty Program`,
           name: 'loyalty-program',
+          icon: 'lucide-gift',
           route: '/list/LoyaltyProgram',
           schemaName: 'LoyaltyProgram',
           hidden: () => !fyo.isFeatureOn('enable_loyalty_point_program'),
@@ -253,6 +282,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Lead`,
           name: 'lead',
+          icon: 'lucide-user-plus',
           route: '/list/Lead',
           schemaName: 'Lead',
           hidden: () => !fyo.isFeatureOn('enable_lead'),
@@ -260,6 +290,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Pricing Rule`,
           name: 'pricing-rule',
+          icon: 'lucide-tag',
           route: '/list/PricingRule',
           schemaName: 'PricingRule',
           hidden: () => !fyo.isFeatureOn('enable_pricing_rule'),
@@ -267,6 +298,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Coupon Code`,
           name: 'coupon-code',
+          icon: 'lucide-ticket',
           route: `/list/CouponCode`,
           schemaName: 'CouponCode',
           hidden: () => !fyo.isFeatureOn('enable_coupon_code'),
@@ -282,12 +314,14 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Purchase Invoice`,
           name: 'purchase-invoices',
+          icon: 'lucide-receipt',
           route: '/list/PurchaseInvoice',
           schemaName: 'PurchaseInvoice',
         },
         {
           label: t`Purchase Receipt`,
           name: 'purchase-receipt',
+          icon: 'lucide-package-check',
           route: '/list/PurchaseReceipt',
           schemaName: 'PurchaseReceipt',
           hidden: isInventoryOff,
@@ -295,6 +329,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Purchase Payment`,
           name: 'payments',
+          icon: 'lucide-wallet',
           route: `/list/PaymentEntry/${t`Purchase Payment`}`,
           schemaName: 'PaymentEntry',
           filters: routeFilters.PurchasePayments,
@@ -302,6 +337,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Supplier`,
           name: 'supplier',
+          icon: 'lucide-building-2',
           route: '/list/Supplier',
           schemaName: 'Supplier',
         },
@@ -316,12 +352,14 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Journal Entry`,
           name: 'journal-entry',
+          icon: 'lucide-book-open',
           route: '/list/JournalEntry',
           schemaName: 'JournalEntry',
         },
         {
           label: t`Item`,
           name: 'item',
+          icon: 'lucide-package',
           route: '/list/Item',
           schemaName: 'Item',
         },
@@ -329,6 +367,7 @@ function getCompleteSidebar(): SidebarConfig {
           // Standalone only; accessory mode has no Stock Entry.
           label: t`Stock Entry`,
           name: 'stock-entry',
+          icon: 'lucide-arrow-right-left',
           route: '/list/StockEntry',
           schemaName: 'StockEntry',
           hidden: isInventoryOff,
@@ -336,6 +375,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Price List`,
           name: 'price-list',
+          icon: 'lucide-list',
           route: '/list/PriceList',
           schemaName: 'PriceList',
           hidden: () => !fyo.isFeatureOn('enable_price_list'),
@@ -343,6 +383,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Item Price`,
           name: 'item-price',
+          icon: 'lucide-tags',
           route: '/list/ItemPrice',
           schemaName: 'ItemPrice',
           hidden: () => !fyo.isFeatureOn('enable_price_list'),
@@ -363,41 +404,48 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Chart of Accounts`,
           name: 'chart-of-accounts',
+          icon: 'lucide-list-tree',
           route: '/chart-of-accounts',
         },
         {
           label: t`Tax Template`,
           name: 'taxes',
+          icon: 'lucide-percent',
           route: '/list/ItemTaxTemplate',
           schemaName: 'ItemTaxTemplate',
         },
         {
           label: t`Sales Taxes and Charges Template`,
           name: 'sales-taxes',
+          icon: 'lucide-receipt-text',
           route: '/list/SalesTaxesAndChargesTemplate',
           schemaName: 'SalesTaxesAndChargesTemplate',
         },
         {
           label: t`Purchase Taxes and Charges Template`,
           name: 'purchase-taxes',
+          icon: 'lucide-receipt-text',
           route: '/list/PurchaseTaxesAndChargesTemplate',
           schemaName: 'PurchaseTaxesAndChargesTemplate',
         },
         {
           label: t`Number Series`,
           name: 'number-series',
+          icon: 'lucide-hash',
           route: '/list/NumberSeries',
           schemaName: 'NumberSeries',
         },
         {
           label: t`Import Wizard`,
           name: 'import-wizard',
+          icon: 'lucide-upload',
           route: '/import-wizard',
           hidden: () => !getImportableSchemaNames(fyo).length,
         },
         {
           label: t`Print Template`,
           name: 'print-template',
+          icon: 'lucide-printer',
           route: `/list/PrintFormat/${t`Print Template`}`,
           // The template builder makes Books templates; ERPNext has its print formats.
           hidden: isAccessoryMode,
@@ -406,6 +454,7 @@ function getCompleteSidebar(): SidebarConfig {
         {
           label: t`Settings`,
           name: 'settings',
+          icon: 'lucide-settings',
           route: '/settings',
         },
       ] as SidebarItem[],

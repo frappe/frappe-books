@@ -20,7 +20,7 @@
           :key="page.label"
           :label="page.label"
           :route="getPath(page)"
-          :active="Boolean(isGroupActive(page))"
+          :active="isActive(page)"
           :icon="page.icon"
         />
       </div>
@@ -34,7 +34,7 @@
           :key="item.label"
           :label="item.label"
           :route="getPath(item)"
-          :active="Boolean(isItemActive(item))"
+          :active="isActive(item)"
           :icon="item.icon"
         />
       </FrappeSidebarSection>
@@ -77,14 +77,13 @@ import { useCompanyIdentity } from 'src/utils/company';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
 import {
+  findSidebarEntry,
   getSidebarLocation,
-  getSidebarPath,
-  matchesSidebarPath,
+  type SidebarEntry,
 } from 'src/utils/sidebarNavigation';
 import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
-import router from '../router';
 import ShortcutsHelper from './ShortcutsHelper.vue';
 
 const COMPONENT_NAME = 'Sidebar';
@@ -106,12 +105,17 @@ export default defineComponent({
     return {
       groups: [],
       viewShortcuts: false,
-      activeGroup: null,
+      currentEntry: undefined,
     } as {
       groups: SidebarConfig;
       viewShortcuts: boolean;
-      activeGroup: null | SidebarRoot;
+      /** The one current entry, even where two lists share a doctype, as the payments do. */
+      currentEntry: SidebarEntry | undefined;
     };
+  },
+  watch: {
+    $route: 'setCurrentEntry',
+    groups: 'setCurrentEntry',
   },
   computed: {
     pages(): SidebarConfig {
@@ -127,11 +131,6 @@ export default defineComponent({
   async mounted() {
     this.groups = await getSidebarConfig();
 
-    this.setActiveGroup();
-    router.afterEach(() => {
-      this.setActiveGroup();
-    });
-
     this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyH'], () => {
       if (document.body === document.activeElement) {
         this.toggleSidebar();
@@ -144,42 +143,15 @@ export default defineComponent({
   },
   methods: {
     toggleSidebar,
-    setActiveGroup() {
-      const { path } = this.$route;
-      const fallBackGroup = this.activeGroup;
-      this.activeGroup =
-        this.groups.find((g) => {
-          if (path.startsWith(g.route + '/') && g.route !== '/') {
-            return true;
-          }
-
-          if (g.route === path) {
-            return true;
-          }
-
-          if (g.items) {
-            let activeItem = g.items.filter(
-              ({ route }) =>
-                route === decodeURI(path) || path.startsWith(route + '/')
-            );
-
-            if (activeItem.length) {
-              return true;
-            }
-          }
-        }) ??
-        (fallBackGroup?.items?.some(this.isItemActive)
-          ? fallBackGroup
-          : this.groups.find((group) =>
-              group.items?.some(this.isItemActive)
-            )) ??
-        null;
+    setCurrentEntry() {
+      this.currentEntry = findSidebarEntry(
+        this.groups,
+        this.$route,
+        this.currentEntry
+      );
     },
-    isItemActive(item: SidebarItem) {
-      return matchesSidebarPath(getSidebarPath(this.$route), item.route);
-    },
-    isGroupActive(group: SidebarRoot) {
-      return this.activeGroup && group.label === this.activeGroup.label;
+    isActive(entry: SidebarRoot | SidebarItem): boolean {
+      return this.currentEntry?.item === entry;
     },
     getPath: getSidebarLocation,
   },

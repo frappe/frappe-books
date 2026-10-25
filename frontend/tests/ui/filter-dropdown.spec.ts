@@ -354,7 +354,7 @@ test('datetime filters select both calendar date and time and preserve SQL round
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   await expect(panel).toBeHidden();
   expect(await appliedFilters(page)).toEqual([
-    ['date', '=', '2024-02-29 13:45:00'],
+    ['period_start_date', '=', '2024-02-29 13:45:00'],
   ]);
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
@@ -372,7 +372,7 @@ test('datetime filters select both calendar date and time and preserve SQL round
     .click();
   await expect(panel).toBeHidden();
   expect(await appliedFilters(page)).toEqual([
-    ['date', '=', '2024-02-29 14:25:30'],
+    ['period_start_date', '=', '2024-02-29 14:25:30'],
   ]);
 });
 

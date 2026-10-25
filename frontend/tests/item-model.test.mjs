@@ -200,3 +200,40 @@ test('item defaults show as fields of the company row, made by a value and gone 
   // Files hold the table, not the fields.
   assert.equal(item.fieldMap.income_account.clientOnly, true);
 });
+
+test("accounts the server filled are refilled after an edit, and a user's are kept", async () => {
+  const sent = [];
+  stubFrappe(({ body }) => {
+    sent.push(body.document);
+    const { item_type = 'Product' } = body.document;
+    const row = body.document.item_defaults?.[0] ?? {};
+    const income = item_type === 'Product' ? 'Sales' : 'Service';
+    return {
+      docs: [
+        {
+          ...body.document,
+          item_defaults: [
+            {
+              ...row,
+              company: 'Books Co',
+              income_account: row.income_account ?? income,
+            },
+          ],
+        },
+      ],
+    };
+  });
+  const item = newFrappeDoc('Item', { item_code: 'Tea' });
+  await item.preview();
+  assert.equal(item.income_account, 'Sales');
+
+  await item.set('item_type', 'Service');
+  await item.whenFilled();
+  assert.equal(sent.at(-1).item_defaults[0].income_account, undefined);
+  assert.equal(item.income_account, 'Service');
+
+  await item.set('income_account', 'Consulting');
+  await item.set('item_type', 'Product');
+  await item.whenFilled();
+  assert.equal(item.income_account, 'Consulting');
+});

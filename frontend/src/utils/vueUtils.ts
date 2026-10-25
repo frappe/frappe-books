@@ -94,7 +94,7 @@ export function useKeys() {
 /** What the save shortcut does: save the doc, else submit it, else say it cannot. */
 export async function syncOrSubmitDoc(doc: FrappeDoc) {
   if (doc.canSave) {
-    return await commonDocSync(doc, true);
+    return await commonDocSync(doc);
   }
 
   if (doc.canSubmit) {
@@ -102,6 +102,12 @@ export async function syncOrSubmitDoc(doc: FrappeDoc) {
   }
 
   showCannotSaveOrSubmitToast(doc);
+}
+
+/** A control commits its edit on blur, as a click on Save makes it do; the edit's change then runs. */
+async function commitFocusedEdit() {
+  (document.activeElement as HTMLElement | null)?.blur();
+  await new Promise((resolve) => setTimeout(resolve));
 }
 
 export function useDocShortcuts(
@@ -118,6 +124,7 @@ export function useDocShortcuts(
 
   const syncOrSubmitCallback = async () => {
     if (docRef.value) {
+      await commitFocusedEdit();
       await syncOrSubmit(docRef.value);
     }
   };

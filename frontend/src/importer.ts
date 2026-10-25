@@ -254,11 +254,14 @@ export class Importer {
       tf: TemplateField;
     }[];
 
+    // A row without a name belongs to no document, so the import would leave it out.
+    const nameIndex = this.getNameIndex();
     const cellErrors = [];
     for (let i = 0; i < this.valueMatrix.length; i++) {
       const row = this.valueMatrix[i];
       for (const { tf, index } of assigned) {
-        if (!row[index]?.error) {
+        const isUnnamed = index === nameIndex && !row[index]?.value;
+        if (!row[index]?.error && !isUnnamed) {
           continue;
         }
 
@@ -322,9 +325,17 @@ export class Importer {
     });
   }
 
-  /** Grid rows by document, as the name column groups them. Rows without a name are left out. */
+  /**
+   * Grid rows by document, as the name column groups them. Rows without a
+   * name are left out. A DocType its template gives no name column, like an
+   * address its script names, takes a document per row.
+   */
   getDocumentRows(): number[][] {
     const nameIndex = this.getNameIndex();
+    if (nameIndex === -1) {
+      return this.valueMatrix.map((_, index) => [index]);
+    }
+
     const documents = new Map<string, number[]>();
     for (const [index, row] of this.valueMatrix.entries()) {
       const name = row[nameIndex]?.value;

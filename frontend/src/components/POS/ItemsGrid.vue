@@ -26,6 +26,7 @@
             {{ getItemInitials(item.itemName) }}
           </span>
           <FrappeBadge
+            v-if="item.trackItem"
             class="absolute end-1.5 top-1.5"
             :theme="item.availableQty > 0 ? 'green' : 'red'"
             :label="t`${item.availableQty} in stock`"

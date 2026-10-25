@@ -9,7 +9,6 @@ import { Action } from 'fyo/model/types';
 import { getActions } from 'fyo/utils';
 import { ConflictError, ValueError } from 'fyo/utils/errors';
 import { canOpenLedger, getLedgerLink } from 'models/helpers';
-import { Invoice } from 'models/invoices/Invoice';
 import { ModelNameEnum } from 'models/types';
 import { Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
@@ -110,7 +109,7 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
           try {
             await doc.delete();
           } catch (err) {
-            await handleErrorWithDialog(err as Error, doc);
+            await handleErrorWithDialog(err as Error, doc, true);
             return false;
           }
 
@@ -145,7 +144,7 @@ export async function cancelDocWithPrompt(
           try {
             await doc.cancel(linkedDocs);
           } catch (err) {
-            await handleErrorWithDialog(err as Error, doc);
+            await handleErrorWithDialog(err as Error, doc, true);
             return false;
           }
 
@@ -353,7 +352,7 @@ function getDuplicateAction(doc: FrappeDoc): Action {
         const dupe = await doc.duplicate();
         await openEdit(dupe);
       } catch (err) {
-        await handleErrorWithDialog(err as Error, doc);
+        await handleErrorWithDialog(err as Error, doc, true);
       }
     },
   };
@@ -369,7 +368,7 @@ function getNewAction(doc: FrappeDoc): Action {
         const newDoc = newFrappeDoc(doc.schemaName);
         await openEdit(newDoc);
       } catch (err) {
-        await handleErrorWithDialog(err as Error, doc);
+        await handleErrorWithDialog(err as Error, doc, true);
       }
     },
   };
@@ -436,8 +435,8 @@ export function getFormRoute(schemaName: string, name: string): string {
     return route;
   }
 
-  // Use `encodeURIComponent` if more name issues
-  return `/edit/${schemaName}/${name.replaceAll('/', '%2F')}`;
+  // ERPNext names may hold any character, like the % of "GST 18% - AR".
+  return `/edit/${schemaName}/${encodeURIComponent(name)}`;
 }
 
 export async function openNewDoc(schemaName: string, initData?: DocValueMap) {
@@ -598,35 +597,16 @@ export type ActionErrorHandler = (error: unknown) => void;
 
 export async function commonDocSync(
   doc: FrappeDoc,
-  useDialog = false,
-  onError?: ActionErrorHandler
-): Promise<boolean> {
-  let success: boolean;
-  if (useDialog) {
-    success = !!(await showSubmitOrSyncDialog(doc, 'sync', onError));
-  } else {
-    success = await syncWithoutDialog(doc, onError);
-  }
-
-  if (!success) {
-    return false;
-  }
-
-  showActionToast(doc, 'sync');
-  return true;
-}
-
-async function syncWithoutDialog(
-  doc: FrappeDoc,
   onError?: ActionErrorHandler
 ): Promise<boolean> {
   try {
     await doc.sync();
   } catch (error) {
-    await reportActionError(error, doc, onError, false);
+    await reportActionError(error, doc, onError, true);
     return false;
   }
 
+  showActionToast(doc, 'sync');
   return true;
 }
 
@@ -638,7 +618,7 @@ export async function commonDocSubmit(
     return false;
   }
 
-  const success = await showSubmitOrSyncDialog(doc, 'submit', onError);
+  const success = await showSubmitDialog(doc, onError);
   if (!success) {
     return false;
   }
@@ -684,28 +664,14 @@ async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
   })) as boolean;
 }
 
-async function showSubmitOrSyncDialog(
-  doc: FrappeDoc,
-  type: 'submit' | 'sync',
-  onError?: ActionErrorHandler
-) {
-  const label = getDocReferenceLabel(doc);
-  let title = t`Save ${label}?`;
-  if (type === 'submit') {
-    title = t`Submit ${label}?`;
-  }
-
-  let detail: string;
-  if (type === 'submit') {
-    detail = getDocSubmitMessage(doc);
-  } else {
-    detail = getDocSyncMessage(doc);
-  }
+async function showSubmitDialog(doc: FrappeDoc, onError?: ActionErrorHandler) {
+  const title = t`Submit ${getDocReferenceLabel(doc)}?`;
+  const detail = getDocSubmitMessage(doc);
 
   let actionError: unknown;
   const yesAction = async () => {
     try {
-      await doc[type]();
+      await doc.submit();
     } catch (error) {
       actionError = error;
       return false;
@@ -740,24 +706,6 @@ async function showSubmitOrSyncDialog(
   }
 
   return success;
-}
-
-function getDocSyncMessage(doc: FrappeDoc): string {
-  const label = getDocReferenceLabel(doc);
-  const detail = t`Create new ${doc.schema.label} entry?`;
-  if (doc.inserted) {
-    return t`Save changes made to ${label}?`;
-  }
-
-  if (doc instanceof Invoice && doc.grand_total?.isZero()) {
-    const gt = doc.fyo.format(doc.grand_total ?? doc.fyo.pesa(0), 'Currency');
-    return [
-      detail,
-      t`Entry has Grand Total ${gt}. Please verify amounts.`,
-    ].join(' ');
-  }
-
-  return detail;
 }
 
 function getDocSubmitMessage(doc: FrappeDoc): string {

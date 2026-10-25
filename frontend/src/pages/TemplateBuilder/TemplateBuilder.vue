@@ -671,10 +671,19 @@ export default defineComponent({
         return;
       }
 
+      const isNew = doc.notInserted;
       try {
         await doc.sync();
       } catch (error) {
-        await handleErrorWithDialog(error, doc as FrappeDoc);
+        await handleErrorWithDialog(error, doc as FrappeDoc, true);
+        return;
+      }
+
+      // A reload opens the saved template, not a new one under its draft name.
+      if (isNew) {
+        await this.$router.replace(
+          `/template-builder/${encodeURIComponent(doc.name!)}`
+        );
       }
     },
     async setDoc() {

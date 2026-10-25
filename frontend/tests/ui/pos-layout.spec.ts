@@ -565,6 +565,52 @@ test('payment takes a large amount field, tiles and same-size actions', async ({
   });
 });
 
+test('a split payment adds a tender for the balance, and only cash gives change', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1352, height: 848 });
+  await showModal(page, 'Payment');
+  const dialog = page.getByRole('dialog', { name: 'Payment' });
+  const amounts = dialog.getByRole('textbox', { name: 'Amount paid' });
+  const status = dialog.getByRole('status');
+  const pay = dialog.getByRole('button', { name: 'Pay', exact: true });
+  const addPayment = dialog.getByRole('button', { name: 'Add payment' });
+  await dialog.getByRole('radio', { name: 'Credit Card', exact: true }).click();
+  await dialog.getByRole('textbox', { name: /Reference No/ }).fill('CARD-1');
+  await expect(addPayment).toHaveCount(0);
+
+  await amounts.first().fill('1000');
+  await amounts.first().press('Tab');
+  await expect(status).toContainText('Balance due');
+  await addPayment.click();
+  const second = dialog.getByRole('radiogroup', { name: 'Payment 2' });
+  await expect(second.getByRole('radio', { name: 'Credit Card' })).toHaveCount(0);
+  await second.getByRole('radio', { name: 'Cash', exact: true }).click();
+  await expect(amounts.nth(1)).toHaveValue('1,250.00');
+  await expect(status).toHaveCount(0);
+  await expect(pay).toBeEnabled();
+
+  await amounts.nth(1).fill('1500');
+  await amounts.nth(1).press('Tab');
+  await expect(status).toContainText('Change to return');
+  await expect(status).toContainText('250.00');
+  await page.screenshot({
+    animations: 'disabled',
+    path: test.info().outputPath('payment-split.png'),
+  });
+
+  await amounts.first().fill('2500');
+  await amounts.first().press('Tab');
+  await expect(status).toContainText('Non-cash over amount due');
+  await expect(pay).toBeDisabled();
+
+  await dialog.getByRole('button', { name: 'Remove Payment 2' }).click();
+  await expect(dialog.getByRole('radiogroup')).toHaveCount(1);
+  await expect(
+    dialog.getByRole('radiogroup', { name: 'Payment method' })
+  ).toBeVisible();
+});
+
 test('the paid amount takes arithmetic, and text that is no number pays nothing', async ({
   page,
 }) => {

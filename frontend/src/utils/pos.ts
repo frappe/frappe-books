@@ -30,6 +30,7 @@ export { getTotalQuantity } from './posCart';
 /** The item fields the POS lists, searches and adds items by. */
 export const POS_ITEM_FIELDS = [
   'name',
+  'item_name',
   { barcodes: ['barcode'] },
   'image',
   'standard_rate',
@@ -200,7 +201,7 @@ export async function getPOSItemRecords(
 
   const [items, rates] = await Promise.all([
     getList('Item', {
-      fields: [...POS_ITEM_FIELDS, 'item_name'],
+      fields: POS_ITEM_FIELDS,
       filters: [...filters, ...SOLD_ITEMS],
       orFilters: getProfileGroups(profile).map(
         (group) => ['item_group', 'descendants of (inclusive)', group] as Filter
@@ -425,6 +426,14 @@ export function getPayableTotal(invoice: SalesInvoice): Money {
     invoice.conversion_rate || 1
   );
   return (invoice.grand_total ?? fyo.pesa(0)).sub(loyalty);
+}
+
+/** What the Pay or Refund button takes, as a positive amount: what a submitted sale still owes, else its payable total. */
+export function getAmountToPay(invoice: SalesInvoice): Money {
+  const amount = invoice.isSubmitted
+    ? (invoice.outstanding_amount ?? fyo.pesa(0))
+    : getPayableTotal(invoice);
+  return amount.abs();
 }
 
 /** The rows' total before discounts, then each amount that takes it to the payable total. */

@@ -1,9 +1,10 @@
-import { FiltersMap, HiddenMap } from 'fyo/model/types';
+import { FiltersMap, HiddenMap, RequiredMap } from 'fyo/model/types';
 import {
   AccountRootTypeEnum,
   AccountTypeEnum,
 } from 'models/baseModels/Account/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 
 /** Books POS Settings, served by Frappe. */
 export class POSSettings extends FrappeDoc {
@@ -43,6 +44,9 @@ export class POSSettings extends FrappeDoc {
       ['account_type', '=', AccountTypeEnum.Receivable],
     ],
   };
+
+  // The server asks for it too; accessory mode keeps only screen preferences here.
+  required: RequiredMap = { cash_account: () => !isAccessoryMode() };
 
   // Fields of features turned off in other settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {

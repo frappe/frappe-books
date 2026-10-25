@@ -1,13 +1,17 @@
 """Previews of ERPNext documents: what a save would fill, worked out by ERPNext's own code."""
 
+from contextlib import contextmanager
+
 import frappe
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import get_loyalty_program_details
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_reference_details
 from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 from erpnext.accounts.party import get_party_details
 from erpnext.accounts.services.taxes import get_default_taxes_and_charges
+from erpnext.stock.doctype.stock_entry.stock_entry import get_uom_details
 from frappe.model import no_value_fields
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import flt, nowdate
 
 from frappe_books.accessory import pos
 from frappe_books.permissions import check_preview_permission
@@ -39,6 +43,8 @@ PRICE_SOURCES = {"selling_price_list", "buying_price_list", "currency", "price_l
 FORM_FILLS = {
 	"POS Opening Entry": pos.fill_opening_entry,
 	"POS Closing Entry": pos.fill_closing_entry,
+	"Payment Entry": lambda document, edited: fill_transfer_amount(document),
+	"Journal Entry": lambda document, edited: fill_posting_date(document),
 }
 
 
@@ -63,16 +69,27 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 	untouched = document.is_new() and not (edited or edited_rows)
 	frappe.db.savepoint("books_preview")
 	try:
+		fetch_links(document)
 		refresh_party(document, edited)
 		refresh_items(document, edited_rows)
+		fill_stock_entry_rows(document)
+		if hasattr(document, "set_use_serial_batch_fields"):
+			# What its save sets, which shows the rows' Batch No and Serial No as Desk's form does
+			document.set_use_serial_batch_fields()
+		fill_payment_account(document)
+		reallocate_payment(document, edited)
 		if edited & PRICE_SOURCES:
 			reprice_rows(document, edited_rows)
 		if check_coupons and document.get("coupon_code"):
 			validate_coupon_code(document.coupon_code)
-		if untouched:
-			fill_untouched(document)
-		else:
-			fill(document, edited)
+		with without_blank_rows(document):
+			if untouched:
+				fill_untouched(document)
+			else:
+				fill(document, edited)
+				allocate_references(document)
+		# What the steps announced, like an Item Price added, is rolled back; the save says it again.
+		frappe.clear_messages()
 		return document.as_dict()
 	finally:
 		# ERPNext's fills only read, but a preview never keeps a write.
@@ -97,10 +114,19 @@ def get_document(values: dict) -> Document:
 
 
 def set_default_taxes(document: Document):
-	"""A new document takes the company's default tax template, as Desk gives it, until the user clears it."""
+	"""A new document takes the company's default tax template, as Desk gives it, until the user clears it.
+
+	The client sends a template it was given empty, so rows already there came
+	from it on an earlier preview and stay as they are.
+	"""
 	field = document.meta.get_field("taxes_and_charges")
-	if field and document.get("taxes_and_charges") is None and not document.get("taxes"):
-		document.update(get_default_taxes_and_charges(field.options, company=document.company) or {})
+	if not field or document.get("taxes_and_charges") is not None:
+		return
+
+	default = get_default_taxes_and_charges(field.options, company=document.company) or {}
+	if document.get("taxes"):
+		default.pop("taxes", None)
+	document.update(default)
 
 
 def set_payment_party_type(document: Document, values: dict):
@@ -114,6 +140,32 @@ def set_payment_party_type(document: Document, values: dict):
 		document.payment_type = PAYMENT_TYPE_OF_PARTY.get(document.party_type, document.payment_type)
 	elif not (document.party_type or document.party):
 		document.party_type = PARTY_TYPE_OF_PAYMENT.get(document.payment_type)
+
+
+def fetch_links(document: Document):
+	"""Fields fetched from a link take the linked record's values, as the save fetches them, like a stock
+	entry's purpose from its type; the client sends them empty once the server filled them.
+	"""
+	for field in document.meta.get_link_fields():
+		if document.get(field.fieldname):
+			fetch_link_values(document, field)
+
+
+def fetch_link_values(document: Document, field):
+	fetched = [
+		df
+		for df in document.meta.get_fields_to_fetch(field.fieldname)
+		if not df.fetch_if_empty or not document.get(df.fieldname)
+	]
+	sources = [df.fetch_from.split(".")[-1] for df in fetched]
+	values = fetched and frappe.db.get_value(
+		field.options, document.get(field.fieldname), sources, as_dict=True
+	)
+	if not values:
+		return
+
+	for df in fetched:
+		document.set_fetch_from_value(field.options, df, values)
 
 
 def refresh_party(document: Document, edited: set[str]):
@@ -138,6 +190,117 @@ def refresh_party(document: Document, edited: set[str]):
 	reprice_rows(document, {})
 
 
+def fill_stock_entry_rows(document: Document):
+	"""Stock entry rows take their item's details, as Desk's form asks ERPNext for them once an item is chosen.
+
+	What a row holds stays; a unit other than the stock unit takes its conversion factor.
+	"""
+	if document.doctype != "Stock Entry":
+		return
+
+	for row in document.get("items") or []:
+		if not row.item_code or row.conversion_factor:
+			continue
+
+		args = frappe._dict(
+			item_code=row.item_code,
+			warehouse=row.s_warehouse or row.t_warehouse,
+			qty=row.qty,
+			company=document.company,
+		)
+		details = document.get_item_details(args)
+		if row.uom and row.uom != details.stock_uom:
+			details.update(get_uom_details(row.item_code, row.uom, row.qty))
+		row.update({key: value for key, value in details.items() if value and not row.get(key)})
+
+
+@contextmanager
+def without_blank_rows(document: Document):
+	"""Rows with no item yet sit out ERPNext's fills, which refuse them; Desk never sends them either."""
+	rows = document.get("items") or []
+	filled = [row for row in rows if row.get("item_code")]
+	if len(filled) == len(rows):
+		yield
+		return
+
+	document.set("items", filled)
+	try:
+		yield
+	finally:
+		document.set("items", rows)
+
+
+def fill_payment_account(document: Document):
+	"""An empty cash or bank account of a payment takes its mode of payment's account for the company, as Desk's
+	form fills it; a mode without one leaves the account to the user.
+	"""
+	if document.doctype != "Payment Entry" or not document.mode_of_payment:
+		return
+
+	field = "paid_to" if document.payment_type == "Receive" else "paid_from"
+	if not document.get(field):
+		filters = {"parent": document.mode_of_payment, "company": document.company}
+		document.set(field, frappe.db.get_value("Mode of Payment Account", filters, "default_account"))
+
+
+def reallocate_payment(document: Document, edited: set[str]):
+	"""A payment's new amount is allocated to its references again, oldest first, as Desk's form does."""
+	if document.doctype != "Payment Entry" or not edited & {"paid_amount", "received_amount"}:
+		return
+
+	paid_by_received = document.payment_type == "Pay" and "received_amount" in edited
+	amount = document.received_amount if paid_by_received else document.paid_amount
+	document.allocate_amount_to_references(flt(amount), True, True)
+
+
+def fill_posting_date(document: Document):
+	"""A new entry is dated today, as Desk's form dates it; ERPNext's DocType has no default."""
+	if document.is_new() and not document.posting_date and not document.amended_from:
+		document.posting_date = nowdate()
+
+
+def fill_transfer_amount(document: Document):
+	"""A transfer between accounts of one currency receives what it pays, as Desk's form sets it; ERPNext leaves
+	a transfer's received amount to the user, which Books does not ask for.
+	"""
+	same_currency = document.paid_from_account_currency == document.paid_to_account_currency
+	if document.payment_type == "Internal Transfer" and same_currency and not document.received_amount:
+		document.received_amount = document.paid_amount
+		document.target_exchange_rate = document.source_exchange_rate
+		document.set_amounts()
+
+
+def allocate_references(document: Document):
+	"""A reference with no allocation takes what is left of the payment, up to its outstanding amount, as Desk's
+	form allocates a reference just chosen; a payment with no amount takes the references' outstanding amounts.
+	The client sends an allocation the server made empty, so it is made again.
+	"""
+	if document.doctype != "Payment Entry":
+		return
+
+	chosen = [
+		row for row in document.get("references") or [] if row.reference_name and not row.allocated_amount
+	]
+	if not chosen:
+		return
+
+	receiving = document.payment_type == "Receive"
+	currency = document.paid_from_account_currency if receiving else document.paid_to_account_currency
+	for row in chosen:
+		row.update(
+			get_reference_details(
+				row.reference_doctype, row.reference_name, currency, document.party_type, document.party
+			)
+		)
+		left = flt(document.unallocated_amount) if document.paid_amount else flt(row.outstanding_amount)
+		row.allocated_amount = min(left, flt(row.outstanding_amount))
+		document.set_amounts()
+
+	if not document.paid_amount:
+		document.paid_amount = sum(flt(row.allocated_amount) for row in document.references)
+		document.set_amounts()
+
+
 def refresh_items(document: Document, edited_rows: dict[str, list[str]]):
 	"""A row whose item changed starts afresh, keeping its quantity and what the user just typed.
 
@@ -150,7 +313,7 @@ def refresh_items(document: Document, edited_rows: dict[str, list[str]]):
 			for field in row.meta.fields:
 				if field.fieldtype not in no_value_fields and field.fieldname not in kept:
 					row.set(field.fieldname, None)
-		if row.item_code and not row.qty:
+		if row.item_code and row.meta.has_field("qty") and not row.qty:
 			row.qty = 1
 
 
@@ -204,7 +367,10 @@ def fill_loyalty(document: Document, edited: set[str]):
 		document.customer, document.loyalty_program, document.posting_date, document.company
 	)
 	document.loyalty_redemption_account = details.expense_account
-	document.loyalty_redemption_cost_center = details.cost_center
+	# The program may name none; Desk's form then asks, which Books does not, so the company's goes.
+	document.loyalty_redemption_cost_center = details.cost_center or frappe.get_cached_value(
+		"Company", document.company, "cost_center"
+	)
 	document.loyalty_amount = flt(
 		details.conversion_factor * document.loyalty_points, document.precision("loyalty_amount")
 	)

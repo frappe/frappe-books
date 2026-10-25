@@ -150,10 +150,13 @@ export default {
         this.triggerChange(savedName);
       });
     },
-    /** The typed text as the title of a record its DocType names by script, like an address. */
+    /**
+     * The typed text as the new record's title too, when that is not its
+     * naming field: an address its DocType names by script, an item's name.
+     */
     getTypedTitle(target) {
-      const { titleField } = getModel(target)?.presentation ?? {};
-      return titleField && this.searchQuery
+      const { titleField } = getSchema(target);
+      return titleField && titleField !== 'name' && this.searchQuery
         ? { [titleField]: this.searchQuery }
         : {};
     },

@@ -142,7 +142,7 @@
               :disable-pay="disablePayButton"
               :is-return="!!sinvDoc.isReturn"
               :is-submitted="sinvDoc.isSubmitted"
-              :grand-total="getPayableTotal(sinvDoc as SalesInvoice)"
+              :grand-total="getAmountToPay(sinvDoc as SalesInvoice)"
               @save="saveInvoiceAction"
               @pay="handlePaymentAction"
             />
@@ -269,11 +269,11 @@ import {
   validatePOSCheckout,
   isTypingInField,
   getQuickQtyBuffer,
-  getPayableTotal,
+  getAmountToPay,
   loadPricingRuleTitles,
 } from 'src/utils/pos';
 import {
-  clearReturnPayments,
+  clearPayments,
   posCheckoutKey,
   usePOSCheckout,
 } from 'src/utils/posCheckout';
@@ -755,7 +755,7 @@ export default defineComponent({
         'make_return'
       )) as SalesInvoice;
       if (isAccessoryMode()) {
-        await clearReturnPayments(this.sinvDoc);
+        await clearPayments(this.sinvDoc);
         await this.previewInvoice();
       }
     },
@@ -1130,7 +1130,7 @@ export default defineComponent({
 
       this.toggleModal('Payment', true);
     },
-    getPayableTotal,
+    getAmountToPay,
     routeTo,
   },
 });

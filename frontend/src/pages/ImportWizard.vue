@@ -350,9 +350,11 @@ import { handleErrorWithDialog } from 'src/errorHandling';
 import { fyo } from 'src/initFyo';
 import { downloadFile } from 'src/utils/browser';
 import { showDialog } from 'src/utils/interactive';
+import { serverHtmlToText } from 'src/utils/serverHtml';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { selectTextFile } from 'src/utils/ui';
+import { getServerMessages } from 'src/web/api';
 import { defineComponent } from 'vue';
 
 type ImportWizardData = {
@@ -681,6 +683,12 @@ export default defineComponent({
       this.isMakingEntries = true;
       try {
         await this.importFile(this.importer.getImportFile());
+      } catch (error) {
+        // Frappe's Data Import refused the file, as it says.
+        const messages = getServerMessages(error).map(({ message }) =>
+          serverHtmlToText(message)
+        );
+        await this.showCannotImport(messages.join('\n'));
       } finally {
         this.isMakingEntries = false;
       }

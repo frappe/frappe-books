@@ -23,6 +23,8 @@ export class PricingRule extends FrappeDoc {
         optionLabels: { floor: 'Floor', round: 'Round', ceil: 'Ceil' },
       },
       ...withoutCreate(['free_item', 'free_item_uom']),
+      // Books' rules price sales; ERPNext's need Selling or Buying ticked.
+      selling: { default: true },
     },
   };
   static override previewMethod = 'preview';

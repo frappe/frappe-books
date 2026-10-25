@@ -133,6 +133,64 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "cannot exceed the outstanding", invoice.save)
 
+	def test_split_tenders_make_a_payment_each_and_count_per_mode(self):
+		invoice = self.make_pos_invoice(
+			payments=[
+				{"mode_of_payment": "Cash", "amount": 100},
+				{"mode_of_payment": "Bank", "amount": 100, "reference_no": "R1"},
+			]
+		)
+
+		invoice.submit()
+
+		payments = [frappe.get_doc("Books Payment Entry", name) for name in counter_payments(invoice)]
+		# The non-cash tender pays first, so the cash one gives the change.
+		self.assertEqual(
+			sorted((payment.mode_of_payment, payment.paid_amount) for payment in payments),
+			[("Bank", 100), ("Cash", 80)],
+		)
+		self.assertEqual(invoice.reload().status, "Paid")
+		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
+		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Bank": 100, "Cash": 80})
+
+	def test_split_tenders_that_pay_in_full_need_no_partial_payments(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 0)
+		paid = self.make_pos_invoice(
+			payments=[
+				{"mode_of_payment": "Bank", "amount": 80, "reference_no": "R1"},
+				{"mode_of_payment": "Cash", "amount": 100},
+			]
+		)
+		short = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 100}])
+
+		paid.submit()
+
+		self.assertEqual(paid.reload().outstanding_amount, 0)
+		self.assertRaisesRegex(frappe.ValidationError, "Enable partial payments", short.submit)
+
+	def test_non_cash_tenders_together_cannot_pay_more_than_is_due(self):
+		invoice = self.make_pos_invoice()
+		invoice.append("payments", {"mode_of_payment": "Bank", "amount": 100, "reference_no": "R1"})
+		invoice.append("payments", {"mode_of_payment": "Bank", "amount": 100, "reference_no": "R2"})
+
+		self.assertRaisesRegex(frappe.ValidationError, "cannot exceed the outstanding", invoice.save)
+
+	def test_a_submitted_sale_is_paid_by_split_tenders(self):
+		invoice = self.make_pos_invoice()
+		invoice.submit()
+
+		names = pay_pos_invoice(
+			invoice.name,
+			[
+				{"mode_of_payment": "Cash", "amount": 100},
+				{"mode_of_payment": "Bank", "amount": 50, "reference_no": "R1"},
+			],
+		)
+
+		amounts = [frappe.db.get_value("Books Payment Entry", name, "paid_amount") for name in names]
+		self.assertEqual(sorted(amounts), [50, 100])
+		self.assertEqual(invoice.reload().outstanding_amount, 30)
+
 	def test_only_pos_invoices_take_counter_payments(self):
 		with self.assertRaisesRegex(frappe.ValidationError, "Only POS invoices"):
 			make_invoice(

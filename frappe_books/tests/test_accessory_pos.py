@@ -189,6 +189,30 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 		self.assertEqual(payment.paid_amount, invoice.outstanding_amount)
 		self.assertEqual(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount"), 0)
 
+	def test_each_tender_pays_what_the_earlier_ones_left(self):
+		from frappe_books.accessory.pos import pay_pos_invoice
+
+		invoice = make_pos_invoice(self.profile, self.customer, self.item, paid=5)
+
+		names = pay_pos_invoice(
+			invoice.name,
+			[{"mode_of_payment": "Cash", "amount": 10}, {"mode_of_payment": "Cash", "amount": 10}],
+		)
+
+		amounts = [frappe.db.get_value("Payment Entry", name, "paid_amount") for name in names]
+		self.assertEqual(amounts, [10, 5])
+		self.assertEqual(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount"), 0)
+
+	def test_a_submitted_pos_invoice_is_paid_only_by_its_profile_modes(self):
+		from frappe_books.accessory.pos import pay_pos_invoice
+
+		invoice = make_pos_invoice(self.profile, self.customer, self.item, paid=5)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "does not take Wire Transfer"):
+			pay_pos_invoice(invoice.name, [{"mode_of_payment": "Wire Transfer", "amount": 15}])
+		with self.assertRaisesRegex(frappe.ValidationError, "greater than zero"):
+			pay_pos_invoice(invoice.name, [{"mode_of_payment": "Cash", "amount": -5}])
+
 	def test_cashiers_read_the_profile_prices_without_item_price_rights(self):
 		from frappe_books.accessory.pos import get_selling_rates
 

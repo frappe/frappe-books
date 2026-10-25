@@ -5,7 +5,10 @@ import {
   call,
   errors,
   getDocuments,
+  getServerMessages,
+  insertDocument,
   loadTranslations,
+  onServerMessages,
 } from './helpers/accounting.mjs';
 
 const LOGIN_URL = '/login?redirect-to=%2Fbooks';
@@ -128,4 +131,65 @@ test("a signed-in user's refusal stays an error", async () => {
   respondWith(403, 'PermissionError');
   const result = await getRedirect(call('method'));
   assert.deepEqual(result, { href: undefined, settled: true });
+});
+
+const ALERT = { message: 'Item Price added', alert: 1, indicator: 'green' };
+
+test('a failed request drops its alerts, as it kept nothing they announce', async () => {
+  const thrown = { message: 'Rate is required', indicator: 'red' };
+  globalThis.fetch = async () =>
+    Response.json(
+      {
+        exc_type: 'ValidationError',
+        _server_messages: JSON.stringify(
+          [ALERT, thrown].map((m) => JSON.stringify(m))
+        ),
+      },
+      { status: 417 }
+    );
+
+  const error = await call('method').catch((error) => error);
+
+  assert.deepEqual(getServerMessages(error), [thrown]);
+});
+
+test('an error Frappe linked to an alert says what failed instead', async () => {
+  globalThis.fetch = async () =>
+    Response.json(
+      {
+        errors: [
+          {
+            type: 'TypeError',
+            exception:
+              "Traceback\nTypeError: 'NoneType' object is not callable\n",
+            ...ALERT,
+          },
+        ],
+      },
+      { status: 500 }
+    );
+
+  const error = await insertDocument('Purchase Receipt', {}).catch((e) => e);
+
+  assert.deepEqual(
+    getServerMessages(error).map(({ message }) => message),
+    ["TypeError: 'NoneType' object is not callable"]
+  );
+});
+
+test('a successful request shows what the server logged', async () => {
+  const shown = [];
+  onServerMessages((messages) => shown.push(...messages));
+  globalThis.fetch = async () =>
+    Response.json({ data: { name: 'PR-1' }, messages: [ALERT] });
+  await insertDocument('Purchase Receipt', {});
+  globalThis.fetch = async () =>
+    Response.json({
+      message: 'ok',
+      _server_messages: JSON.stringify([JSON.stringify(ALERT)]),
+    });
+  await call('method');
+
+  onServerMessages(() => undefined);
+  assert.deepEqual(shown, [ALERT, ALERT]);
 });

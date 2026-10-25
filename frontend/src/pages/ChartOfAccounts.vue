@@ -420,10 +420,13 @@ export default defineComponent({
         own
       );
     },
+    /** A balance on the other side than its root type keeps shows as a positive amount of that side. */
     getBalanceString(account: AccountItem) {
-      const isCredit = this.creditRootTypes.includes(account.root_type);
       const balance = this.getBalance(account);
-      return `${fyo.format(balance, 'Currency')} ${isCredit ? t`Cr.` : t`Dr.`}`;
+      const keepsCredit = this.creditRootTypes.includes(account.root_type);
+      const isCredit = balance < 0 ? !keepsCredit : keepsCredit;
+      const amount = fyo.format(Math.abs(balance), 'Currency');
+      return `${amount} ${isCredit ? t`Cr.` : t`Dr.`}`;
     },
     /** Balances are signed on the server by the side each root type keeps. */
     async setBalances() {

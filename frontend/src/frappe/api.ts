@@ -3,9 +3,11 @@ import type { DocPermissionMap } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
 import {
   call,
-  getServerError,
+  getFailure,
+  getHeaders,
   leaveIfSessionExpired,
   reachServer,
+  showServerMessages,
   type ServerMessage,
 } from 'src/web/api';
 
@@ -28,7 +30,7 @@ export interface ListQuery {
 type ResponseBody<T> = {
   data: T;
   docs?: DocValues[];
-  errors?: { type?: string; message?: string; title?: string }[];
+  errors?: (Partial<ServerMessage> & { type?: string; exception?: string })[];
   /** Messages the server logged besides the error, in order. */
   messages?: ServerMessage[];
 };
@@ -86,6 +88,29 @@ export async function runDocMethod(
     running
   );
   return docs![0];
+}
+
+/**
+ * Submits an ERPNext document as Desk does, through Frappe's client API:
+ * controllers like the Journal Entry's override `submit` without whitelisting it.
+ */
+export async function submitERPNextDocument(
+  document: DocValues
+): Promise<DocValues> {
+  const submitting = call<DocValues>('frappe.client.submit', { doc: document });
+  return await checkLatest(
+    String(document.doctype),
+    String(document.name),
+    submitting
+  );
+}
+
+/** Cancels an ERPNext document as Desk does; see `submitERPNextDocument`. */
+export async function cancelERPNextDocument(
+  doctype: string,
+  name: string
+): Promise<DocValues> {
+  return await call<DocValues>('frappe.client.cancel', { doctype, name });
 }
 
 /** Fields edited since the last preview: the document's, and its rows' by row name. */
@@ -224,23 +249,28 @@ async function request<T>(
     throw toServerError(body, response);
   }
 
+  showServerMessages(body.messages);
   return body;
 }
 
-/** A failed response's error; a mandatory error says what is missing only in its messages. */
+/**
+ * A failed response's error; a mandatory error says what is missing only in
+ * its messages. Frappe gives an error raised without a message, like a
+ * TypeError, the first message logged before it, such as an alert, which
+ * stays an alert.
+ */
 function toServerError(body: ResponseBody<unknown>, response: Response) {
   const [error] = body.errors ?? [];
   const messages = [...(body.messages ?? [])];
   if (error?.message) {
-    messages.push({ message: error.message, title: error.title });
+    messages.push({
+      message: error.message,
+      title: error.title,
+      alert: error.alert,
+    });
   }
 
-  const message =
-    error?.message ??
-    (messages.map((m) => m.message).join('\n') ||
-      error?.type ||
-      response.statusText);
-  return getServerError(message, error?.type, response.status, messages);
+  return getFailure(messages, error?.type, response.status, error?.exception);
 }
 
 /** Frappe refuses a copy older than the saved one; /books says so in its own words. */
@@ -271,19 +301,4 @@ function getQueryString(params: Record<string, unknown> = {}): string {
 
   const text = query.toString();
   return text ? `?${text}` : '';
-}
-
-/** Frappe's JSON request headers, with the session's CSRF token. */
-export function getHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'Content-Type': 'application/json; charset=utf-8',
-    'X-Frappe-Site-Name': window.location.hostname,
-  };
-  const token = window.csrf_token;
-  if (token && token !== '{{ csrf_token }}') {
-    headers['X-Frappe-CSRF-Token'] = token;
-  }
-
-  return headers;
 }

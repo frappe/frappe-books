@@ -54,6 +54,42 @@ def invoice_values(customer, item, **row):
 	}
 
 
+def make_default_sales_taxes(title):
+	"""The company's default Sales Taxes and Charges Template, with one 9% row."""
+	company = erpnext_default_company()
+	abbr = frappe.get_cached_value("Company", company, "abbr")
+	account = frappe.db.get_value("Account", {"account_name": title, "company": company})
+	if not account:
+		account = (
+			frappe.get_doc(
+				{
+					"doctype": "Account",
+					"account_name": title,
+					"parent_account": f"Duties and Taxes - {abbr}",
+					"account_type": "Tax",
+					"company": company,
+				}
+			)
+			.insert()
+			.name
+		)
+
+	row = {"charge_type": "On Net Total", "account_head": account, "rate": 9, "description": title}
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Sales Taxes and Charges Template",
+				"title": title,
+				"company": company,
+				"is_default": 1,
+				"taxes": [row],
+			}
+		)
+		.insert()
+		.name
+	)
+
+
 def first_row(doc):
 	return frappe._dict(doc["items"][0])
 
@@ -105,6 +141,23 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 
 		self.assertEqual(doc["customer_name"], other)
 
+	def test_a_default_tax_template_stays_on_later_previews_with_its_rows(self):
+		template = make_default_sales_taxes("Accessory Preview GST")
+		doc = self.preview(invoice_values(self.customer, self.pen, qty=1), {})
+		doc["taxes"][0]["rate"] = 5
+		# The client sends the template it was given empty.
+		doc = self.preview({**doc, "__islocal": 1, "taxes_and_charges": None}, {"doc": ["customer"]})
+
+		self.assertEqual(doc["taxes_and_charges"], template)
+		self.assertEqual([row["rate"] for row in doc["taxes"]], [5])
+
+	def test_a_preview_drops_what_its_rolled_back_steps_announced(self):
+		frappe.clear_messages()
+		with patch("frappe_books.accessory.preview.fill", lambda *args: frappe.msgprint("Added", alert=True)):
+			self.preview(invoice_values(self.customer, self.pen, qty=1), {"doc": ["customer"]})
+
+		self.assertFalse(frappe.get_message_log())
+
 	def test_an_untouched_new_payment_previews_without_erpnext_refusals(self):
 		frappe.clear_messages()
 		doc = self.preview({"doctype": "Payment Entry", "__islocal": 1}, {})
@@ -132,6 +185,113 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 		ensure_user(NO_RIGHTS_USER)
 		with self.set_user(NO_RIGHTS_USER), self.assertRaises(frappe.PermissionError):
 			self.preview(invoice_values(self.customer, self.pen), {})
+
+
+def submitted_invoice(customer, item, qty):
+	invoice = frappe.get_doc(
+		{"doctype": "Sales Invoice", "customer": customer, "items": [{"item_code": item, "qty": qty}]}
+	)
+	return invoice.insert().submit()
+
+
+def cash_account():
+	"""The Cash mode of payment's account for the company, which the setup wizard may not have set."""
+	company = erpnext_default_company()
+	account = frappe.db.get_value("Company", company, "default_cash_account")
+	mode = frappe.get_doc("Mode of Payment", "Cash")
+	if not any(row.company == company for row in mode.accounts):
+		mode.append("accounts", {"company": company, "default_account": account})
+		mode.save()
+	return frappe.db.get_value(
+		"Mode of Payment Account", {"parent": "Cash", "company": company}, "default_account"
+	)
+
+
+def payment_values(customer, paid_amount=0, **reference):
+	values = {
+		"doctype": "Payment Entry",
+		"__islocal": 1,
+		"party_type": "Customer",
+		"party": customer,
+		"paid_amount": paid_amount,
+	}
+	if reference:
+		values["references"] = [{"name": "ref-1", "reference_doctype": "Sales Invoice", **reference}]
+	return values
+
+
+@needs_erpnext
+class IntegrationTestAccessoryFormFills(IntegrationTestCase):
+	def setUp(self):
+		from frappe_books.accessory.preview import preview
+
+		self.preview = preview
+		self.customer = make_customer("Accessory Preview Customer")
+		self.pen = make_item("ACC-PREVIEW-PEN", 20)
+
+	def test_a_mode_of_payment_fills_its_cash_account(self):
+		account = cash_account()
+		values = {**payment_values(self.customer), "mode_of_payment": "Cash"}
+		doc = self.preview(values, {"doc": ["mode_of_payment"]})
+
+		self.assertEqual(doc["paid_to"], account)
+
+	def test_a_chosen_reference_takes_what_is_left_of_the_payment(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		doc = self.preview(
+			payment_values(self.customer, 30, reference_name=invoice.name), {"doc": ["paid_amount"]}
+		)
+
+		self.assertEqual(doc["references"][0]["allocated_amount"], 30)
+
+	def test_a_payment_with_no_amount_takes_the_outstanding_amount(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		doc = self.preview(payment_values(self.customer, reference_name=invoice.name), {"doc": ["party"]})
+
+		self.assertEqual((doc["paid_amount"], doc["references"][0]["allocated_amount"]), (60, 60))
+
+	def test_a_new_amount_is_allocated_again(self):
+		invoice = submitted_invoice(self.customer, self.pen, 3)
+		values = payment_values(self.customer, 20, reference_name=invoice.name, allocated_amount=60)
+		doc = self.preview(values, {"doc": ["paid_amount"]})
+
+		self.assertEqual(doc["references"][0]["allocated_amount"], 20)
+
+	def test_a_new_journal_entry_is_dated_today(self):
+		doc = self.preview({"doctype": "Journal Entry", "__islocal": 1}, {})
+
+		self.assertEqual(str(doc["posting_date"]), nowdate())
+
+	def test_a_transfer_receives_what_it_pays(self):
+		values = {
+			"doctype": "Payment Entry",
+			"__islocal": 1,
+			"payment_type": "Internal Transfer",
+			"paid_from": cash_account(),
+			"paid_to": cash_account(),
+			"paid_amount": 25,
+		}
+		doc = self.preview(values, {"doc": ["paid_amount"]})
+
+		self.assertEqual(doc["received_amount"], 25)
+
+	def test_a_stock_entry_takes_its_purpose_and_its_rows_their_item_details(self):
+		warehouse = frappe.db.get_value("Warehouse", {"is_group": 0, "company": erpnext_default_company()})
+		values = {
+			"doctype": "Stock Entry",
+			"__islocal": 1,
+			"stock_entry_type": "Material Receipt",
+			"items": [
+				{"name": "row-1", "item_code": self.pen, "qty": 2, "t_warehouse": warehouse},
+				{"name": "row-2"},
+			],
+		}
+		doc = self.preview(values, {"doc": ["stock_entry_type"], "rows": {"row-1": ["item_code"]}})
+
+		row, blank = (frappe._dict(row) for row in doc["items"])
+		self.assertEqual(doc["purpose"], "Material Receipt")
+		self.assertEqual((row.uom, row.conversion_factor, row.transfer_qty), ("Nos", 1, 2))
+		self.assertFalse(blank.item_code)
 
 
 @needs_erpnext

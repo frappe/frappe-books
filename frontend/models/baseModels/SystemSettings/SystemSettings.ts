@@ -1,10 +1,16 @@
 import { DocValue } from 'fyo/core/types';
-import { ListsMap, ReadOnlyMap, ValidationMap } from 'fyo/model/types';
+import {
+  HiddenMap,
+  ListsMap,
+  ReadOnlyMap,
+  ValidationMap,
+} from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
 import { SelectOption } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 import { getCountryInfo } from 'utils/misc';
 
@@ -65,6 +71,9 @@ export class SystemSettings extends FrappeDoc {
       );
     },
   };
+
+  // Accessory mode has no Get Started page.
+  hidden: HiddenMap = { hide_get_started: isAccessoryMode };
 
   readOnly: ReadOnlyMap = {
     date_format: () => !this.canWriteSystemSettings,

@@ -1,18 +1,20 @@
 <template>
   <FrappeHoverCard
-    v-model:open="previewOpen"
+    :open="previewOpen"
     side="bottom"
     align="center"
     :offset="8"
     :hover-delay="300"
     :leave-delay="150"
+    @update:open="setPreviewOpen"
   >
     <template #trigger>
       <!-- Preview visibility belongs to the hover target, not the button's pressed state. -->
       <span
         class="inline-flex shrink-0"
-        @focusin="previewOpen = true"
+        @focusin="setPreviewOpen(true)"
         @focusout="previewOpen = false"
+        @pointerleave="isOpened = false"
       >
         <FrappeButton
           variant="ghost"
@@ -45,11 +47,22 @@ export default defineComponent({
   },
   emits: ['open'],
   data() {
-    return { previewOpen: false };
+    return { previewOpen: false, isOpened: false };
+  },
+  /** Back on the form whose entry was opened. */
+  activated() {
+    this.isOpened = false;
   },
   methods: {
-    /** The form stays alive behind the opened entry; an open preview would stay on screen. */
+    /**
+     * The form stays alive behind the opened entry; an open preview would stay
+     * on screen, so neither the click nor a hover begun before it opens one.
+     */
+    setPreviewOpen(open: boolean) {
+      this.previewOpen = open && !this.isOpened;
+    },
     open() {
+      this.isOpened = true;
       this.previewOpen = false;
       this.$emit('open');
     },

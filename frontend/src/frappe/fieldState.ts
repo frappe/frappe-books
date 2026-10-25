@@ -25,6 +25,8 @@ const ruleConditions: Record<
 };
 
 const docFieldMaps = new WeakMap<DocTypeMeta, Record<string, DocField>>();
+const breakConditionMaps = new WeakMap<DocTypeMeta, Record<string, string[]>>();
+const BREAK_FIELDTYPES = ['Tab Break', 'Section Break', 'Column Break'];
 const evalDocs = new WeakMap<FrappeDoc, ComputedRef<EvalDoc>>();
 
 /**
@@ -104,8 +106,58 @@ function isRuleOn(doc: FrappeDoc, field: Field, rule: FieldRule): boolean {
 
   return (
     isConditionOn(doc, field.fieldname, rule) ||
+    (rule === 'hidden' && isHiddenByBreak(doc, field.fieldname)) ||
     !!doc[rule][field.fieldname]?.()
   );
+}
+
+/** Whether the depends_on of the field's tab, section or column hides it, as Desk hides a break's fields with it. */
+function isHiddenByBreak(doc: FrappeDoc, fieldname: string): boolean {
+  const conditions = getBreakConditions(getDocType(doc.schemaName).meta);
+  const evalDoc = getEvalDoc(doc);
+  const parent = doc.parentdoc && getEvalDoc(doc.parentdoc);
+  return (conditions[fieldname] ?? []).some(
+    (condition) => !evaluateCondition(condition, evalDoc, parent, true)
+  );
+}
+
+/** The depends_on of the breaks each field of the DocType sits under, worked out once per meta. */
+function getBreakConditions(meta: DocTypeMeta): Record<string, string[]> {
+  let conditions = breakConditionMaps.get(meta);
+  if (conditions) {
+    return conditions;
+  }
+
+  conditions = {};
+  const breaks: Record<string, string | undefined> = {};
+  for (const { fieldname, fieldtype, depends_on } of meta.fields) {
+    if (BREAK_FIELDTYPES.includes(fieldtype)) {
+      setBreakCondition(breaks, fieldtype, depends_on);
+      continue;
+    }
+
+    const shownWith = Object.values(breaks).filter((c): c is string => !!c);
+    if (shownWith.length) {
+      conditions[fieldname] = shownWith;
+    }
+  }
+
+  breakConditionMaps.set(meta, conditions);
+  return conditions;
+}
+
+/** A tab starts new sections and a section new columns. */
+function setBreakCondition(
+  breaks: Record<string, string | undefined>,
+  fieldtype: string,
+  condition?: string
+) {
+  const nested = BREAK_FIELDTYPES.slice(BREAK_FIELDTYPES.indexOf(fieldtype));
+  for (const type of nested) {
+    breaks[type] = undefined;
+  }
+
+  breaks[fieldtype] = condition;
 }
 
 /** Whether depends_on hides the field, or its read only or mandatory condition holds. */

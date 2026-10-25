@@ -42,6 +42,7 @@ import {
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
 import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive, toRaw } from 'vue';
+import { VALUELESS_FIELDTYPES } from './accessoryLayout';
 import * as api from './api';
 import type { DocValues } from './api';
 import type { EvalDoc } from './dependsOn';
@@ -271,8 +272,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   /** What a form of the document is headed by. */
+  /** The name, or the title of a DocType whose links show titles, like ERPNext's hash-named batches. */
   get formTitle(): string {
-    return this.name ?? '';
+    const { meta } = getDocType(this.schemaName);
+    const title = meta.show_title_field_in_link && meta.title_field;
+    return (title && (this[title] as string | undefined)) || (this.name ?? '');
   }
 
   /** The kind of record the user sees, such as Sales Invoice. */
@@ -476,6 +480,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       if (
         field.meta ||
         field.clientOnly ||
+        VALUELESS_FIELDTYPES.includes(field.fieldtype) ||
         (field.insertOnly && this.inserted) ||
         (options.clearServerFilled && this._serverFilled.has(field.fieldname))
       ) {
@@ -971,7 +976,10 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     }
 
     const document = this.getMethodDocument();
-    await this._setSaved(await api.runDocMethod('submit', document), 'submit');
+    const submitted = isAccessoryMode()
+      ? await api.submitERPNextDocument(document)
+      : await api.runDocMethod('submit', document);
+    await this._setSaved(submitted, 'submit');
     await this._notifyAfterAction('submit');
   }
 
@@ -986,11 +994,17 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
 
     const cancelled = linkedDocs.length
       ? await this._cancelWithLinkedDocs(linkedDocs)
-      : await api.runDocMethod('cancel', this.getMethodDocument());
+      : await this._cancelAlone();
     await this._syncValues(this.toDocValues(cancelled));
     this._notInserted = false;
     this._rememberSavedRows();
     this.fyo.observer.trigger(`cancel:${this.schemaName}`, this.name);
+  }
+
+  async _cancelAlone(): Promise<DocValues> {
+    return isAccessoryMode()
+      ? await api.cancelERPNextDocument(this.doctype, this.name!)
+      : await api.runDocMethod('cancel', this.getMethodDocument());
   }
 
   /** Frappe's Cancel All cancels the documents, then this one, in one go; a Books controller runs it on its own copy. */

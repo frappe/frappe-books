@@ -8,10 +8,11 @@ from frappe.utils import nowdate, nowtime
 from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.payment import (
 	map_invoice_payment,
 	payment_account_field,
+	validate_partial_payment,
 	validate_payment_details,
 )
 from frappe_books.accounting.returns import map_return
@@ -188,8 +189,13 @@ class BooksSalesInvoice(PostingInvoiceController):
 			pricing.update_coupon_usage(self, delta)
 
 	def pay_at_counter(self, rows):
-		"""Submit a payment for each tendered row and return their names."""
+		"""Submit a payment for each tendered row and return their names.
+
+		The tenders together may pay less than is due only with partial payments on.
+		"""
 		amounts = counter_payment_amounts(rows, settlement.due(self))
+		if amounts:
+			validate_partial_payment(self, sum_decimal(amount for _row, amount in amounts))
 		names = [self.make_counter_payment(row, amount) for row, amount in amounts]
 		settlement.reload_balance(self)
 		return names
@@ -206,6 +212,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 			}
 		)
 		payment.references[0].allocated_amount = amount
+		payment.flags.ignore_partial_payment_rule = True
 		payment.insert()
 		payment.submit()
 		return payment.name

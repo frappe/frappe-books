@@ -79,7 +79,7 @@
             v-if="doc.canSave || doc.showsDisabledSave"
             variant="solid"
             :disabled="doc.isSyncing || !doc.canSave"
-            @click="sync"
+            @click="sync()"
           >
             {{ t`Save` }}
           </FrappeButton>
@@ -453,7 +453,9 @@ export default defineComponent({
         return '';
       }
 
-      if (this.schema.isSubmittable && this.docOrNull.notInserted) {
+      // A random temporary name means nothing to the user.
+      const { isSubmittable, naming } = this.schema;
+      if (this.docOrNull.notInserted && (isSubmittable || naming === 'random')) {
         return this.t`New entry`;
       }
 
@@ -552,7 +554,7 @@ export default defineComponent({
     if (this.isAccessory) {
       this.formActions.syncOrSubmit = () =>
         this.doc.canSave
-          ? this.sync(true)
+          ? this.sync()
           : this.doc.canSubmit
             ? this.submit()
             : syncOrSubmitDoc(this.doc);
@@ -628,9 +630,9 @@ export default defineComponent({
         this.activeTab = [...this.groupedFields.keys()][0] ?? this.t`Default`;
       }
     },
-    async sync(useDialog?: boolean) {
+    async sync() {
       if (this.isAccessory) {
-        await this.runAccessoryAction('save', useDialog);
+        await this.runAccessoryAction('save');
         return;
       }
 
@@ -638,7 +640,7 @@ export default defineComponent({
         return;
       }
 
-      if (await commonDocSync(this.doc, useDialog)) {
+      if (await commonDocSync(this.doc)) {
         this.updateGroupedFields();
       }
     },
@@ -657,7 +659,7 @@ export default defineComponent({
       }
     },
     /** Accessory mode: saves or submits after its mandatory check; ERPNext's refusal shows in the error panel. */
-    async runAccessoryAction(action: FormError['action'], useDialog?: boolean) {
+    async runAccessoryAction(action: FormError['action']) {
       this.formError = null;
       this.dismissedPreviewError = '';
       if (!(await this.checkMandatory())) {
@@ -668,7 +670,7 @@ export default defineComponent({
       const done =
         action === 'submit'
           ? await commonDocSubmit(this.doc, onError)
-          : await commonDocSync(this.doc, useDialog, onError);
+          : await commonDocSync(this.doc, onError);
       if (done) {
         this.updateGroupedFields();
       }

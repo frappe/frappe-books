@@ -15,6 +15,7 @@ BOOKS_USER = "accessory-books-user@example.com"
 ERPNEXT_CHECKS = ("accessory", "boot", "frappe_books.doctype.books_erpnext_settings.books_erpnext_settings")
 ACCESSORY_ON = patch("frappe_books.permissions.accessory_company", return_value="Acme")
 ERPNEXT_SET_UP = patch("frappe_books.accessory.erpnext_setup_complete", return_value=True)
+POS_SETTINGS = "frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings"
 
 
 def without_erpnext():
@@ -86,3 +87,23 @@ class IntegrationTestAccessoryMode(IntegrationTestCase):
 			extend_bootinfo(bootinfo)
 
 		self.assertFalse(bootinfo.books["accessory_mode"])
+
+
+class IntegrationTestAccessoryPOSSettings(IntegrationTestCase):
+	def _settings_without_cash_account(self):
+		settings = frappe.get_single("Books POS Settings")
+		settings.cash_account = None
+		return settings
+
+	def test_accessory_mode_saves_pos_screen_preferences_without_a_cash_account(self):
+		settings = self._settings_without_cash_account()
+		with patch(f"{POS_SETTINGS}.accessory_company", return_value="Acme"):
+			settings.save()
+
+	def test_standalone_pos_settings_need_a_cash_account(self):
+		settings = self._settings_without_cash_account()
+		with (
+			patch(f"{POS_SETTINGS}.accessory_company", return_value=None),
+			self.assertRaises(frappe.MandatoryError),
+		):
+			settings.save()

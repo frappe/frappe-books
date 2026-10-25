@@ -113,6 +113,20 @@ test('each table’s columns start with its row ID, which is not imported', () =
   ]);
 });
 
+test('a row without the name that groups it is a cell error, as the import would leave it out', () => {
+  const importer = new Importer('SalesInvoice', fyo);
+  importer.assignedTemplateFields = [
+    'SalesInvoice.name',
+    'SalesInvoice.customer',
+  ];
+  importer.valueMatrix = [
+    [{ value: 'A' }, { value: 'Acme' }],
+    [{ value: null }, { value: 'Acme' }],
+  ];
+
+  assert.deepEqual(importer.checkCellErrors(), ['(Row 2, Invoice No)']);
+});
+
 test('a list export’s CSV maps onto the template by its keys', async () => {
   const pick = (fields, fieldnames) =>
     fields.filter(({ fieldname }) => fieldnames.includes(fieldname));
@@ -213,6 +227,25 @@ test('the import file puts each document’s rows together, its values on the fi
   assert.deepEqual(file.gridRows, [0, 2, 1]);
   assert.deepEqual(getGridRows(file, [2, 3]), [0, 2]);
   assert.equal(importer.getRowName(2), 'A');
+});
+
+test('a template without a name column imports a document per row, as Frappe names addresses', () => {
+  const importer = new Importer('Address', fyo);
+  importer.assignedTemplateFields = [
+    'Address.address_title',
+    'Address.address_line1',
+  ];
+  importer.valueMatrix = [
+    [{ value: 'Home' }, { value: '1 Road' }],
+    [{ value: 'Shop' }, { value: '2 Road' }],
+  ];
+
+  assert.equal(importer.getNameIndex(), -1);
+  assert.deepEqual(importRows(importer), [
+    ['docstatus', 'address_title', 'address_line1'],
+    ['0', 'Home', '1 Road'],
+    ['0', 'Shop', '2 Road'],
+  ]);
 });
 
 test('named documents import their name under the DocType’s fieldname', async () => {

@@ -13,7 +13,8 @@ abstract class TaxesAndChargesTemplate extends FrappeDoc {
 }
 
 /**
- * The rows show no amounts: a template has none until an invoice applies it.
+ * The rows show no totals: a template has none until an invoice applies it.
+ * The amount column is for Actual charges, whose amount the template sets.
  * ERPNext's templates belong to a company, which accessory mode shows;
  * standalone Books has one.
  */
@@ -23,8 +24,13 @@ function getTemplatePresentation(label: string): Presentation {
     fields: {
       company: { hidden: false, readOnly: false },
       taxes: {
-        tableFields: ['charge_type', 'account_head', 'rate'],
-        mobileTableFields: ['account_head', 'charge_type', 'rate'],
+        tableFields: ['charge_type', 'account_head', 'rate', 'tax_amount'],
+        mobileTableFields: [
+          'account_head',
+          'charge_type',
+          'rate',
+          'tax_amount',
+        ],
       },
     },
   };

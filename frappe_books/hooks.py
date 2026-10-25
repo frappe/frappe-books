@@ -58,6 +58,11 @@ before_tests = [
 doc_events = {doctype: {"before_insert": "frappe_books.company.set_company"} for doctype in COMPANY_DOCTYPES}
 # A new ERPNext Lead saved from /books in accessory mode makes its Address, as a Books Lead does.
 doc_events["Lead"] = {"after_insert": "frappe_books.accounting.party_contacts.make_lead_address"}
+# Keeps the palette's index in step with saves while Frappe's update stops at ERPNext's search; see search.py.
+doc_events["*"] = {
+	"on_update": "frappe_books.search.update_doc_index",
+	"on_trash": "frappe_books.search.delete_doc_index",
+}
 
 scheduler_events = {
 	"daily": ["frappe_books.commerce.loyalty.expire_programs_and_points"],

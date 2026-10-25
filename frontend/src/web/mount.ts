@@ -3,11 +3,14 @@ import { FrappeUI } from 'frappe-ui';
 import { fyo } from 'src/initFyo';
 import router from 'src/router';
 import WebApp from './WebApp.vue';
-import { showToast } from 'src/utils/interactive';
+import { showServerMessages, showToast } from 'src/utils/interactive';
+import { onServerMessages } from './api';
 
 fyo.onDocumentActionWarning = ({ message }) => {
   showToast({ type: 'warning', message });
 };
+
+onServerMessages(showServerMessages);
 
 const app = createApp(WebApp);
 app.use(FrappeUI);

@@ -78,7 +78,7 @@ async function mount() {
           }),
           doc.canSave && h(Button, {
             onClick: async () => {
-              state.result = await commonDocSync(doc, true);
+              state.result = await commonDocSync(doc);
             },
           }, () => 'Save'),
           doc.canSubmit && h(Button, {

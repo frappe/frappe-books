@@ -74,6 +74,15 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				# Jinja prints an undefined name back as its tag.
 				self.assertNotIn("{{", html)
 
+	def test_built_in_invoice_formats_print_item_names(self):
+		frappe.db.set_value("Books Item", self.item.name, "item_name", "Printed Item Name")
+		invoice = self.make_invoice()
+
+		for print_format in ("Business - Sales Invoice", "Business-POS - Sales Invoice"):
+			with self.subTest(print_format=print_format):
+				html = get_print(invoice.doctype, invoice.name, print_format=print_format)
+				self.assertIn("Printed Item Name", html)
+
 	def test_built_in_formats_set_their_borderless_pdf_page(self):
 		invoice = self.make_invoice()
 

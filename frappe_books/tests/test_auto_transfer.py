@@ -233,7 +233,7 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		invoice, _item = self._sales_invoice(make_auto_stock_transfer=1)
 		frappe.db.set_single_value("Books Defaults", "delivery_note_location", None)
 
-		self.assertRaisesRegex(frappe.ValidationError, "Set Delivery Note Location", invoice.submit)
+		self.assertRaisesRegex(frappe.ValidationError, "Set Delivery Note Warehouse", invoice.submit)
 
 	def test_delivery_note_maps_only_what_the_invoice_has_not_shipped(self):
 		invoice, item = self._sales_invoice(currency=foreign_currency(), conversion_rate=2)

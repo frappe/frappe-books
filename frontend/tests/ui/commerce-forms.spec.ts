@@ -79,6 +79,7 @@ test('a primary contact changes only to one linked to the customer', async ({
   await expect(page.getByText('Not Saved', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
+  await expect(page.getByText(`${name} saved`)).toBeVisible();
   await expect(contact).toContainText('Mira');
   expect(
     await getValue(page, 'Books Customer', name, 'customer_primary_contact')

@@ -1,15 +1,14 @@
 """Accessory mode's endpoints over ERPNext: previews, mappers, linked entries, search and print options."""
 
-import unittest
 from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate
 
+from frappe_books.tests import needs_erpnext
 from frappe_books.tests.accounting import ensure_user
 
-HAS_ERPNEXT = "erpnext" in frappe.get_installed_apps()
 NO_RIGHTS_USER = "accessory-no-rights@example.com"
 
 
@@ -58,7 +57,7 @@ def first_row(doc):
 	return frappe._dict(doc["items"][0])
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryPreview(IntegrationTestCase):
 	def setUp(self):
 		from frappe_books.accessory.preview import preview
@@ -134,7 +133,7 @@ class IntegrationTestAccessoryPreview(IntegrationTestCase):
 			self.preview(invoice_values(self.customer, self.pen), {})
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryMappers(IntegrationTestCase):
 	def setUp(self):
 		from frappe_books.accessory.mappers import make_mapped_doc
@@ -179,7 +178,7 @@ class IntegrationTestAccessoryMappers(IntegrationTestCase):
 			self.make_mapped_doc("Quotation", quotation.name, "make_sales_invoice")
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryLinkedEntriesAndSearch(IntegrationTestCase):
 	def test_linked_entries_list_the_erpnext_documents_that_link(self):
 		from frappe_books.linked_entries import get_linked_entries
@@ -210,7 +209,7 @@ class IntegrationTestAccessoryLinkedEntriesAndSearch(IntegrationTestCase):
 		self.assertIn("Books Sales Invoice", _get_search_doctypes(False))
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryFieldPicks(IntegrationTestCase):
 	def setUp(self):
 		from frappe_books.frappe_books.doctype.books_field_pick.books_field_pick import save_field_picks
@@ -239,7 +238,7 @@ class IntegrationTestAccessoryFieldPicks(IntegrationTestCase):
 			self.save("Sales Invoice", [{"fieldname": "po_no"}])
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryScreens(IntegrationTestCase):
 	def setUp(self):
 		self.company = frappe.db.get_value("Company", {}, "name")
@@ -320,7 +319,7 @@ def make_letter_head(name, **values):
 	return name
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryPrintOptions(IntegrationTestCase):
 	def setUp(self):
 		from frappe_books.accessory.printing import get_print_options
@@ -365,7 +364,7 @@ class IntegrationTestAccessoryPrintOptions(IntegrationTestCase):
 			self.get_print_options("Sales Invoice")
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryLeadAddress(IntegrationTestCase):
 	def test_a_lead_saved_with_address_values_makes_its_address(self):
 		lead = frappe.get_doc(

@@ -1,15 +1,14 @@
 """POS in accessory mode: ERPNext POS entries, POS invoices, prices, preferences and stock checks."""
 
-import unittest
 from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, now_datetime, nowdate
 
+from frappe_books.tests import needs_erpnext
 from frappe_books.tests.accounting import ensure_user
 from frappe_books.tests.test_accessory_erpnext import (
-	HAS_ERPNEXT,
 	NO_RIGHTS_USER,
 	leaf,
 	make_customer,
@@ -76,7 +75,7 @@ def make_pos_invoice(profile, customer, item, **values):
 	return invoice
 
 
-@unittest.skipUnless(HAS_ERPNEXT, "needs ERPNext")
+@needs_erpnext
 class IntegrationTestAccessoryPOS(IntegrationTestCase):
 	def setUp(self):
 		from frappe_books.accessory.preview import preview

@@ -1,4 +1,3 @@
-import unittest
 from unittest.mock import patch
 
 import frappe
@@ -8,6 +7,7 @@ from frappe_books.accessory import SETTINGS, accessory_company, forbid_in_access
 from frappe_books.boot import extend_bootinfo
 from frappe_books.company import default_company
 from frappe_books.permissions import has_app_permission
+from frappe_books.tests import needs_erpnext
 
 BOOKS_USER = "accessory-books-user@example.com"
 WITHOUT_ERPNEXT = patch("frappe_books.accessory.erpnext_installed", return_value=False)
@@ -57,7 +57,7 @@ class IntegrationTestAccessoryMode(IntegrationTestCase):
 			with ACCESSORY_ON:
 				self.assertFalse(has_app_permission())
 
-	@unittest.skipUnless("erpnext" in frappe.get_installed_apps(), "needs ERPNext")
+	@needs_erpnext
 	def test_first_load_without_books_setup_starts_in_accessory_mode(self):
 		company = frappe.get_all("Company", pluck="name", limit=1)[0]
 		forget_settings_and_books_setup()

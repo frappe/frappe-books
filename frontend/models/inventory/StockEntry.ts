@@ -9,14 +9,20 @@ import { ModelNameEnum } from 'models/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { StockEntryDetail } from './StockEntryDetail';
 
+// The purposes of a Books Stock Entry, which accessory mode keeps to as well
+const STOCK_ENTRY_PURPOSES = [
+  'Material Issue',
+  'Material Receipt',
+  'Material Transfer',
+  'Repack',
+];
+
 /**
  * Books Stock Entry, served by Frappe. Its `preview` fills the number
  * series, row units, rates, warehouses and the total while the user edits.
  */
 export class StockEntry extends FrappeDoc {
   static override doctype = 'Books Stock Entry';
-  // Standalone only
-  static override erpnextDoctype = null;
   static override presentation = {
     label: 'Stock Entry',
     nameField: { label: 'Stock Entry No.', hidden: true },
@@ -28,6 +34,8 @@ export class StockEntry extends FrappeDoc {
       'items',
     ],
     fields: { items: { edit: true } },
+    // ERPNext's entry takes its purpose from its Stock Entry Type, which Desk asks for first.
+    accessoryPlacements: [{ fieldname: 'stock_entry_type', before: 'purpose' }],
     fileFields: [
       'name',
       'naming_series',
@@ -42,6 +50,8 @@ export class StockEntry extends FrappeDoc {
 
   static filters: FiltersMap = {
     naming_series: () => [['reference_type', '=', ModelNameEnum.StockEntry]],
+    // Accessory mode: the ERPNext types of the purposes standalone Books has.
+    stock_entry_type: () => [['purpose', 'in', STOCK_ENTRY_PURPOSES]],
   };
 
   static getListViewSettings(): ListViewSettings {

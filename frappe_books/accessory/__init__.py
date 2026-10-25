@@ -7,8 +7,6 @@ from frappe.core.doctype.installed_applications.installed_applications import (
 )
 
 SETTINGS = "Books ERPNext Settings"
-# Books doctypes whose ERPNext twin accessory mode leaves out
-STANDALONE_ONLY = {"Books Stock Entry"}
 
 
 def erpnext_installed() -> bool:

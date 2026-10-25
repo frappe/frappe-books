@@ -181,7 +181,9 @@ export function toSchema(
       getNamingField(meta) ||
       'name',
     quickEditFields: presentation.quickEditFields,
-    linkDisplayField: presentation.linkDisplayField,
+    linkDisplayField:
+      presentation.linkDisplayField ??
+      (meta.show_title_field_in_link ? meta.title_field : undefined),
     create: presentation.create,
     fileFields: presentation.fileFields,
     mobileTableFields: presentation.mobileTableFields,

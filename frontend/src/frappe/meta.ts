@@ -51,6 +51,8 @@ export interface DocTypeMeta {
   autoname?: string;
   naming_rule?: string;
   title_field?: string;
+  /** Desk's links show the record's title field instead of its name. */
+  show_title_field_in_link?: number;
   sort_field?: string;
   /** Comma separated fieldnames that search matches besides the name. */
   search_fields?: string;

@@ -45,8 +45,8 @@
       </template>
     </div>
 
-    <!-- Framed by frappe-ui's chart card, as the number cards are. -->
-    <FrappeChartCard v-if="chart" :class="phone ? 'h-40' : 'h-52'">
+    <!-- Framed by frappe-ui's chart card, as the number cards are; as tall as the dashboard's Cashflow on desktop. -->
+    <FrappeChartCard v-if="chart" :class="phone ? 'h-40' : 'h-72'">
       <component
         :is="chart.type === 'line' ? FrappeLineChart : FrappeBarChart"
         :data="chart.rows"

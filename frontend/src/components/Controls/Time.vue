@@ -10,63 +10,24 @@
     :size="size"
     :container-styles="containerStyles"
   />
-  <div v-else-if="isMobile" :style="containerStyles">
-    <MobileFieldTrigger
-      :label="showLabel ? df.label : undefined"
-      :required="isRequired"
-      :placeholder="inputPlaceholder"
-      :display-value="displayTime"
-      :invalid="invalid || !!typedError"
-      @click="sheetOpen = true"
-    >
-      <template #prefix>
-        <span
-          class="lucide-clock size-4 shrink-0 text-ink-gray-5"
-          aria-hidden="true"
-        />
-      </template>
-    </MobileFieldTrigger>
-    <FrappeErrorMessage class="mt-1.5" :message="typedError" />
-    <FrappeBottomSheet v-model:open="sheetOpen" :title="df.label">
-      <div class="flex flex-col gap-3 px-4">
-        <FrappeTextInput
-          size="lg"
-          variant="subtle"
-          :model-value="displayTime"
-          :placeholder="inputPlaceholder"
-          :aria-label="df.label"
-          :error="typedError"
-          @blur="(e: FocusEvent) => commitTyped(e.target as HTMLInputElement)"
-          @keydown.enter="
-            (e: KeyboardEvent) => (e.target as HTMLElement).blur()
-          "
-        >
-          <template #prefix>
-            <span
-              class="lucide-clock size-4 text-ink-gray-5"
-              aria-hidden="true"
-            />
-          </template>
-        </FrappeTextInput>
-        <div
-          ref="slotList"
-          role="listbox"
-          :aria-label="df.label"
-          class="-mx-2 flex flex-col pb-[max(env(safe-area-inset-bottom),1rem)]"
-        >
-          <MobileSheetRow
-            v-for="slot in slots"
-            :key="slot.value"
-            role="option"
-            :aria-selected="slot.value === pickedSlot"
-            :label="slot.label"
-            :checked="slot.value === pickedSlot"
-            @click="pick(slot.value)"
-          />
-        </div>
-      </div>
-    </FrappeBottomSheet>
-  </div>
+  <!-- Phones use the native picker, as dates do. -->
+  <FrappeTextInput
+    v-else-if="isMobile"
+    ref="input"
+    type="time"
+    :step="hasSeconds ? 1 : 60"
+    :model-value="nativeValue"
+    :label="showLabel ? df.label : undefined"
+    :aria-label="showLabel ? undefined : df.label"
+    :description="showLabel ? df.sub_label : undefined"
+    :required="isRequired"
+    :size="frappeSize"
+    :variant="frappeVariant"
+    :class="controlClasses"
+    :style="containerStyles"
+    @update:model-value="(time: string) => commit(time || null)"
+    @focus="onFocus"
+  />
   <FrappeTimePicker
     v-else
     ref="input"
@@ -94,13 +55,9 @@
 
 <script lang="ts">
 import {
-  BottomSheet as FrappeBottomSheet,
-  ErrorMessage as FrappeErrorMessage,
   TextInput as FrappeTextInput,
   TimePicker as FrappeTimePicker,
 } from 'frappe-ui';
-import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
-import MobileSheetRow from 'src/mobile/MobileSheetRow.vue';
 import {
   formatTime,
   getTimeFormat,
@@ -112,40 +69,19 @@ import { defineComponent } from 'vue';
 import Base from './Base.vue';
 import ReadOnlyValue from './ReadOnlyValue.vue';
 
-/** A Time field: typed, or picked from half-hourly slots, in the user's time format. */
+/** A Time field: typed, or picked from half-hourly slots, in the user's time format; phones use the native picker. */
 export default defineComponent({
   name: 'Time',
-  components: {
-    FrappeBottomSheet,
-    FrappeErrorMessage,
-    FrappeTextInput,
-    FrappeTimePicker,
-    MobileFieldTrigger,
-    MobileSheetRow,
-    ReadOnlyValue,
-  },
+  components: { FrappeTextInput, FrappeTimePicker, ReadOnlyValue },
   extends: Base,
   data() {
     return {
-      sheetOpen: false,
       typedError: '',
       slots: getTimeSlots().map((slot) => ({
         value: slot,
         label: formatTime(slot),
       })),
     };
-  },
-  watch: {
-    /** The sheet opens on the picked slot. */
-    async sheetOpen(open: boolean) {
-      await this.$nextTick();
-      const list = this.$refs.slotList as HTMLElement | undefined;
-      if (open) {
-        list
-          ?.querySelector('[aria-selected="true"]')
-          ?.scrollIntoView({ block: 'center' });
-      }
-    },
   },
   computed: {
     timeFormat(): string {
@@ -160,8 +96,12 @@ export default defineComponent({
     displayTime(): string {
       return this.timeValue && formatTime(this.timeValue);
     },
-    pickedSlot(): string {
-      return this.timeValue.slice(0, 5);
+    hasSeconds(): boolean {
+      return this.timeFormat.includes('ss');
+    },
+    /** The native input's value, to the minute unless the time format shows seconds. */
+    nativeValue(): string {
+      return this.hasSeconds ? this.timeValue : this.timeValue.slice(0, 5);
     },
     inputPlaceholder(): string {
       return this.placeholder || this.df.placeholder || this.t`Select time`;
@@ -177,21 +117,6 @@ export default defineComponent({
       if (value !== (this.timeValue || null)) {
         this.triggerChange(value);
       }
-    },
-    pick(slot: string) {
-      this.commit(slot);
-      this.sheetOpen = false;
-    },
-    commitTyped(input: HTMLInputElement) {
-      const text = input.value.trim();
-      const time = parseTime(text);
-      if (text && !time) {
-        this.typedError = this.timeError();
-        return;
-      }
-
-      this.commit(time);
-      this.sheetOpen = false;
     },
     /** TimePicker puts back the last time over text it cannot read, and has no event for it, so the text is read before TimePicker sees it. */
     checkTyped(event: Event) {

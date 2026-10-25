@@ -122,7 +122,7 @@ test('accessory mode previews through ERPNext with the fields edited since the l
   });
   const item = newFrappeDoc('Item', { name: 'Assam' });
 
-  await item.set('item_type', 'Product');
+  await item.set('item_type', 'Service');
   await item.whenFilled();
   assert.equal(previews[0].path, PREVIEW);
   assert.equal(previews[0].body.doc.doctype, 'Books Item');

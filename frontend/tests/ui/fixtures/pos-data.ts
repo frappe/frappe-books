@@ -180,7 +180,8 @@ function answer(path: string, body: Row, params: Row): unknown {
         body.limit_start,
         body.limit_page_length
       ),
-    'frappe.desk.search.search_widget': () => getList(body.doctype),
+    'frappe.desk.search.search_widget': () =>
+      searchList(body.doctype, body.txt),
     get_open_shift: () => (shift.open ? openingShift.name : null),
     get_stock_location: () => inventory,
     get_sale_shortfalls: () => [],
@@ -315,6 +316,17 @@ function getRecord(doctype: string, name: string): Row | undefined {
  * The doctype's records that match each `[field, operator, value]` filter on
  * a field they have; the items have no `is_stock_item`, so every item lists.
  */
+/** Records with a value that matches `txt`, Frappe's `%` pattern of the letters typed. */
+function searchList(doctype: string, txt = ''): Row[] {
+  const escaped = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(escaped.replaceAll('%', '.*'), 'i');
+  return getList(doctype).filter((row) =>
+    Object.values(row).some(
+      (value) => typeof value === 'string' && pattern.test(value)
+    )
+  );
+}
+
 function getList(doctype: string, filters: Filter[] = []): Row[] {
   return (records[doctype] ?? []).filter((row) =>
     filters.every(

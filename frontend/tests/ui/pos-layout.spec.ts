@@ -405,56 +405,45 @@ test('the transfer quantity keypad is titled as its cart field', async ({
   ).toBeVisible();
 });
 
-for (const modern of [true, false]) {
-  test(`${modern ? 'Modern' : 'Classic'} cart rows step quantities and edit ${modern ? 'with the keypad' : 'inline'}`, async ({
-    page,
-  }) => {
-    await page.evaluate((modern) => {
-      const fixture = (window as any).posFixture;
-      fixture.setLayout(modern);
-      fixture.fillCart();
-    }, modern);
-    const row = page
-      .getByRole('list', { name: 'Cart' })
-      .getByRole('listitem')
-      .first();
-    const remove = row.getByRole('button', {
-      name: 'Remove item',
-      exact: true,
-    });
-    await expect(
-      row.getByRole('button', { name: 'Increase quantity', exact: true })
-    ).toBeVisible();
-    await expect(
-      row.getByRole('button', { name: 'Decrease quantity', exact: true })
-    ).toBeVisible();
-
-    const bounds = await row.boundingBox();
-    await remove.hover();
-    await expect(
-      page.locator('[data-slot="bubble"]', { hasText: 'Remove item' })
-    ).toBeVisible();
-    expect(await row.boundingBox()).toEqual(bounds);
-
-    await row.getByRole('button', { name: /^Organic Assam Tea/ }).click();
-    await expect(
-      row.getByRole('button', { name: /^Organic Assam Tea/ })
-    ).toHaveAttribute('aria-expanded', 'true');
-    await page.getByRole('textbox', { name: 'Quantity', exact: true }).click();
-    const keypad = page.getByRole('dialog', { name: 'Quantity', exact: true });
-    if (modern) {
-      await expect(keypad).toBeVisible();
-    } else {
-      await expect(keypad).toBeHidden();
-    }
-    await page.screenshot({
-      animations: 'disabled',
-      path: test.info().outputPath(`${modern ? 'modern' : 'classic'}-row.png`),
-    });
+test('cart rows step quantities and edit with the keypad', async ({ page }) => {
+  await page.evaluate(() => (window as any).posFixture.fillCart());
+  const row = page
+    .getByRole('list', { name: 'Cart' })
+    .getByRole('listitem')
+    .first();
+  const remove = row.getByRole('button', {
+    name: 'Remove item',
+    exact: true,
   });
-}
+  await expect(
+    row.getByRole('button', { name: 'Increase quantity', exact: true })
+  ).toBeVisible();
+  await expect(
+    row.getByRole('button', { name: 'Decrease quantity', exact: true })
+  ).toBeVisible();
 
-test('view toggles survive switching layouts and checkout remains reachable', async ({
+  const bounds = await row.boundingBox();
+  await remove.hover();
+  await expect(
+    page.locator('[data-slot="bubble"]', { hasText: 'Remove item' })
+  ).toBeVisible();
+  expect(await row.boundingBox()).toEqual(bounds);
+
+  await row.getByRole('button', { name: /^Organic Assam Tea/ }).click();
+  await expect(
+    row.getByRole('button', { name: /^Organic Assam Tea/ })
+  ).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('textbox', { name: 'Quantity', exact: true }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Quantity', exact: true })
+  ).toBeVisible();
+  await page.screenshot({
+    animations: 'disabled',
+    path: test.info().outputPath('cart-row.png'),
+  });
+});
+
+test('the grid view survives a narrow screen and checkout remains reachable', async ({
   page,
 }) => {
   const grid = page.getByRole('radio', { name: 'Grid view', exact: true });
@@ -464,7 +453,6 @@ test('view toggles survive switching layouts and checkout remains reachable', as
     animations: 'disabled',
     path: test.info().outputPath('item-grid.png'),
   });
-  await page.evaluate(() => (window as any).posFixture.setLayout(false));
   await expect(grid).toHaveAttribute('aria-checked', 'true');
   await page.setViewportSize({ width: narrowest, height: 700 });
   await page
@@ -476,25 +464,17 @@ test('view toggles survive switching layouts and checkout remains reachable', as
   });
   await page.getByRole('radio', { name: 'List view', exact: true }).click();
   await page.evaluate(() => (window as any).posFixture.fillCart());
-  for (const modern of [true, false]) {
-    await page.evaluate(
-      (modern) => (window as any).posFixture.setLayout(modern),
-      modern
-    );
-    await page.setViewportSize({ width: narrowest, height: 700 });
-    const pay = page.getByRole('button', { name: 'Pay 2,250.00', exact: true });
-    await pay.scrollIntoViewIfNeeded();
-    await expect(pay).toBeInViewport();
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth)
-    ).toBe(narrowest);
-    await page.screenshot({
-      animations: 'disabled',
-      path: test
-        .info()
-        .outputPath(modern ? 'modern-small.png' : 'classic-small.png'),
-    });
-  }
+  await page.setViewportSize({ width: narrowest, height: 700 });
+  const pay = page.getByRole('button', { name: 'Pay 2,250.00', exact: true });
+  await pay.scrollIntoViewIfNeeded();
+  await expect(pay).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    narrowest
+  );
+  await page.screenshot({
+    animations: 'disabled',
+    path: test.info().outputPath('cart-small.png'),
+  });
 });
 
 test('invoice selection and bank payment fields work in a small dialog', async ({

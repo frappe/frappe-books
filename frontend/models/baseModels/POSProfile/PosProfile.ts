@@ -36,7 +36,6 @@ export class POSProfile extends FrappeDoc {
       'customer',
       'warehouse',
       'print_format',
-      'pos_ui',
       'item_visibility',
       'allow_rate_change',
       'hide_unavailable_items',
@@ -52,7 +51,6 @@ export class POSProfile extends FrappeDoc {
   declare customer?: string;
   declare warehouse?: string;
   declare print_format?: string;
-  declare pos_ui?: 'Classic' | 'Modern';
   declare item_visibility?: string;
   declare allow_rate_change?: boolean;
   declare hide_unavailable_items?: boolean;

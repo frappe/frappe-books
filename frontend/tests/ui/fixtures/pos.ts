@@ -103,9 +103,6 @@ async function mount() {
       pos.closeAllModals();
       pos.toggleModal(name, true);
     },
-    setLayout(modern: boolean) {
-      pos.posProfile = { pos_ui: modern ? 'Modern' : 'Classic' };
-    },
     closeShift() {
       shift.open = false;
       return pos.shift.refresh();

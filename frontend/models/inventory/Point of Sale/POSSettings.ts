@@ -18,7 +18,6 @@ export class POSSettings extends FrappeDoc {
   declare cash_account?: string;
   declare write_off_account?: string;
   declare default_account?: string;
-  declare pos_ui?: 'Classic' | 'Modern';
   declare weight_enabled_barcode?: boolean;
   declare check_digits?: number;
   declare item_code_digits?: number;

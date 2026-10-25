@@ -11,7 +11,6 @@
   "pos_profile",
   "cash_account",
   "write_off_account",
-  "pos_ui",
   "default_account",
   "barcode_section_break_9",
   "weight_enabled_barcode",
@@ -55,15 +54,6 @@
    "fieldtype": "Link",
    "label": "Write Off Account",
    "options": "Books Account"
-  },
-  {
-   "default": "Classic",
-   "fieldname": "pos_ui",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "POS UI",
-   "options": "Classic\nModern",
-   "reqd": 1
   },
   {
    "fieldname": "default_account",
@@ -146,7 +136,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-24 22:00:00.000000",
+ "modified": "2026-10-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books POS Settings",

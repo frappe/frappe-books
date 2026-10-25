@@ -25,7 +25,6 @@ class BooksPOSProfile(Document):
 		ignore_pricing_rule: DF.Check
 		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items", "All Items"]
 		pay_button_colour: DF.Color | None
-		pos_ui: DF.Literal["Classic", "Modern"]
 		print_format: DF.Link | None
 		return_button_colour: DF.Color | None
 		save_button_colour: DF.Color | None

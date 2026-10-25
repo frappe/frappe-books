@@ -12,7 +12,6 @@
   "default_section_break_2",
   "warehouse",
   "print_format",
-  "pos_ui",
   "item_visibility",
   "allow_rate_change",
   "hide_unavailable_items",
@@ -51,15 +50,6 @@
    "fieldtype": "Link",
    "label": "Print Format",
    "options": "Print Format"
-  },
-  {
-   "default": "Classic",
-   "fieldname": "pos_ui",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "POS UI",
-   "options": "Classic\nModern",
-   "reqd": 1
   },
   {
    "default": "Inventory Items",
@@ -145,7 +135,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-24 22:00:00.000000",
+ "modified": "2026-10-25 21:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books POS Profile",

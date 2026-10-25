@@ -118,7 +118,6 @@
           </div>
 
           <SelectedItemTable
-            :layout="layout"
             :expanded-row="expandedRow"
             @expand="(name?: string) => (expandedRow = name)"
             @select="selectRow"
@@ -290,7 +289,6 @@ import {
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
-  getPOSPreference,
   getPOSProfile,
   loadPOSPreferences,
   validateIsPosSettingsSet,
@@ -300,7 +298,7 @@ import { getFrappeDoc, getMappedDoc, newFrappeDoc } from 'src/frappe/documents';
 import { isAccessoryMode } from 'src/frappe/mode';
 import type { DocValueMap } from 'fyo/core/types';
 import { getItemQtyMap } from 'models/inventory/posStock';
-import { POSItem, POSLayout, ItemQtyMap } from 'src/components/POS/types';
+import { POSItem, ItemQtyMap } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { filterPOSItems, getScannedItem } from 'src/utils/posItemSearch';
 
@@ -393,10 +391,6 @@ export default defineComponent({
     };
   },
   computed: {
-    layout(): POSLayout {
-      const posUI = this.posProfile?.pos_ui || getPOSPreference('pos_ui');
-      return posUI === 'Classic' ? 'Classic' : 'Modern';
-    },
     isDiscountingEnabled(): boolean {
       return fyo.isFeatureOn('enable_discounts_and_margin');
     },

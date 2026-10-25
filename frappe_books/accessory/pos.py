@@ -14,7 +14,6 @@ from frappe_books.commerce.pos import counter_payment_amounts
 
 # Books' POS screen preferences, by the single that holds them
 POS_SETTINGS_FIELDS = (
-	"pos_ui",
 	"item_visibility",
 	"weight_enabled_barcode",
 	"check_digits",

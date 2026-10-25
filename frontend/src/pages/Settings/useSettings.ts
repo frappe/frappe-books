@@ -80,7 +80,6 @@ const POS_SCREEN_GROUPS: [string, ModelNameEnum, string[]][] = [
     ModelNameEnum.POSScreenDefaults,
     ['pos_cash_denominations'],
   ],
-  [t`Item grid`, ModelNameEnum.POSScreenSettings, ['pos_ui']],
   [t`Item visibility`, ModelNameEnum.POSScreenSettings, ['item_visibility']],
   [
     t`Scale barcodes`,

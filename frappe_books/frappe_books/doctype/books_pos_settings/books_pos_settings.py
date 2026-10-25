@@ -35,7 +35,6 @@ class BooksPOSSettings(Document):
 		item_visibility: DF.Literal["Inventory Items", "Non-Inventory Items", "All Items"]
 		item_weight_digits: DF.Int
 		pos_profile: DF.Link | None
-		pos_ui: DF.Literal["Classic", "Modern"]
 		warehouse: DF.Link | None
 		weight_enabled_barcode: DF.Check
 		write_off_account: DF.Link | None

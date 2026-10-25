@@ -155,6 +155,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.income.name,
 		)
 		invoice.items[0].discount_percentage = 0
+		invoice.items[0].discount_amount = 0
 		invoice.save()
 		invoice.submit()
 
@@ -175,7 +176,8 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		refund.cancel()
 
 		credit_note.cancel()
-		self.assertEqual(invoice.db_get("status"), "Unpaid")
+		# The defaults paid the invoice on submit.
+		self.assertEqual(invoice.db_get("status"), "Paid")
 		self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 	def test_partial_and_full_return_flags_for_sales_and_purchases(self):
@@ -187,8 +189,11 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		):
 			with self.subTest(doctype=doctype):
 				returned = f"{returned} Note Issued"
-				invoice = make_invoice(doctype, party, account, self.item.name, item_account)
+				invoice = make_invoice(
+					doctype, party, account, self.item.name, item_account, make_auto_payment=0
+				)
 				invoice.items[0].discount_percentage = 0
+				invoice.items[0].discount_amount = 0
 				invoice.save().submit()
 				partial = map_return(doctype, invoice.name)
 				partial.items[0].qty = -1
@@ -215,7 +220,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			self.item.name,
 			self.income.name,
 		)
-		invoice.items[0].update({"discount_percentage": 0, "serial_no": "S-1\nS-2"})
+		invoice.items[0].update({"discount_percentage": 0, "discount_amount": 0, "serial_no": "S-1\nS-2"})
 		other_item = make_item(self.income.name, self.expense.name)
 		invoice.append("items", {"item_code": other_item.name, "price_list_rate": 10, "qty": 1})
 		invoice.save().submit()
@@ -397,6 +402,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					is_pos=is_pos,
 				)
 				invoice.items[0].discount_percentage = 0
+				invoice.items[0].discount_amount = 0
 				invoice.save().submit()
 
 				references = frappe.get_all(
@@ -418,6 +424,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 			make_auto_payment=1,
 		)
 		invoice.items[0].discount_percentage = 0
+		invoice.items[0].discount_amount = 0
 		invoice.save().submit()
 
 		payment = frappe.db.get_value(

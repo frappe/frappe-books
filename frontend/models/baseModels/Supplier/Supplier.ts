@@ -6,7 +6,7 @@ import {
   getPartyActions,
   getPartyPresentation,
   getPrimaryEmptyMessages,
-  getPrimaryFilters,
+  getPartyFilters,
   Party,
 } from '../Party/Party';
 
@@ -19,13 +19,13 @@ export class Supplier extends Party {
     'mobile_no',
     'supplier_primary_address',
     ...ADDRESS_FIELDNAMES,
-    'accounts',
+    'account',
     'default_currency',
     'tax_id',
   ]);
   static override accountType = 'Payable' as const;
   static override partyKey = 'supplier' as const;
-  static override filters = getPrimaryFilters('supplier');
+  static override filters = getPartyFilters('supplier');
   static override emptyMessages = getPrimaryEmptyMessages('supplier');
 
   static getActions(fyo: Fyo): Action[] {

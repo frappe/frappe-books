@@ -8,7 +8,7 @@ import {
   getPartyActions,
   getPartyPresentation,
   getPrimaryEmptyMessages,
-  getPrimaryFilters,
+  getPartyFilters,
   Party,
 } from '../Party/Party';
 
@@ -24,7 +24,7 @@ export class Customer extends Party {
       'mobile_no',
       'customer_primary_address',
       ...ADDRESS_FIELDNAMES,
-      'accounts',
+      'account',
       'loyalty_program',
       'default_currency',
       'tax_id',
@@ -33,7 +33,7 @@ export class Customer extends Party {
   );
   static override accountType = 'Receivable' as const;
   static override partyKey = 'customer' as const;
-  static override filters = getPrimaryFilters('customer');
+  static override filters = getPartyFilters('customer');
   static override emptyMessages = getPrimaryEmptyMessages('customer');
 
   lead_name?: string;

@@ -181,6 +181,8 @@ declare global {
           company: string | null;
           /** /books shows ERPNext documents of `company` instead of Books ones. */
           accessory_mode?: boolean;
+          /** Accessory mode: ERPNext has companies besides `company`. */
+          other_companies?: boolean;
           /** With ERPNext installed, whether its setup wizard is done; null without ERPNext. */
           erpnext?: { setup_complete: boolean } | null;
           charts_of_accounts: ChartOfAccounts[];

@@ -10,6 +10,11 @@ export function getAccessoryCompany(): string | undefined {
   return globalThis.window?.frappe?.boot?.books?.company ?? undefined;
 }
 
+/** Accessory mode: whether ERPNext has companies besides the one Books works on. */
+export function hasOtherCompanies(): boolean {
+  return !!globalThis.window?.frappe?.boot?.books?.other_companies;
+}
+
 /** The DocType a model shows: its Books one, or its ERPNext twin in accessory mode; null when accessory mode leaves it out. */
 export function getActiveDoctype(Model: {
   doctype: string;

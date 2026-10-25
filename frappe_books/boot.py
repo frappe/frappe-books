@@ -1,3 +1,4 @@
+import frappe
 from frappe.utils.jinja_globals import bundled_asset
 
 from frappe_books.accessory import (
@@ -21,6 +22,8 @@ def extend_bootinfo(bootinfo):
 		# The ERPNext company in accessory mode, else the one Books Company
 		"company": company or default_company(),
 		"accessory_mode": bool(company),
+		# Forms name the company their per-company values are for when ERPNext has others
+		"other_companies": bool(company) and frappe.db.count("Company") > 1,
 		"erpnext": erpnext_state(),
 		"charts_of_accounts": chart_options(),
 		"indian_states": INDIAN_STATES,

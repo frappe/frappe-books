@@ -11,7 +11,14 @@ import { canOpenLedger, getMappedDocAction } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
 import { getReports } from 'reports';
 import type { Field } from 'schemas/types';
+import type { DocValue } from 'fyo/core/types';
+import {
+  getCompanyRowDescription,
+  getCompanyRowValue,
+  setCompanyRowValue,
+} from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
+import { getAccessoryCompany, isAccessoryMode } from 'src/frappe/mode';
 import type { Presentation } from 'src/frappe/schema';
 import { getModel } from 'src/frappe/registry';
 import { validateEmail, validatePhoneNumber } from 'src/frappe/validation';
@@ -44,6 +51,16 @@ const ADDRESS_FIELDS = [
   },
 ].map((field) => ({ ...field, section: 'Address' })) as Field[];
 
+/** The party's ledger account for the current company, kept in its `accounts` row. */
+const ACCOUNT_FIELD = {
+  fieldname: 'account',
+  fieldtype: 'Link',
+  label: 'Account',
+  target: 'Account',
+  create: false,
+  after: 'accounts',
+} as Field & { after: string };
+
 export const ADDRESS_FIELDNAMES = ADDRESS_FIELDS.map(
   ({ fieldname }) => fieldname
 );
@@ -75,6 +92,15 @@ export abstract class Party extends FrappeDoc {
     [this.primaryAddressField]: () => this.notInserted,
   };
 
+  /** The Account field shows the current company's `accounts` row; rows of other companies stay as they are. */
+  get account(): DocValue {
+    return getCompanyRowValue(this, 'accounts', 'account');
+  }
+
+  set account(value: DocValue) {
+    setCompanyRowValue(this, 'accounts', 'account', value);
+  }
+
   get primaryContactField(): string {
     return `${(this.constructor as typeof Party).partyKey}_primary_contact`;
   }
@@ -83,8 +109,14 @@ export abstract class Party extends FrappeDoc {
     return `${(this.constructor as typeof Party).partyKey}_primary_address`;
   }
 
-  /** A saved party's contact and address sections hold its primary ones. */
+  /** A saved party's contact and address sections hold its primary ones; the Account names its company. */
   override getFormFields(fields: Field[]): Field[] {
+    const description = getCompanyRowDescription(this);
+    fields = fields.map((field) =>
+      field.fieldname === 'account' && description
+        ? { ...field, sub_label: description }
+        : field
+    );
     if (this.notInserted) {
       return fields;
     }
@@ -140,8 +172,11 @@ export function getPartyPresentation(
     label,
     quickEditFields,
     insertFields: ADDRESS_FIELDS,
+    clientFields: [ACCOUNT_FIELD],
     fields: {
       ...fields,
+      // The Account field edits the current company's row.
+      accounts: { hidden: true },
       [`${partyKey}_primary_contact`]: {
         ...card,
         placeholder: 'No primary contact',
@@ -155,8 +190,11 @@ export function getPartyPresentation(
   };
 }
 
-/** The primary Contact and Address are picked from those linked to the party. */
-export function getPrimaryFilters(partyKey: PartyKey): FiltersMap {
+/**
+ * The primary Contact and Address are picked from those linked to the party;
+ * the Account from the ledgers of its type, of the current company in ERPNext.
+ */
+export function getPartyFilters(partyKey: PartyKey): FiltersMap {
   const linkedToParty = (doc: FrappeDoc) => [
     ['Dynamic Link', 'link_doctype', '=', doc.doctype],
     ['Dynamic Link', 'link_name', '=', doc.name],
@@ -164,6 +202,11 @@ export function getPrimaryFilters(partyKey: PartyKey): FiltersMap {
   return {
     [`${partyKey}_primary_contact`]: linkedToParty,
     [`${partyKey}_primary_address`]: linkedToParty,
+    account: (doc: FrappeDoc) => [
+      ['is_group', '=', 0],
+      ['account_type', '=', (doc.constructor as typeof Party).accountType],
+      ...(isAccessoryMode() ? [['company', '=', getAccessoryCompany()]] : []),
+    ],
   } as FiltersMap;
 }
 

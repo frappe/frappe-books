@@ -30,6 +30,15 @@ export function serverHtmlToText(html: string): string {
     .body.textContent!.trim();
 }
 
+/** HTML of several lines, like an address's, as one line of text. */
+export function serverHtmlToLine(html: string): string {
+  return html
+    .split(/<br\s*\/?>/i)
+    .map((line) => serverHtmlToText(line))
+    .filter(Boolean)
+    .join(', ');
+}
+
 /**
  * A server message's HTML with other elements unwrapped to their text, and
  * every attribute dropped but a link's own-site or http(s) `href`. Table

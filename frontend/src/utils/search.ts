@@ -3,7 +3,9 @@ import { Fyo, t } from 'fyo';
 import { RawValueMap } from 'fyo/core/types';
 import { ModelNameEnum } from 'models/types';
 import { getReports } from 'reports';
-import { OptionField } from 'schemas/types';
+import { OptionField, RawValue } from 'schemas/types';
+import { toDocValue } from 'src/frappe/values';
+import { serverHtmlToLine } from 'src/utils/serverHtml';
 import type { DocValues } from 'src/frappe/api';
 import { getAllSchemaNames, getField, getSchema } from 'src/frappe/registry';
 import {
@@ -622,11 +624,27 @@ export class Search {
     };
   }
 
-  /** A field's value, or its Select option's label. */
+  /** A field's value as forms show it: its Select option's label, a formatted date or amount, HTML as text. */
   _getDisplayValue(schemaName: string, fieldname: string, value: unknown) {
-    const text = value == null ? '' : String(value);
-    const { options } = (getField(schemaName, fieldname) ?? {}) as OptionField;
-    return options?.find((option) => option.value === text)?.label ?? text;
+    const field = getField(schemaName, fieldname);
+    if (value == null || value === '' || !field) {
+      return value == null ? '' : String(value);
+    }
+
+    const text = String(value);
+    const option = (field as OptionField).options?.find(
+      (o) => o.value === text
+    );
+    if (option) {
+      return option.label;
+    }
+
+    if (/<[a-z][^>]*>/i.test(text)) {
+      return serverHtmlToLine(text);
+    }
+
+    const docValue = toDocValue(value as RawValue, field, this.fyo);
+    return this.fyo.format(docValue, field);
   }
 
   _setSearchables() {

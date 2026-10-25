@@ -1,5 +1,5 @@
 import { translateValue } from 'fyo/utils/translation';
-import { serverHtmlToText } from 'src/utils/serverHtml';
+import { serverHtmlToLine } from 'src/utils/serverHtml';
 import { call } from 'src/web/api';
 import { getValue } from './api';
 import { getDocType, isFrappeBacked } from './doctypes';
@@ -50,17 +50,9 @@ export async function searchLink(
     label: label || value,
     value,
     record: { name: value },
-    description: description ? toDescriptionText(description) : undefined,
+    // A query method's description may be HTML, like a customer's address lines.
+    description: description ? serverHtmlToLine(description) : undefined,
   }));
-}
-
-/** A query method's description, which may be HTML, like a customer's address lines, as one line of text. */
-function toDescriptionText(html: string): string {
-  return html
-    .split(/<br\s*\/?>/i)
-    .map((line) => serverHtmlToText(line))
-    .filter(Boolean)
-    .join(', ');
 }
 
 /**

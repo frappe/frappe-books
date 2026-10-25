@@ -25,7 +25,12 @@ function getTemplatePresentation(label: string): Presentation {
       company: { hidden: false, readOnly: false },
       taxes: {
         tableFields: ['charge_type', 'account_head', 'rate', 'tax_amount'],
-        mobileTableFields: ['account_head', 'charge_type', 'rate', 'tax_amount'],
+        mobileTableFields: [
+          'account_head',
+          'charge_type',
+          'rate',
+          'tax_amount',
+        ],
       },
     },
   };

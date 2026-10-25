@@ -431,7 +431,7 @@ export function getPayableTotal(invoice: SalesInvoice): Money {
 /** What the Pay or Refund button takes, as a positive amount: what a submitted sale still owes, else its payable total. */
 export function getAmountToPay(invoice: SalesInvoice): Money {
   const amount = invoice.isSubmitted
-    ? invoice.outstanding_amount ?? fyo.pesa(0)
+    ? (invoice.outstanding_amount ?? fyo.pesa(0))
     : getPayableTotal(invoice);
   return amount.abs();
 }

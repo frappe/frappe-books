@@ -128,7 +128,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/import-wizard',
     name: 'Import Wizard',
-    meta: { desktopOnly: true },
+    meta: { desktopOnly: true, standaloneOnly: true },
     component: ImportWizard,
   },
   {

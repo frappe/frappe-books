@@ -7,6 +7,7 @@ from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
+from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.status import store_status
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
@@ -290,7 +291,8 @@ def _update_billed_status(invoice):
 	if not transfer:
 		return
 	moved = sum(batch_quantities(transfer.items).values())
-	unbilled = sum(max(quantity, 0) for quantity in _unbilled_quantities(transfer).values())
+	left = _unbilled_quantities(transfer, _billed_rows(transfer))
+	unbilled = sum(max(quantity, 0) for quantity in left.values())
 	transfer.per_billed = flt((moved - unbilled) / moved * 100, 2) if moved else 0
 	transfer.db_set("per_billed", transfer.per_billed, update_modified=False)
 	store_status(transfer)
@@ -310,7 +312,9 @@ def _bill_transfer(transfer, invoice):
 	"""Keep on an invoice mapped from the transfer only what its invoices have not billed yet, at the
 	transfer's rates and discounts per the row's unit."""
 	_validate_billable(transfer)
-	left = _unbilled_quantities(transfer)
+	billed_rows = _billed_rows(transfer)
+	left = _unbilled_quantities(transfer, billed_rows)
+	billed_serials = {serial for row in billed_rows for serial in parse_serial_numbers(row.serial_no)}
 	sources = {row.name: row for row in transfer.items}
 	detail_field = ROW_LINK_FIELDS[invoice.doctype][1]
 	rows = []
@@ -320,6 +324,7 @@ def _bill_transfer(transfer, invoice):
 		left[key] -= quantity
 		if quantity > 0:
 			_bill_row(row, sources[row.get(detail_field)], quantity)
+			row.serial_no = _unbilled_serials(row.serial_no, billed_serials, quantity)
 			rows.append(row)
 	if not rows:
 		frappe.throw(_("{0} is already fully billed.").format(transfer.name))
@@ -337,10 +342,16 @@ def _bill_row(row, source, stock_qty):
 		row.discount_amount = source.discount_amount
 
 
-def _unbilled_quantities(transfer):
-	"""Return what the transfer moved and its invoices have not billed yet, per item and batch."""
+def _unbilled_serials(value, billed_serials, stock_qty):
+	"""Return the row's first serial numbers no invoice has billed, one per unit billed, as ERPNext did."""
+	serials = [serial for serial in parse_serial_numbers(value) if serial not in billed_serials]
+	return "\n".join(serials[: int(stock_qty)]) or None
+
+
+def _unbilled_quantities(transfer, billed_rows):
+	"""Return what the transfer moved and the billed rows have not billed yet, per item and batch."""
 	left = batch_quantities(transfer.items)
-	for key, quantity in batch_quantities(_billing_rows(transfer, _billed_rows(transfer))).items():
+	for key, quantity in batch_quantities(_billing_rows(transfer, billed_rows)).items():
 		left[key] -= quantity
 	return left
 

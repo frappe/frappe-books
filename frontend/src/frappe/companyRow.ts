@@ -56,6 +56,8 @@ export function setCompanyRowValue(
   }
 
   row[fieldname] = empty ? null : value;
+  // The user's value, which a preview no longer refills.
+  row._serverFilled.delete(fieldname);
   if (isEmptyRow(row)) {
     const rows = (doc[tableField] as FrappeDoc[]).filter((r) => r !== row);
     rows.forEach((r, idx) => (r.idx = idx));

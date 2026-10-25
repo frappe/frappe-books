@@ -17,13 +17,15 @@ const fields = ['company', 'account', 'advance_account'].map((fieldname) => ({
 
 /** A party with `accounts` rows, as company-row fields read and write them. */
 function makeParty(rows) {
+  const makeRow = (values) => ({
+    ...values,
+    schema: { fields },
+    _serverFilled: new Set(),
+  });
   const party = {
-    accounts: rows.map((row) => ({ ...row, schema: { fields } })),
+    accounts: rows.map(makeRow),
     push(tableField, values) {
-      party[tableField] = [
-        ...party[tableField],
-        { ...values, schema: { fields } },
-      ];
+      party[tableField] = [...party[tableField], makeRow(values)];
     },
   };
   return party;

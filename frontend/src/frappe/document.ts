@@ -1326,7 +1326,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     const nextRows = previewedRows.map((values) => {
       const row = rows.find(({ name }) => name === values.name);
       if (!row) {
-        return this._getChildDoc({ ...values, name: undefined }, fieldname);
+        return this._getPreviewRow(fieldname, values);
       }
 
       row.applyPreview(values);
@@ -1334,6 +1334,23 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
     });
     setChildDocIdx(nextRows);
     this[fieldname] = nextRows;
+  }
+
+  /**
+   * A row the server added. A company row's values stay the server's to
+   * refill, as a document field's do, until the user edits them.
+   */
+  _getPreviewRow(fieldname: string, values: DocValueMap): FrappeDoc {
+    const isCompanyRow = this.schema.fields.some(
+      ({ companyTable }) => companyTable === fieldname
+    );
+    if (!isCompanyRow) {
+      return this._getChildDoc({ ...values, name: undefined }, fieldname);
+    }
+
+    const row = this._getChildDoc({}, fieldname);
+    row.applyPreview(values);
+    return row;
   }
 }
 

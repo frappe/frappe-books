@@ -367,7 +367,10 @@ def fill_loyalty(document: Document, edited: set[str]):
 		document.customer, document.loyalty_program, document.posting_date, document.company
 	)
 	document.loyalty_redemption_account = details.expense_account
-	document.loyalty_redemption_cost_center = details.cost_center
+	# The program may name none; Desk's form then asks, which Books does not, so the company's goes.
+	document.loyalty_redemption_cost_center = details.cost_center or frappe.get_cached_value(
+		"Company", document.company, "cost_center"
+	)
 	document.loyalty_amount = flt(
 		details.conversion_factor * document.loyalty_points, document.precision("loyalty_amount")
 	)

@@ -26,10 +26,12 @@
     </FrappeListCell>
 
     <!-- Data Input Form Control -->
+    <!-- With no Edit row column after it, the last field keeps its hover inside the table's border. -->
     <FrappeListCell
-      v-for="df in tableFields"
+      v-for="(df, index) in tableFields"
       :key="df.fieldname"
       class="min-w-0 self-center"
+      :class="{ 'pe-2': !canEditRow && index === tableFields.length - 1 }"
     >
       <!-- A field its depends_on hides on this row leaves its cell empty. -->
       <template v-if="isHidden(df)" />

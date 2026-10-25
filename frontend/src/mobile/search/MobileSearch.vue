@@ -44,12 +44,11 @@
       </div>
     </div>
 
-    <p
+    <FrappeLoadingText
       v-if="isFirstSearch"
-      class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
-    >
-      {{ t`Loading...` }}
-    </p>
+      class="justify-center px-3 py-10"
+      :text="t`Loading...`"
+    />
     <p
       v-else-if="!resultsQuery && rows.length"
       class="px-4 pb-1.5 pt-3.5 text-sm text-ink-gray-5"
@@ -131,6 +130,7 @@ import {
   Badge as FrappeBadge,
   Button as FrappeButton,
   Icon as FrappeIcon,
+  LoadingText as FrappeLoadingText,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import {

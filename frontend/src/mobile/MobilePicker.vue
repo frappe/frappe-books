@@ -89,12 +89,11 @@
               </FrappeListCell>
             </FrappeListRow>
           </FrappeList>
-          <p
+          <FrappeLoadingText
             v-if="loading && !options.length"
-            class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
-          >
-            {{ t`Loading...` }}
-          </p>
+            class="justify-center px-3 py-10"
+            :text="t`Loading...`"
+          />
           <p
             v-else-if="!sortedOptions.length"
             class="px-3 py-10 text-center text-p-sm text-ink-gray-4"
@@ -110,6 +109,7 @@
 import {
   Avatar as FrappeAvatar,
   Button as FrappeButton,
+  LoadingText as FrappeLoadingText,
   TextInput as FrappeTextInput,
   usePortalTarget,
 } from 'frappe-ui';

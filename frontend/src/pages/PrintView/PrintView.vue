@@ -89,8 +89,7 @@
           v-if="isLoading"
           class="absolute inset-x-0 top-[120px] mx-auto flex h-8 w-max items-center gap-2 rounded-lg bg-surface-base px-3 text-base text-ink-gray-7 shadow-md"
         >
-          <FrappeSpinner class="size-3.5" />
-          {{ t`Loading preview…` }}
+          <FrappeLoadingText :text="t`Loading preview…`" />
         </div>
         <!-- Takes the touches the preview frame would swallow. -->
         <div
@@ -148,7 +147,7 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
-  Spinner as FrappeSpinner,
+  LoadingText as FrappeLoadingText,
 } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import { t } from 'fyo';
@@ -216,7 +215,7 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeScrollArea,
-    FrappeSpinner,
+    FrappeLoadingText,
     SelectControl,
     PrintSheet,
     DropdownWithActions,

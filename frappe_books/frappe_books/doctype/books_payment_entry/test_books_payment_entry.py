@@ -177,6 +177,19 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.item = make_item(self.income.name, self.expense.name)
 		self.invoice = self._submitted_invoice()
 
+	def test_only_the_party_ledger_entry_carries_the_party(self):
+		payment = self._payment(self.invoice).insert().submit()
+
+		entries = frappe.get_all(
+			"Books GL Entry",
+			filters={"voucher_type": payment.doctype, "voucher_no": payment.name},
+			fields=["account", "party"],
+		)
+		self.assertEqual(
+			sorted((row.account, row.party) for row in entries),
+			sorted([(self.receivable.name, self.party.name), (self.cash.name, None)]),
+		)
+
 	def test_cancelling_a_refund_restores_the_credit_note(self):
 		credit_note = map_return(self.invoice.doctype, self.invoice.name).insert().submit()
 		refund = self._payment(credit_note, payment_type="Pay").insert()

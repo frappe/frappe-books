@@ -17,6 +17,8 @@ export interface DialogSheet {
   detail?: string;
   actions: DialogSheetAction[];
   dismissible: boolean;
+  /** An action runs with the sheet open, which shows its error; see `DialogOptions`. */
+  keepsOpenOnError?: boolean;
   onCancel: () => Promise<void>;
 }
 
@@ -40,7 +42,10 @@ export async function showDialog(options: DialogOptions) {
         resolve(await config.action());
       } catch (error) {
         settled = false;
-        reject(error);
+        // The dialog shows the error and stays open.
+        if (!options.keepsOpenOnError) {
+          reject(error);
+        }
         throw error;
       }
     };
@@ -74,8 +79,8 @@ export async function showDialog(options: DialogOptions) {
       : options.detail;
     const isDestructive = Boolean(
       options.destructive ||
-        options.type === 'warning' ||
-        options.type === 'error'
+      options.type === 'warning' ||
+      options.type === 'error'
     );
 
     if (isMobile.value) {
@@ -88,6 +93,7 @@ export async function showDialog(options: DialogOptions) {
           settleFromAction
         ),
         dismissible: Boolean(escapeButton),
+        keepsOpenOnError: options.keepsOpenOnError,
         onCancel: settleFromDismiss,
       };
       return;

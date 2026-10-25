@@ -18,6 +18,7 @@ import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
+import { getErrorMessage } from 'src/utils';
 import router from 'src/router';
 import { call } from 'src/web/api';
 import { assertIsType } from 'utils/index';
@@ -128,13 +129,13 @@ export async function deleteDocWithPrompt(doc: FrappeDoc) {
   })) as boolean;
 }
 
-export async function cancelDocWithPrompt(doc: FrappeDoc) {
-  const linkedDocs = await getDocsToCancel(doc);
+export async function cancelDocWithPrompt(
+  doc: FrappeDoc,
+  linkedDocs: LinkedDoc[]
+) {
   return (await showDialog({
     title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail: isAccessoryMode()
-      ? getLinkedCancelDetail(linkedDocs)
-      : getCancelDetail(linkedDocs),
+    detail: getCancelDetail(linkedDocs),
     type: 'warning',
     // Buttons name the outcome: "Cancel" alone could mean either answer.
     buttons: [
@@ -192,15 +193,51 @@ async function getInvoicePayments(doc: FrappeDoc): Promise<LinkedDoc[]> {
   });
 }
 
-function getLinkedCancelDetail(linkedDocs: LinkedDoc[]): string {
-  if (!linkedDocs.length) {
-    return t`This action is permanent`;
-  }
+/**
+ * Accessory mode cancels the documents linked to `doc` with it, all or
+ * nothing, as Desk's Cancel All does; a failure stays in the dialog to try again.
+ */
+async function cancelAllWithPrompt(doc: FrappeDoc, linkedDocs: LinkedDoc[]) {
+  return (await showDialog({
+    title: t`Cancel ${getDocReferenceLabel(doc)}?`,
+    detail: getCancelAllDetail(doc, linkedDocs),
+    destructive: true,
+    keepsOpenOnError: true,
+    buttons: [
+      {
+        label: t`Cancel all`,
+        async action() {
+          try {
+            await doc.cancel(linkedDocs);
+          } catch (err) {
+            const message = getErrorMessage(err as Error);
+            throw new Error(`${message}\n${t`Nothing was cancelled.`}`, {
+              cause: err,
+            });
+          }
 
-  const names = linkedDocs
-    .map(({ doctype, name }) => `${doctype} ${name}`)
-    .join(', ');
-  return t`This action is permanent and will cancel the following documents: ${names}`;
+          return true;
+        },
+        isPrimary: true,
+      },
+      { label: t`Go back`, action: () => false, isEscape: true },
+    ],
+  })) as boolean;
+}
+
+function getCancelAllDetail(doc: FrappeDoc, linkedDocs: LinkedDoc[]): string {
+  const type = doc.typeLabel.toLowerCase();
+  const rows = linkedDocs.map(
+    ({ doctype, name }) => `${doctype} <b>${name}</b>`
+  );
+  return [
+    t`Cancelling this ${type} in ERPNext also cancels every submitted document linked to it.`,
+    '',
+    linkedDocs.length === 1
+      ? t`1 linked document will also be cancelled:`
+      : t`${linkedDocs.length} linked documents will also be cancelled:`,
+    ...rows,
+  ].join('<br>');
 }
 
 function getCancelDetail(payments: LinkedDoc[]): string {
@@ -533,12 +570,26 @@ export async function commonDocDelete(
 }
 
 export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
-  const res = await cancelDocWithPrompt(doc);
-  if (!res) {
+  const linkedDocs = await getDocsToCancel(doc);
+  if (!isAccessoryMode() || !linkedDocs.length) {
+    const cancelled = await cancelDocWithPrompt(doc, linkedDocs);
+    if (cancelled) {
+      showActionToast(doc, 'cancel');
+    }
+    return cancelled;
+  }
+
+  if (!(await cancelAllWithPrompt(doc, linkedDocs))) {
     return false;
   }
 
-  showActionToast(doc, 'cancel');
+  const label = getDocReferenceLabel(doc);
+  const count = linkedDocs.length;
+  const message =
+    count === 1
+      ? t`Cancelled ${label} and 1 linked document`
+      : t`Cancelled ${label} and ${count} linked documents`;
+  showToast({ type: 'success', message, duration: 'short' });
   return true;
 }
 

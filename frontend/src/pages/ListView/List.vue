@@ -96,7 +96,7 @@
         :key="row"
         class="flex h-12 items-center border-b border-outline-gray-1"
       >
-        <FrappeSkeleton class="h-4 w-full" />
+        <Skeleton class="h-4 w-full" />
       </div>
     </div>
 
@@ -134,8 +134,8 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
-  Skeleton as FrappeSkeleton,
 } from 'frappe-ui';
+import Skeleton from 'src/components/Skeleton.vue';
 import { ListViewSettings, RenderData } from 'fyo/model/types';
 import {
   List as FrappeList,
@@ -178,7 +178,7 @@ export default defineComponent({
     FrappeListRow,
     FrappeListRows,
     FrappeScrollArea,
-    FrappeSkeleton,
+    Skeleton,
     ListCell,
     FrappeButton,
     EmptyState,

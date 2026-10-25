@@ -140,7 +140,7 @@
         :key="row"
         class="flex h-12 items-center border-b border-outline-gray-1"
       >
-        <FrappeSkeleton class="h-4 w-full" />
+        <Skeleton class="h-4 w-full" />
       </div>
     </div>
     <div
@@ -174,10 +174,10 @@ import {
   Alert as FrappeAlert,
   Button as FrappeButton,
   Select as FrappeSelect,
-  Skeleton as FrappeSkeleton,
   TabButtons as FrappeTabButtons,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import Skeleton from 'src/components/Skeleton.vue';
 import {
   List as FrappeList,
   ListHeader as FrappeListHeader,

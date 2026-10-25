@@ -139,8 +139,8 @@
         :key="width"
         class="flex h-8 items-center gap-2 px-1.5"
       >
-        <FrappeSkeleton class="size-4 rounded-full" />
-        <FrappeSkeleton class="h-4 rounded-4" :class="width" />
+        <Skeleton class="size-4 rounded-full" />
+        <Skeleton class="h-4 rounded-4" :class="width" />
       </div>
     </div>
     <!-- Not dialog.prompt: it neither focuses the field nor submits on Enter (frappe/frappe-ui#1264). -->
@@ -176,7 +176,6 @@ import {
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
   ScrollArea as FrappeScrollArea,
-  Skeleton as FrappeSkeleton,
   TextInput as FrappeTextInput,
   Tree as FrappeTree,
   type DialogAction,
@@ -185,6 +184,7 @@ import {
   Button as FrappeButton,
   PageHeaderBackButton as FrappePageHeaderBackButton,
 } from 'frappe-ui';
+import Skeleton from 'src/components/Skeleton.vue';
 import { ModelNameEnum } from 'models/types';
 import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
@@ -262,7 +262,7 @@ export default defineComponent({
     FrappePageHeaderBackButton,
     PageHeader,
     FrappeScrollArea,
-    FrappeSkeleton,
+    Skeleton,
     FrappeTextInput,
     FrappeTree,
     FrappeDialog,

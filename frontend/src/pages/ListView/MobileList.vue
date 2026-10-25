@@ -14,17 +14,14 @@
       >
         <FrappeListCell>
           <div class="flex flex-col gap-2">
-            <FrappeSkeleton
-              class="h-4 rounded-4"
-              :style="{ width: `${width}px` }"
-            />
-            <FrappeSkeleton class="h-3.5 w-28 rounded-4" />
+            <Skeleton class="h-4 rounded-4" :style="{ width: `${width}px` }" />
+            <Skeleton class="h-3.5 w-28 rounded-4" />
           </div>
         </FrappeListCell>
         <FrappeListCell class="justify-end">
           <div class="flex flex-col items-end gap-2">
-            <FrappeSkeleton class="h-4 w-20 rounded-4" />
-            <FrappeSkeleton class="h-3.5 w-12 rounded-full" />
+            <Skeleton class="h-4 w-20 rounded-4" />
+            <Skeleton class="h-3.5 w-12 rounded-full" />
           </div>
         </FrappeListCell>
       </FrappeListRow>
@@ -87,7 +84,8 @@
   </MobilePullToRefresh>
 </template>
 <script lang="ts">
-import { Button as FrappeButton, Skeleton as FrappeSkeleton } from 'frappe-ui';
+import { Button as FrappeButton } from 'frappe-ui';
+import Skeleton from 'src/components/Skeleton.vue';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -109,7 +107,7 @@ export default defineComponent({
     FrappeList,
     FrappeListCell,
     FrappeListRow,
-    FrappeSkeleton,
+    Skeleton,
     EmptyState,
     MobileListRow,
     MobilePullToRefresh,

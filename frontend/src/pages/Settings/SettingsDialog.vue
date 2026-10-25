@@ -82,8 +82,8 @@
               :key="width"
               class="flex items-center gap-8 py-3.5"
             >
-              <FrappeSkeleton class="h-4 rounded-4" :class="width" />
-              <FrappeSkeleton class="ms-auto h-7 w-60 rounded-4" />
+              <Skeleton class="h-4 rounded-4" :class="width" />
+              <Skeleton class="ms-auto h-7 w-60 rounded-4" />
             </div>
           </div>
         </FrappeSettingsBody>
@@ -148,8 +148,8 @@ import {
   SettingsNavItem as FrappeSettingsNavItem,
   SettingsPanel as FrappeSettingsPanel,
   SettingsSidebar as FrappeSettingsSidebar,
-  Skeleton as FrappeSkeleton,
 } from 'frappe-ui';
+import Skeleton from 'src/components/Skeleton.vue';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
@@ -173,7 +173,7 @@ export default defineComponent({
     FrappeSettingsNavItem,
     FrappeSettingsPanel,
     FrappeSettingsSidebar,
-    FrappeSkeleton,
+    Skeleton,
     QuickEditForm,
     SettingsField,
   },

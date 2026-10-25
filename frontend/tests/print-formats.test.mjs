@@ -52,6 +52,14 @@ test('a print page wraps the html in the print stylesheet', () => {
   delete globalThis.window;
 });
 
+test("a print's scripts are left out, as the print sheet runs none", () => {
+  const html = '<p>SINV-1001</p><script>window.print()</script>';
+  const page = getPrintDocument({ html, style: '' });
+
+  assert.doesNotMatch(page, /script/);
+  assert.match(page, /<p>SINV-1001<\/p>/);
+});
+
 test('a template file name names the template', () => {
   assert.equal(getTemplateNameFromFile('Invoice.template.html'), 'Invoice');
   assert.equal(getTemplateNameFromFile('Receipt.html'), 'Receipt');

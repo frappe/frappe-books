@@ -95,6 +95,35 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		self.assertEqual((invoice_row.qty, invoice_row.amount), (2, 50))
 
+	def test_billing_the_rest_of_a_delivery_note_row_takes_only_its_unbilled_serials(self):
+		received = make_account("Serial Received", root_type="Liability")
+		set_inventory_accounts(
+			make_account("Serial Stock", account_type="Stock").name, received.name, self.expense.name
+		)
+		item = make_item(self.income.name, received.name, is_stock_item=1)
+		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
+		serials = [f"BILL-{index} {item.name}" for index in range(3)]
+		seed_stock(item.name, quantity=3, rate=10, serial_number="\n".join(serials))
+		row = {
+			"item_code": item.name,
+			"warehouse": "Stores",
+			"qty": 3,
+			"rate": 25,
+			"serial_no": "\n".join(serials),
+		}
+		shipment = frappe.get_doc(
+			{"doctype": "Books Delivery Note", "customer": self.party.name, "items": [row]}
+		)
+		shipment.insert().submit()
+		first = make_delivery_note_invoice(shipment.name)
+		first.make_auto_payment = 0
+		first.items[0].update({"qty": 2, "serial_no": "\n".join(serials[:2])})
+		first.insert().submit()
+
+		rest = make_delivery_note_invoice(shipment.name).items[0]
+
+		self.assertEqual((rest.qty, rest.serial_no), (1, serials[2]))
+
 	def test_frappe_mappers_make_the_documents_actions_open(self):
 		quote = self._submitted_quote()
 

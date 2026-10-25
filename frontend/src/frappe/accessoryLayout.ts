@@ -17,7 +17,13 @@ export const DEFAULT_SECTION = 'Default';
 
 const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
 // Desk renders these with form scripts; they hold no value, so they are never shown or saved.
-export const VALUELESS_FIELDTYPES = ['HTML', 'Button', 'Heading', 'Image', 'Fold'];
+export const VALUELESS_FIELDTYPES = [
+  'HTML',
+  'Button',
+  'Heading',
+  'Image',
+  'Fold',
+];
 
 let appTitles: string[] = [];
 

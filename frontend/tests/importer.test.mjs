@@ -281,6 +281,11 @@ test('import datetimes are read as system time, whatever the browser’s time zo
       'C,2026-01-01T10:00:00+05:30',
     ].join('\n')
   );
+  // Hash-named, so no template field names the rows; the file groups them by name.
+  importer.assignedTemplateFields[0] = 'POSOpeningEntry.name';
+  for (const [name] of importer.valueMatrix) {
+    name.value = name.rawValue;
+  }
 
   assert.deepEqual(
     importer.valueMatrix.map(([, date]) => date.error ?? false),

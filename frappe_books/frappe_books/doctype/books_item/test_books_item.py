@@ -84,6 +84,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(_accounts(product), ("Sales", received.name))
 
 	def test_accounts_are_kept_once_for_the_one_company(self):
+		self.make_default_sources()
 		item = make_item(None, None)
 
 		self.assertEqual([row.company for row in item.item_defaults], [default_company()])

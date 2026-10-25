@@ -146,8 +146,9 @@ function getOptionProperties(
 }
 
 function getDefault(fieldtype: string, value: string | undefined) {
-  // A default like ":Company", the user's default company, is the server's to fill.
-  if (value === undefined || value.startsWith(':')) {
+  // A default like ":Company", the user's default company, or "__user", the
+  // user, is the server's to fill, as Frappe does on insert.
+  if (value === undefined || value.startsWith(':') || value === '__user') {
     return undefined;
   }
 

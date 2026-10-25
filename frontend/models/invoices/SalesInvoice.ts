@@ -1,6 +1,11 @@
 import { Fyo } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
-import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
+import {
+  Action,
+  FiltersMap,
+  HiddenMap,
+  ListViewSettings,
+} from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { ModelNameEnum } from 'models/types';
@@ -8,7 +13,7 @@ import type { Money } from 'pesa';
 import type { SubmitWarning } from 'src/frappe/document';
 import { isAccessoryMode } from 'src/frappe/mode';
 import { getLoyaltyPoints } from './loyalty';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, Invoice, SALES_FILTERS } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
 import { PricingRuleDetail } from './PricingRuleDetail';
 import { SalesInvoicePayment } from './SalesInvoicePayment';
@@ -55,6 +60,10 @@ export class SalesInvoice extends Invoice {
   };
   static override partyField = 'customer';
   static override partyAccountField = 'debit_to';
+  static override filters: FiltersMap = {
+    ...Invoice.filters,
+    ...SALES_FILTERS,
+  };
   static override rowModels = {
     items: SalesInvoiceItem,
     taxes: TaxesAndCharges,

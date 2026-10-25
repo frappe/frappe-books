@@ -3,7 +3,7 @@ import { Fyo } from 'fyo';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, Invoice, SALES_FILTERS } from './Invoice';
 import { QuotationItem } from './InvoiceItem';
 import { TaxesAndCharges } from './TaxesAndCharges';
 
@@ -50,9 +50,8 @@ export class Quotation extends Invoice {
 
   // A quote has no party account.
   static override filters: FiltersMap = {
-    naming_series: Invoice.filters.naming_series,
-    selling_price_list: Invoice.filters.selling_price_list,
-    taxes_and_charges: Invoice.filters.taxes_and_charges,
+    ...Invoice.filters,
+    selling_price_list: SALES_FILTERS.selling_price_list,
   };
 
   /** Quotes post no ledger entries. */

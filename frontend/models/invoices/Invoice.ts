@@ -180,16 +180,20 @@ export abstract class Invoice extends FrappeDoc {
     return false;
   }
 
+  /** The price list field of the invoice's side; the other side's is not in its DocType. */
+  get priceListField(): 'selling_price_list' | 'buying_price_list' {
+    return this.isSales ? 'selling_price_list' : 'buying_price_list';
+  }
+
   get priceList(): string | undefined {
-    return this.isSales ? this.selling_price_list : this.buying_price_list;
+    return this[this.priceListField];
   }
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.
   hidden: HiddenMap = {
     discount_after_tax: () =>
       !this.fyo.isFeatureOn('enable_discounts_and_margin'),
-    selling_price_list: () => this.isPriceListHidden,
-    buying_price_list: () => this.isPriceListHidden,
+    [this.priceListField]: () => this.isPriceListHidden,
     // A finished document names its template in the Taxes section instead.
     taxes_and_charges: () => this.submitted,
   };
@@ -232,14 +236,11 @@ export abstract class Invoice extends FrappeDoc {
     conversion_rate: () => this.isMultiCurrency,
   };
 
+  // Each side adds its party account and price list: SALES_FILTERS, PURCHASE_FILTERS.
   static override filters: FiltersMap = {
-    debit_to: getPartyAccountFilter('Receivable'),
-    credit_to: getPartyAccountFilter('Payable'),
     naming_series: (doc: FrappeDoc) => [
       ['reference_type', '=', doc.schemaName],
     ],
-    selling_price_list: getPriceListFilter('selling'),
-    buying_price_list: getPriceListFilter('buying'),
     taxes_and_charges: () => [['disabled', '=', 0]],
   };
 
@@ -330,6 +331,16 @@ function getPriceListFilter(side: 'selling' | 'buying'): FilterFunction {
     [side, '=', 1],
   ];
 }
+
+export const SALES_FILTERS: FiltersMap = {
+  debit_to: getPartyAccountFilter('Receivable'),
+  selling_price_list: getPriceListFilter('selling'),
+};
+
+export const PURCHASE_FILTERS: FiltersMap = {
+  credit_to: getPartyAccountFilter('Payable'),
+  buying_price_list: getPriceListFilter('buying'),
+};
 
 /** Shows a currency field of `doc` in the currency `getCurrency` names. */
 export function setCurrencies(doc: FrappeDoc, getCurrency: () => string) {

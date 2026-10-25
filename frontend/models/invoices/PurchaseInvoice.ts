@@ -1,8 +1,13 @@
 import { Fyo } from 'fyo';
-import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
+import {
+  Action,
+  FiltersMap,
+  HiddenMap,
+  ListViewSettings,
+} from 'fyo/model/types';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { ModelNameEnum } from 'models/types';
-import { INVOICE_FIELDS, Invoice } from './Invoice';
+import { INVOICE_FIELDS, Invoice, PURCHASE_FILTERS } from './Invoice';
 import { PurchaseInvoiceItem } from './InvoiceItem';
 import { TaxesAndCharges } from './TaxesAndCharges';
 
@@ -40,6 +45,10 @@ export class PurchaseInvoice extends Invoice {
   };
   static override partyField = 'supplier';
   static override partyAccountField = 'credit_to';
+  static override filters: FiltersMap = {
+    ...Invoice.filters,
+    ...PURCHASE_FILTERS,
+  };
   static override rowModels = {
     items: PurchaseInvoiceItem,
     taxes: TaxesAndCharges,

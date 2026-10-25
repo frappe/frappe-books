@@ -1,4 +1,5 @@
 import type { Filter } from './api';
+import { getCompanyRow } from './companyRow';
 import { evaluateExpression, type EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import type { FrappeDoc } from './document';
@@ -9,6 +10,7 @@ import {
   type LinkQueryRule,
 } from './erpnextQueries';
 import type { LinkSearch } from './link';
+import { getAccessoryCompany } from './mode';
 
 interface Context {
   doc: EvalDoc;
@@ -34,10 +36,7 @@ export function getERPNextLinkSearch(
     return undefined;
   }
 
-  const context = {
-    doc: doc.getEvalDoc(),
-    parent: doc.parentdoc?.getEvalDoc() ?? null,
-  };
+  const context = getContext(fieldname, doc);
   const { query, filters } = rule ? resolveRule(rule, context) : {};
   return {
     query,
@@ -60,8 +59,17 @@ export function toFilterList(filters: LinkSearch['filters']): Filter[] | null {
   );
 }
 
-/** The field's rule; a row's is keyed by its table, as `frm.set_query(field, table)` sets it. */
+/**
+ * The field's rule; a row's is keyed by its table, as `frm.set_query(field, table)` sets it.
+ * A field kept in a per-company row searches as that row's field.
+ */
 function getRule(fieldname: string, doc: FrappeDoc): LinkQueryRule | undefined {
+  const table = doc.fieldMap[fieldname]?.companyTable;
+  if (table) {
+    const { doctype } = getDocType(doc.schemaName);
+    return ERPNEXT_QUERIES[doctype]?.[`${table}.${fieldname}`];
+  }
+
   const { parentdoc, parentFieldname } = doc;
   if (parentdoc) {
     const { doctype } = getDocType(parentdoc.schemaName);
@@ -78,6 +86,21 @@ function getLinkFilters(fieldname: string, doc: FrappeDoc): string | undefined {
   return docfield?.link_filters && docfield.link_filters !== '[]'
     ? docfield.link_filters
     : undefined;
+}
+
+/** What a rule reads; a per-company row's field reads the row, a new one only its company. */
+function getContext(fieldname: string, doc: FrappeDoc): Context {
+  const table = doc.fieldMap[fieldname]?.companyTable;
+  if (table) {
+    const row = getCompanyRow(doc, table);
+    const company = getAccessoryCompany();
+    return { doc: row?.getEvalDoc() ?? { company }, parent: doc.getEvalDoc() };
+  }
+
+  return {
+    doc: doc.getEvalDoc(),
+    parent: doc.parentdoc?.getEvalDoc() ?? null,
+  };
 }
 
 /** The first case of the rule that holds, its values worked out. */

@@ -70,6 +70,7 @@ export interface BaseField {
   computed?: boolean; // Computed values are not stored in the database.
   insertOnly?: boolean; // A quick-entry value only a new document is saved with; its DocType does not hold it
   clientOnly?: boolean; // A value only the form shows; its model keeps it in DocType fields
+  companyTable?: string; // A client field's per-company table, whose current company's row holds the field of the same name
   section?: string; // UI Facing config, for grouping by sections
   tab?: string; // UI Facing config, for grouping by tabs
   isCustom?: boolean; // Whether the field is a custom field

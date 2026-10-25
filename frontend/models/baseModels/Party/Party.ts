@@ -18,7 +18,6 @@ import {
   setCompanyRowValue,
 } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
-import { getAccessoryCompany, isAccessoryMode } from 'src/frappe/mode';
 import type { Presentation } from 'src/frappe/schema';
 import { getModel } from 'src/frappe/registry';
 import { validateEmail, validatePhoneNumber } from 'src/frappe/validation';
@@ -58,6 +57,7 @@ const ACCOUNT_FIELD = {
   label: 'Account',
   target: 'Account',
   create: false,
+  companyTable: 'accounts',
   after: 'accounts',
 } as Field & { after: string };
 
@@ -192,7 +192,7 @@ export function getPartyPresentation(
 
 /**
  * The primary Contact and Address are picked from those linked to the party;
- * the Account from the ledgers of its type, of the current company in ERPNext.
+ * the Account from the ledgers of its type (ERPNext's rule for the row in accessory mode).
  */
 export function getPartyFilters(partyKey: PartyKey): FiltersMap {
   const linkedToParty = (doc: FrappeDoc) => [
@@ -205,7 +205,6 @@ export function getPartyFilters(partyKey: PartyKey): FiltersMap {
     account: (doc: FrappeDoc) => [
       ['is_group', '=', 0],
       ['account_type', '=', (doc.constructor as typeof Party).accountType],
-      ...(isAccessoryMode() ? [['company', '=', getAccessoryCompany()]] : []),
     ],
   } as FiltersMap;
 }

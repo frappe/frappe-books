@@ -85,7 +85,7 @@ function markSubmitted(sale, name = 'SINV-0900') {
 async function startCheckout(sale, method = 'Cash') {
   const checkout = usePOSCheckout(() => sale);
   await checkout.start();
-  checkout.selectMethod(method);
+  checkout.selectMethod(0, method);
   return checkout;
 }
 
@@ -102,10 +102,10 @@ test('a partly paid sale is due what it still owes, and a short tender leaves a 
   const checkout = await startCheckout(sale, 'Card');
 
   assert.equal(checkout.due.float, 200);
-  assert.equal(checkout.tender.amount.float, 200);
+  assert.equal(checkout.tenders[0].amount.float, 200);
   assert.equal(checkout.settlement, null);
 
-  checkout.setAmount(fyo.pesa(150));
+  checkout.setAmount(0, fyo.pesa(150));
   assert.equal(checkout.settlement.label, 'Balance due');
   assert.equal(checkout.settlement.amount.float, 50);
   assert.equal(checkout.settlement.isChange, false);
@@ -116,8 +116,8 @@ test('cash beyond what is due is change, offered with round amounts', async () =
     makeSale({ outstanding_amount: fyo.pesa(437) })
   );
 
-  assert.deepEqual(amounts(checkout.quickAmounts), [437, 440, 450]);
-  checkout.setAmount(fyo.pesa(500));
+  assert.deepEqual(amounts(checkout.getQuickAmounts(0)), [437, 440, 450]);
+  checkout.setAmount(0, fyo.pesa(500));
   assert.deepEqual(
     [checkout.settlement.label, checkout.settlement.amount.float],
     ['Change to return', 63]
@@ -134,8 +134,8 @@ test('a refund is due its total and gives no change', async () => {
   const checkout = await startCheckout(sale);
 
   assert.equal(checkout.due.float, 500);
-  assert.deepEqual(amounts(checkout.quickAmounts), [500]);
-  checkout.setAmount(fyo.pesa(600));
+  assert.deepEqual(amounts(checkout.getQuickAmounts(0)), [500]);
+  checkout.setAmount(0, fyo.pesa(600));
   assert.equal(checkout.settlement, null);
 });
 
@@ -148,12 +148,12 @@ test('an amount still at what was due follows a coupon or points that change it'
 
   sale.outstanding_amount = fyo.pesa(450);
   await settle();
-  assert.equal(checkout.tender.amount.float, 450);
+  assert.equal(checkout.tenders[0].amount.float, 450);
 
-  checkout.setAmount(fyo.pesa(1000));
+  checkout.setAmount(0, fyo.pesa(1000));
   sale.outstanding_amount = fyo.pesa(400);
   await settle();
-  assert.equal(checkout.tender.amount.float, 1000);
+  assert.equal(checkout.tenders[0].amount.float, 1000);
 });
 
 test('a tender can pay once it has a method, an amount and what the method needs', async () => {
@@ -161,41 +161,42 @@ test('a tender can pay once it has a method, an amount and what the method needs
   await checkout.start();
   assert.equal(checkout.canPay, false);
 
-  checkout.selectMethod('Cash');
+  checkout.selectMethod(0, 'Cash');
   assert.equal(checkout.canPay, true);
-  checkout.setAmount(null);
+  checkout.setAmount(0, null);
   assert.equal(checkout.canPay, false);
 
-  checkout.selectMethod('Cheque');
-  assert.deepEqual(checkout.requirements, {
+  checkout.selectMethod(0, 'Cheque');
+  assert.deepEqual(checkout.getRequirements(0), {
     isCash: false,
     requiresReferenceId: true,
     requiresClearanceDate: true,
   });
-  checkout.setReference('CHQ-77');
+  checkout.setReference(0, 'CHQ-77');
   assert.equal(checkout.canPay, false);
-  checkout.setClearanceDate(new Date('2026-10-05T00:00:00Z'));
+  checkout.setClearanceDate(0, new Date('2026-10-05T00:00:00Z'));
   assert.equal(checkout.canPay, true);
 });
 
 test('a method keeps only the payment details it needs', async () => {
   const checkout = await startCheckout(makeSale(), 'Cheque');
-  checkout.setReference('CHQ-77');
-  checkout.setClearanceDate(new Date('2026-10-05T00:00:00Z'));
+  checkout.setReference(0, 'CHQ-77');
+  checkout.setClearanceDate(0, new Date('2026-10-05T00:00:00Z'));
 
-  checkout.selectMethod('Card');
+  checkout.selectMethod(0, 'Card');
+  const [tender] = checkout.tenders;
   assert.deepEqual(
-    [checkout.tender.reference_no, checkout.tender.clearance_date],
+    [tender.reference_no, tender.clearance_date],
     ['CHQ-77', undefined]
   );
-  checkout.selectMethod('Cash');
-  assert.equal(checkout.tender.reference_no, undefined);
+  checkout.selectMethod(0, 'Cash');
+  assert.equal(tender.reference_no, undefined);
 });
 
 test('a draft sale is submitted with the tender as its payment row', async () => {
   const sale = makeSale();
   const checkout = await startCheckout(sale, 'Card');
-  checkout.setReference('TXN-9');
+  checkout.setReference(0, 'TXN-9');
   requests.length = 0;
 
   const { invoice, payments } = await checkout.checkout({ pay: true });
@@ -242,8 +243,8 @@ test('a failed payment lookup does not fail the checkout', async () => {
 test('a submitted sale is paid at the counter', async () => {
   const sale = markSubmitted(makeSale({ outstanding_amount: fyo.pesa(200) }));
   const checkout = await startCheckout(sale, 'Cheque');
-  checkout.setReference('CHQ-77');
-  checkout.setClearanceDate(new Date('2026-10-05T12:00:00Z'));
+  checkout.setReference(0, 'CHQ-77');
+  checkout.setClearanceDate(0, new Date('2026-10-05T12:00:00Z'));
   requests.length = 0;
 
   const { invoice, payments } = await checkout.checkout({ pay: true });
@@ -269,18 +270,103 @@ test('a reset tender starts again at what the next sale is due', async () => {
   const sale = shallowRef(makeSale());
   const checkout = usePOSCheckout(() => sale.value);
   await checkout.start();
-  checkout.selectMethod('Cheque');
-  checkout.setReference('CHQ-77');
+  checkout.selectMethod(0, 'Cheque');
+  checkout.setReference(0, 'CHQ-77');
+  checkout.setAmount(0, fyo.pesa(100));
+  checkout.addTender();
 
   checkout.reset();
+  assert.equal(checkout.tenders.length, 1);
+  const [tender] = checkout.tenders;
   assert.deepEqual(
-    [checkout.tender.mode_of_payment, checkout.tender.amount.float],
-    [undefined, 0]
+    [tender.mode_of_payment, tender.amount.float, tender.reference_no],
+    [undefined, 0, undefined]
   );
-  assert.equal(checkout.tender.reference_no, undefined);
 
   sale.value = makeSale({ outstanding_amount: fyo.pesa(80) });
   await checkout.start();
-  assert.equal(checkout.tender.amount.float, 80);
-  assert.equal(checkout.tender.mode_of_payment, undefined);
+  assert.equal(checkout.tenders[0].amount.float, 80);
+  assert.equal(checkout.tenders[0].mode_of_payment, undefined);
+});
+
+test('another tender pays what the first leaves, with a method no tender has', async () => {
+  const checkout = await startCheckout(makeSale(), 'Cash');
+  assert.equal(checkout.canAddTender, false);
+
+  checkout.setAmount(0, fyo.pesa(300));
+  assert.deepEqual(
+    [checkout.settlement.label, checkout.settlement.amount.float],
+    ['Balance due', 200]
+  );
+  assert.equal(checkout.canAddTender, true);
+  checkout.addTender();
+  assert.equal(checkout.tenders[1].amount.float, 200);
+  assert.equal(checkout.canPay, false);
+  assert.deepEqual(
+    checkout.getMethods(1).map(({ name }) => name),
+    ['Card', 'Cheque']
+  );
+
+  checkout.selectMethod(1, 'Card');
+  checkout.setReference(1, 'TXN-9');
+  assert.equal(checkout.tenders[1].amount.float, 200);
+  assert.equal(checkout.settlement, null);
+  assert.equal(checkout.canPay, true);
+  assert.deepEqual(amounts(checkout.getQuickAmounts(1)), [200]);
+});
+
+test('only cash gives change; non-cash beyond what is due cannot pay', async () => {
+  const checkout = await startCheckout(makeSale(), 'Card');
+  checkout.setReference(0, 'TXN-9');
+  checkout.setAmount(0, fyo.pesa(300));
+  checkout.addTender();
+  checkout.selectMethod(1, 'Cash');
+  checkout.setAmount(1, fyo.pesa(300));
+
+  assert.deepEqual(
+    [checkout.settlement.label, checkout.settlement.amount.float],
+    ['Change to return', 100]
+  );
+  assert.equal(checkout.canPay, true);
+
+  checkout.setAmount(0, fyo.pesa(600));
+  assert.deepEqual(
+    [checkout.settlement.label, checkout.settlement.amount.float],
+    ['Non-cash over amount due', 100]
+  );
+  assert.equal(checkout.canPay, false);
+});
+
+test('a removed tender leaves the rest to the others', async () => {
+  const checkout = await startCheckout(makeSale(), 'Cash');
+  checkout.setAmount(0, fyo.pesa(300));
+  checkout.addTender();
+  checkout.selectMethod(1, 'Card');
+
+  checkout.removeTender(1);
+  assert.equal(checkout.tenders.length, 1);
+  assert.equal(checkout.settlement.amount.float, 200);
+  checkout.removeTender(0);
+  assert.equal(checkout.tenders.length, 1);
+});
+
+test('a draft sale is submitted with a payment row per tender', async () => {
+  const checkout = await startCheckout(makeSale(), 'Cash');
+  checkout.setAmount(0, fyo.pesa(300));
+  checkout.addTender();
+  checkout.selectMethod(1, 'Card');
+  checkout.setReference(1, 'TXN-9');
+  requests.length = 0;
+
+  await checkout.checkout({ pay: true });
+
+  const rows = getInserted().payments.map((row) => [
+    row.mode_of_payment,
+    Number(row.amount),
+    row.reference_no ?? null,
+  ]);
+  assert.deepEqual(rows, [
+    ['Cash', 300, null],
+    ['Card', 200, 'TXN-9'],
+  ]);
 });

@@ -6,6 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate
 
+from frappe_books.accessory import erpnext_default_company
 from frappe_books.tests import needs_erpnext
 from frappe_books.tests.accounting import ensure_user
 
@@ -241,7 +242,7 @@ class IntegrationTestAccessoryFieldPicks(IntegrationTestCase):
 @needs_erpnext
 class IntegrationTestAccessoryScreens(IntegrationTestCase):
 	def setUp(self):
-		self.company = frappe.db.get_value("Company", {}, "name")
+		self.company = erpnext_default_company()
 		for module in ("accessory", "accessory.ui_settings", "permissions"):
 			accessory = patch(f"frappe_books.{module}.accessory_company", return_value=self.company)
 			accessory.start()
@@ -325,7 +326,7 @@ class IntegrationTestAccessoryPrintOptions(IntegrationTestCase):
 		from frappe_books.accessory.printing import get_print_options
 
 		self.get_print_options = get_print_options
-		self.company = frappe.db.get_value("Company", {}, "name")
+		self.company = erpnext_default_company()
 		accessory = patch("frappe_books.accessory.printing.accessory_company", return_value=self.company)
 		accessory.start()
 		self.addCleanup(accessory.stop)

@@ -6,6 +6,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, flt, now_datetime, nowdate
 
+from frappe_books.accessory import erpnext_default_company
 from frappe_books.tests import needs_erpnext
 from frappe_books.tests.accounting import ensure_user
 from frappe_books.tests.test_accessory_erpnext import (
@@ -81,7 +82,7 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 		from frappe_books.accessory.preview import preview
 
 		self.preview = preview
-		self.company = frappe.db.get_value("Company", {}, "name")
+		self.company = erpnext_default_company()
 		for module in ACCESSORY_MODULES:
 			accessory = patch(f"frappe_books.{module}.accessory_company", return_value=self.company)
 			accessory.start()

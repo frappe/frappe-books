@@ -9,7 +9,7 @@ from frappe import _
 from frappe.utils import flt, getdate, now_datetime, nowdate
 
 from frappe_books.accessory.ui_settings import check_ui_settings_access
-from frappe_books.accounting.money import as_decimal
+from frappe_books.accounting.money import as_decimal, sum_decimal
 from frappe_books.commerce.pos import counter_payment_amounts
 
 # Books' POS screen preferences, by the single that holds them
@@ -92,7 +92,16 @@ def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	validate_profile_modes(doc.pos_profile, tenders)
 	due = abs(as_decimal(doc.outstanding_amount))
 	amounts = counter_payment_amounts(tenders, due, is_cash=is_cash_mode)
+	validate_full_payment(doc, sum_decimal(paid for _tender, paid in amounts), due)
 	return [make_payment(doc, tender, paid) for tender, paid in amounts]
+
+
+def validate_full_payment(invoice, paid, due):
+	"""The tenders together pay what is due unless the POS Profile allows partial payments, as ERPNext's checkout."""
+	if invoice.is_return or paid >= due:
+		return
+	if not frappe.db.get_value("POS Profile", invoice.pos_profile, "allow_partial_payment"):
+		frappe.throw(_("Partial Payment in POS Transactions are not allowed."))
 
 
 def validate_profile_modes(pos_profile: str, tenders: list):

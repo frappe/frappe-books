@@ -4,31 +4,20 @@
     :class="{ 'min-h-full': isMobile }"
   >
     <PageHeader :title="isMobile ? name : t`Print view`">
-      <template v-if="isAccessory">
-        <FrappeSelect
-          v-for="picker in pickers"
-          :key="picker.title"
-          class="w-[190px]"
-          variant="outline"
-          :aria-label="picker.title"
-          :options="picker.options"
-          :model-value="picker.value"
-          @update:model-value="(value) => picker.select(String(value ?? ''))"
-        />
-      </template>
       <SelectControl
-        v-else-if="templateList.length"
+        v-for="picker in pickers"
+        :key="picker.title"
         :df="{
           fieldtype: 'Select',
-          fieldname: 'templateName',
-          label: t`Template Name`,
-          options: templateList.map((n) => ({ label: n, value: n })),
+          fieldname: picker.title,
+          label: picker.name,
+          options: picker.options,
         }"
         size="small"
         class="w-40"
         :border="true"
-        :value="templateName ?? ''"
-        @change="onTemplateNameChange"
+        :value="picker.value ?? ''"
+        @change="(value: string | null) => picker.select(value ?? '')"
       />
       <DropdownWithActions
         v-if="!isAccessory"
@@ -159,7 +148,6 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
-  Select as FrappeSelect,
   Spinner as FrappeSpinner,
 } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
@@ -180,7 +168,6 @@ import { getServerMessages } from 'src/web/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { isAccessoryMode } from 'src/frappe/mode';
-import type { SheetOption } from 'src/mobile/MobileOptionsSheet.vue';
 import { showToast } from 'src/utils/interactive';
 import {
   canSharePDF,
@@ -205,15 +192,21 @@ import { usePDFShare } from './pdfShare';
 import { usePinchZoom } from './pinchZoom';
 
 /** A print choice the header (desktop) or the sticky bar (phone) offers. */
+/** A choice of the print, as the desktop select and the phone sheet both take it. */
+type PickerOption = { label: string; value: string };
+
 interface PrintPicker {
+  /** What the desktop select is called. */
+  name: string;
+  /** The phone trigger's label and its sheet's title. */
   label: string;
   title: string;
-  options: SheetOption[];
+  options: PickerOption[];
   value: string | null;
   select: (value: string) => unknown;
 }
 
-function toOptions(names: string[]): SheetOption[] {
+function toOptions(names: string[]): PickerOption[] {
   return names.map((name) => ({ label: name, value: name }));
 }
 
@@ -223,7 +216,6 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeScrollArea,
-    FrappeSelect,
     FrappeSpinner,
     SelectControl,
     PrintSheet,
@@ -305,6 +297,7 @@ export default defineComponent({
 
       return [
         {
+          name: this.t`Template Name`,
           label: this.t`Template`,
           title: this.t`Print Template`,
           options: toOptions(this.templateList),
@@ -316,6 +309,7 @@ export default defineComponent({
     accessoryPickers(): PrintPicker[] {
       return [
         {
+          name: this.t`Print format`,
           label: this.t`Format`,
           title: this.t`Print format`,
           options: toOptions(this.templateList),
@@ -323,6 +317,7 @@ export default defineComponent({
           select: this.setPrintFormat,
         },
         {
+          name: this.t`Letter head`,
           label: this.t`Letter head`,
           title: this.t`Letter head`,
           options: [

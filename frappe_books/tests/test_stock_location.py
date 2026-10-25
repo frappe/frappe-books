@@ -53,9 +53,9 @@ class IntegrationTestStockLocation(IntegrationTestCase):
 		other = make_item(income, received, is_stock_item=1).name
 		set_company_value("default_warehouse", "Stores")
 		rows = [
-			frappe._dict(item_code=shelved.name),
-			frappe._dict(item_code=other),
-			frappe._dict(item_code=other, t_warehouse=self.counter),
+			frappe.new_doc("Books Stock Entry Detail", item_code=shelved.name),
+			frappe.new_doc("Books Stock Entry Detail", item_code=other),
+			frappe.new_doc("Books Stock Entry Detail", item_code=other, t_warehouse=self.counter),
 		]
 
 		fill_default_warehouse(rows, "t_warehouse")

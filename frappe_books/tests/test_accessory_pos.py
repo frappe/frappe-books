@@ -279,6 +279,20 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 
 		self.assertEqual(formats[0], receipt)
 
+	def test_a_pos_invoice_prints_every_tender_on_the_books_receipt(self):
+		from frappe_books.accessory.printing import POS_RECEIPT, get_print_options
+
+		self.profile.db_set("print_format", None)
+		invoice = make_pos_invoice(self.profile, self.customer, self.item, paid=50)
+
+		with patch("frappe_books.accessory.printing.accessory_company", return_value=self.company):
+			formats = get_print_options("Sales Invoice", invoice.name)["print_formats"]
+		html = frappe.get_print("Sales Invoice", invoice.name, POS_RECEIPT, no_letterhead=1)
+
+		self.assertEqual(formats[0], POS_RECEIPT)
+		self.assertIn("Cash", html)
+		self.assertIn(invoice.get_formatted("change_amount"), html)
+
 	def make_expired_coupon(self):
 		name = "ACC-POS-EXPIRED"
 		if not frappe.db.exists("Coupon Code", name):

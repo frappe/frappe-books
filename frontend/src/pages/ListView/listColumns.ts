@@ -52,9 +52,17 @@ export function getListColumns(
     columns = [...new Set(['name', ...columns])];
   }
 
-  const shown = columns.flatMap((column): ListColumn[] =>
-    typeof column === 'object' ? [column] : getFields(schemaName, [column])
-  );
+  // A DocType whose links show titles, like ERPNext's hash-named batches, lists them too.
+  const { meta } = getDocType(schemaName);
+  const title = meta.show_title_field_in_link ? meta.title_field : undefined;
+  const shown = columns.flatMap((column): ListColumn[] => {
+    if (typeof column === 'object') {
+      return [column];
+    }
+
+    const fieldname = column === 'name' && title ? title : column;
+    return getFields(schemaName, [fieldname]);
+  });
   if (
     !isAccessoryMode() ||
     shown.some((column) => column.fieldname !== 'name')
@@ -62,7 +70,6 @@ export function getListColumns(
     return shown;
   }
 
-  const { meta } = getDocType(schemaName);
   const listed = meta.fields.filter((field) => field.in_list_view);
   return [
     ...shown,

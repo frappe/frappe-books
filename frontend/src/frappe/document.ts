@@ -272,8 +272,11 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
   }
 
   /** What a form of the document is headed by. */
+  /** The name, or the title of a DocType whose links show titles, like ERPNext's hash-named batches. */
   get formTitle(): string {
-    return this.name ?? '';
+    const { meta } = getDocType(this.schemaName);
+    const title = meta.show_title_field_in_link && meta.title_field;
+    return (title && (this[title] as string | undefined)) || (this.name ?? '');
   }
 
   /** The kind of record the user sees, such as Sales Invoice. */

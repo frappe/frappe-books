@@ -44,7 +44,8 @@
       </template>
     </div>
 
-    <div v-if="chart" :class="phone ? 'h-40' : 'h-52'">
+    <!-- Framed by frappe-ui's chart card, as the number cards are. -->
+    <FrappeChartCard v-if="chart" :class="phone ? 'h-40' : 'h-52'">
       <component
         :is="chart.type === 'line' ? FrappeLineChart : FrappeBarChart"
         :data="chart.rows"
@@ -55,13 +56,14 @@
         :x-axis="{ type: 'category' }"
         :y-axis="{ format: formatChartValue }"
       />
-    </div>
+    </FrappeChartCard>
   </div>
 </template>
 <script setup lang="ts">
 import { Alert as FrappeAlert } from 'frappe-ui';
 import {
   BarChart as FrappeBarChart,
+  ChartCard as FrappeChartCard,
   LineChart as FrappeLineChart,
   NumberCard as FrappeNumberCard,
   type ChartPalette,

@@ -27,6 +27,8 @@ export class Account extends FrappeDoc {
       'is_group',
     ],
     fields: { parent_account: { create: false } },
+    // ERPNext names an account by script from its name; a link's typed text goes in it.
+    titleField: 'account_name',
   };
   static override previewMethod = 'preview';
 

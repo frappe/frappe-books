@@ -7,6 +7,7 @@ from frappe.contacts.doctype.address.address import get_default_address
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
+from frappe_books.accounting.party_contacts import make_lead_address
 from frappe_books.settings import require_feature
 
 
@@ -40,6 +41,9 @@ class BooksLead(Document):
 
 	def validate(self):
 		require_feature("enable_lead")
+
+	def after_insert(self):
+		make_lead_address(self)
 
 	def on_trash(self):
 		# Addresses link to the lead by Dynamic Link; they go with it unless they link elsewhere too.

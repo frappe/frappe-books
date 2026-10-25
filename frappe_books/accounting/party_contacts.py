@@ -1,11 +1,11 @@
-"""A party's primary Contact and Address, made from a new party's quick-entry values as ERPNext does."""
+"""A party's primary Contact and Address, and a lead's Address, made from a new record's quick-entry values as ERPNext does."""
 
 import frappe
 from frappe import _
 from frappe.contacts.address_and_contact import delete_contact_and_address
 from frappe.contacts.doctype.address.address import get_address_display
 
-# The values a new party's primary Address is made from; they are not party fields.
+# The values a new party's or lead's primary Address is made from; Books' doctypes do not hold them.
 ADDRESS_FIELDS = ("address_line1", "address_line2", "city", "state", "pincode", "country")
 # The keys of a party's own fieldnames, as ERPNext names them.
 PARTY_KEYS = {"Books Customer": "customer", "Books Supplier": "supplier"}
@@ -80,27 +80,46 @@ def _make_contact(party):
 
 
 def _make_address(party):
-	values = {fieldname: party.get(fieldname) for fieldname in ADDRESS_FIELDS}
-	if not any(values[fieldname] for fieldname in ADDRESS_FIELDS if fieldname != "country"):
+	if address := make_address(party, _title(party)):
+		party.db_set("primary_address", get_address_display(address.as_dict()))
+	return address
+
+
+def make_lead_address(lead, method=None):
+	"""Link an Address made from a new lead's quick-entry values to it, titled by its organization, else its name."""
+	make_address(lead, lead.get("company_name") or lead.lead_name)
+
+
+def make_address(doc, title):
+	"""Make a primary billing Address linked to `doc` from its quick-entry values, in the company's country unless given."""
+	if not any(doc.get(fieldname) for fieldname in _quick_entry_fields(doc)):
 		return None
 	address = frappe.new_doc("Address")
 	address.update(
 		{
-			**values,
-			"address_title": _title(party),
+			**{fieldname: doc.get(fieldname) for fieldname in ADDRESS_FIELDS},
+			"country": doc.get("country") or frappe.db.get_single_value("System Settings", "country"),
+			"address_title": title,
 			"address_type": "Billing",
 			"is_primary_address": 1,
 			"is_shipping_address": 1,
 		}
 	)
-	address = _insert(address, party)
-	party.db_set("primary_address", get_address_display(address.as_dict()))
-	return address
+	return _insert(address, doc)
 
 
-def _insert(record, party):
-	record.append("links", {"link_doctype": party.doctype, "link_name": party.name})
-	return record.insert(ignore_permissions=party.flags.ignore_permissions)
+def _quick_entry_fields(doc):
+	"""The address values only a quick entry sends, not those the doctype holds, like an ERPNext Lead's city."""
+	return [
+		fieldname
+		for fieldname in ADDRESS_FIELDS
+		if fieldname != "country" and not doc.meta.has_field(fieldname)
+	]
+
+
+def _insert(record, doc):
+	record.append("links", {"link_doctype": doc.doctype, "link_name": doc.name})
+	return record.insert(ignore_permissions=doc.flags.ignore_permissions)
 
 
 def _link(record, party):

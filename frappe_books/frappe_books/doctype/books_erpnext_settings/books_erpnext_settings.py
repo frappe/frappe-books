@@ -50,5 +50,8 @@ class BooksERPNextSettings(Document):
 		if self.has_value_changed("accessory_mode"):
 			# The palette searches the mode's documents, which the index then needs.
 			frappe.enqueue(
-				rebuild_search_index, queue="long", job_id="rebuild_books_search_index", deduplicate=True
+				"frappe_books.search.rebuild_search_index",
+				queue="long",
+				job_id="rebuild_books_search_index",
+				deduplicate=True,
 			)

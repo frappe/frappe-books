@@ -14,13 +14,13 @@
     <div class="px-4">
       <TwoColumnForm :doc="row" :fields="fields" :field-errors="errors" />
       <!-- Sections run edge to edge, as on the form. -->
-      <MobileExtraFields
-        v-if="isAccessory"
-        class="-mx-4"
-        :doc="row"
-        :errors="extraErrors"
-        @value-change="setExtraValue"
-      />
+      <div v-if="isAccessory" class="-mx-4">
+        <MobileExtraFields
+          :doc="row"
+          :errors="extraErrors"
+          @value-change="setExtraValue"
+        />
+      </div>
       <MobileSheetFooter>
         <FrappeButton
           size="lg"

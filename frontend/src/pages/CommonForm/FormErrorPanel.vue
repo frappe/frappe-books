@@ -43,7 +43,7 @@ const MESSAGES_CLASSES = [
   '[&_a]:text-ink-gray-8 [&_a]:underline [&_p+p]:mt-1',
   '[&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5',
   '[&_[data-table]]:my-2 [&_[data-table]]:overflow-x-auto [&_[data-table]]:rounded [&_[data-table]]:border [&_[data-table]]:border-outline-gray-2',
-  '[&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:text-[13px]',
+  '[&_table]:w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:text-sm',
   '[&_th]:bg-surface-gray-1 [&_th]:font-normal [&_th]:text-ink-gray-5',
   '[&_td]:whitespace-nowrap [&_td]:border-b [&_td]:border-outline-gray-1 [&_td]:px-2 [&_td]:py-1.5 [&_td]:text-start',
   '[&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-outline-gray-1 [&_th]:px-2 [&_th]:py-1.5 [&_th]:text-start',

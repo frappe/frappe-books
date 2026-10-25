@@ -108,6 +108,7 @@ class BooksItem(Document):
 		validate_hsn_codes([self], "gst_hsn_code")
 		self.validate_unit_conversions()
 		self.validate_series()
+		self.validate_barcodes()
 
 	def validate_stock_settings(self):
 		if self.is_stock_item and self.item_type != "Product":
@@ -130,6 +131,25 @@ class BooksItem(Document):
 				message = _("{0} cannot contain the following characters: {1}")
 				label = _(self.meta.get_label(fieldname))
 				validate_pattern(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
+
+	def validate_barcodes(self):
+		"""A barcode names one item, as in ERPNext; checked before the database's unique index refuses it."""
+		barcodes = [row.barcode for row in self.barcodes if row.barcode]
+		if not barcodes:
+			return
+		if len(barcodes) != len(set(barcodes)):
+			frappe.throw(_("Each barcode can be used only once."), frappe.UniqueValidationError)
+		used = frappe.get_all(
+			"Books Item Barcode",
+			filters={"barcode": ["in", barcodes], "parent": ["!=", self.name]},
+			fields=["barcode", "parent"],
+			limit=1,
+		)
+		if used:
+			frappe.throw(
+				_("Barcode {0} already used in Item {1}").format(used[0].barcode, used[0].parent),
+				frappe.UniqueValidationError,
+			)
 
 	def validate_accounts(self):
 		"""One row per company. A tracked item is bought into stock received but not billed, a liability."""

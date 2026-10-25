@@ -15,6 +15,8 @@ import { StockEntryDetail } from './StockEntryDetail';
  */
 export class StockEntry extends FrappeDoc {
   static override doctype = 'Books Stock Entry';
+  // Standalone only
+  static override erpnextDoctype = null;
   static override presentation = {
     label: 'Stock Entry',
     nameField: { label: 'Stock Entry No.', hidden: true },
@@ -26,8 +28,6 @@ export class StockEntry extends FrappeDoc {
       'items',
     ],
     fields: { items: { edit: true } },
-    // ERPNext's entry takes its purpose from its Stock Entry Type, which Desk asks for first.
-    accessoryPlacements: [{ fieldname: 'stock_entry_type', before: 'purpose' }],
     fileFields: [
       'name',
       'naming_series',

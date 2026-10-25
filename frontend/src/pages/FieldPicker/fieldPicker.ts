@@ -25,7 +25,7 @@ const PICKER_GROUPS = [
     schemaNames: ['PurchaseInvoice', 'PurchaseReceipt', 'Supplier'],
   },
   { label: t`Accounting`, schemaNames: ['PaymentEntry', 'JournalEntry'] },
-  { label: t`Inventory`, schemaNames: ['StockEntry', 'Item'] },
+  { label: t`Items`, schemaNames: ['Item'] },
 ];
 
 type Loaded =

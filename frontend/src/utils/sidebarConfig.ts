@@ -119,6 +119,49 @@ function getRegionalSidebar(): SidebarRoot[] {
   ];
 }
 
+/** Stock records, with inventory on; delivery notes and purchase receipts sit with sales and purchases. */
+function getInventorySidebar(): SidebarRoot {
+  return {
+    label: t`Inventory`,
+    name: 'inventory',
+    icon: 'lucide-package',
+    route: '/list/StockEntry',
+    hidden: isInventoryOff,
+    items: [
+      {
+        label: t`Stock Entry`,
+        name: 'stock-entry',
+        icon: 'lucide-arrow-right-left',
+        route: '/list/StockEntry',
+        schemaName: 'StockEntry',
+      },
+      {
+        label: t`Warehouse`,
+        name: 'warehouse',
+        icon: 'lucide-warehouse',
+        route: '/list/Warehouse',
+        schemaName: 'Warehouse',
+      },
+      {
+        label: t`Batch`,
+        name: 'batch',
+        icon: 'lucide-boxes',
+        route: '/list/Batch',
+        schemaName: 'Batch',
+        hidden: () => !fyo.isFeatureOn('enable_batches'),
+      },
+      {
+        label: t`Serial No`,
+        name: 'serial-no',
+        icon: 'lucide-scan-barcode',
+        route: '/list/SerialNo',
+        schemaName: 'SerialNo',
+        hidden: () => !fyo.isFeatureOn('enable_serial_number'),
+      },
+    ],
+  };
+}
+
 /** The POS screen, its profiles and its shifts. */
 function getPOSSidebar(): SidebarRoot {
   return {
@@ -372,6 +415,7 @@ function getCompleteSidebar(): SidebarConfig {
         },
       ] as SidebarItem[],
     },
+    getInventorySidebar(),
     {
       label: t`Common`,
       name: 'common-entries',
@@ -406,40 +450,6 @@ function getCompleteSidebar(): SidebarConfig {
           icon: 'lucide-ruler',
           route: '/list/UOM',
           schemaName: 'UOM',
-        },
-        {
-          label: t`Warehouse`,
-          name: 'warehouse',
-          icon: 'lucide-warehouse',
-          route: '/list/Warehouse',
-          schemaName: 'Warehouse',
-          hidden: isInventoryOff,
-        },
-        {
-          // Standalone only; accessory mode has no Stock Entry.
-          label: t`Stock Entry`,
-          name: 'stock-entry',
-          icon: 'lucide-arrow-right-left',
-          route: '/list/StockEntry',
-          schemaName: 'StockEntry',
-          hidden: isInventoryOff,
-        },
-        {
-          label: t`Batch`,
-          name: 'batch',
-          icon: 'lucide-boxes',
-          route: '/list/Batch',
-          schemaName: 'Batch',
-          hidden: () => isInventoryOff() || !fyo.isFeatureOn('enable_batches'),
-        },
-        {
-          label: t`Serial No`,
-          name: 'serial-no',
-          icon: 'lucide-scan-barcode',
-          route: '/list/SerialNo',
-          schemaName: 'SerialNo',
-          hidden: () =>
-            isInventoryOff() || !fyo.isFeatureOn('enable_serial_number'),
         },
         {
           label: t`Price List`,

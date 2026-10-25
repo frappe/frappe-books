@@ -24,6 +24,11 @@ export class Lead extends FrappeDoc {
   static override presentation: Presentation = {
     label: 'Lead',
     insertFields: ADDRESS_FIELDS,
+    // ERPNext names a lead by its person or organization, which Desk asks for first.
+    accessoryPlacements: [
+      { fieldname: 'first_name', before: 'lead_name' },
+      { fieldname: 'company_name', before: 'lead_name' },
+    ],
   };
   static override lists = { state: getStates };
 

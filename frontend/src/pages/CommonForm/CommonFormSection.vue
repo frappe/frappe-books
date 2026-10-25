@@ -52,7 +52,7 @@
               (field as TargetField).card ? 'md:col-span-full' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
               field.fieldname === 'terms_and_conditions' ? 'md:col-span-full' : '',
-              field.narrow ? 'md:max-w-[340px]' : '',
+              field.narrow ? 'md:max-w-xs' : '',
               field.invisible ? 'invisible' : '',
             ]"
           >

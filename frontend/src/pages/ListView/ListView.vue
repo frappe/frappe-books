@@ -71,7 +71,7 @@
     <div v-else-if="filterBar" class="flex gap-2 px-3 pb-2 pt-3 sm:px-5">
       <FrappeTextInput
         type="search"
-        class="w-[240px]"
+        class="w-60"
         :model-value="search"
         :placeholder="filterBar.searchPlaceholder"
         :aria-label="t`Search`"

@@ -16,7 +16,7 @@
   </template>
   <FrappeSelect
     v-else
-    class="w-[200px]"
+    class="w-48"
     :model-value="modelValue"
     :options="options"
     :placeholder="allLabel"

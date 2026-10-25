@@ -62,71 +62,96 @@
       </button>
     </div>
   </section>
-  <section v-else-if="isShown" class="flex flex-col gap-3 py-5">
-    <div class="flex min-h-7 items-center justify-between gap-2">
-      <h2 class="text-base font-semibold text-ink-gray-9">
-        {{ config.label }}
-      </h2>
-      <FrappeButton
-        v-if="canCreate"
-        variant="subtle"
-        icon-left="lucide-plus"
-        :label="config.addLabel"
-        @click="add"
-      />
-    </div>
-    <p v-if="!rows.length" class="text-base text-ink-gray-5">
-      {{ config.emptyMessage }}
-    </p>
-    <FrappeList
-      v-else
-      :columns="tracks"
-      divider="full"
-      class="text-ink-gray-8 list-gap-4 list-row-px-3"
-    >
-      <FrappeListHeader>
-        <FrappeListHeaderCell
-          v-for="column of columns"
-          :key="column.fieldname"
-          :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
-        >
-          {{ column.label }}
-        </FrappeListHeaderCell>
-        <FrappeListHeaderCell>
-          <span class="sr-only">{{ t`Open` }}</span>
-        </FrappeListHeaderCell>
-      </FrappeListHeader>
-      <FrappeListRow
-        v-for="row of rows"
-        :key="row.name as string"
-        @click="open(row as RenderData)"
+  <!-- Titled like the form's sections and framed like its tables. -->
+  <section v-else-if="isShown" class="py-5">
+    <div class="-mx-2">
+      <FrappeAccordion
+        v-model="openSection"
+        :items="[{ value: 'records', title: config.label }]"
       >
-        <FrappeListCell
-          v-for="column of columns"
-          :key="column.fieldname"
-          :class="isNumeric(column.fieldtype) ? 'justify-end tabular-nums' : ''"
-        >
-          <ListCell
-            class="min-w-0 flex-1"
-            :row="row as RenderData"
-            :column="column"
+        <template #item-content>
+          <div
+            class="max-w-full overflow-x-auto rounded-6 border border-outline-gray-1"
+          >
+            <FrappeList
+              :columns="tracks"
+              divider="full"
+              class="text-base text-ink-gray-8 list-gap-4 list-row-px-3"
+            >
+              <FrappeListHeader v-if="rows.length">
+                <FrappeListHeaderCell
+                  v-for="column of columns"
+                  :key="column.fieldname"
+                  :class="isNumeric(column.fieldtype) ? 'justify-end' : ''"
+                >
+                  {{ column.label }}
+                </FrappeListHeaderCell>
+                <FrappeListHeaderCell>
+                  <span class="sr-only">{{ t`Open` }}</span>
+                </FrappeListHeaderCell>
+              </FrappeListHeader>
+              <FrappeListRow
+                v-for="row of rows"
+                :key="row.name as string"
+                @click="open(row as RenderData)"
+              >
+                <FrappeListCell
+                  v-for="column of columns"
+                  :key="column.fieldname"
+                  :class="
+                    isNumeric(column.fieldtype)
+                      ? 'justify-end tabular-nums'
+                      : ''
+                  "
+                >
+                  <ListCell
+                    class="min-w-0 flex-1"
+                    :row="row as RenderData"
+                    :column="column"
+                  />
+                </FrappeListCell>
+                <FrappeListCell class="justify-end">
+                  <span
+                    class="lucide-chevron-right size-4 text-ink-gray-4 rtl-rotate-180"
+                    aria-hidden="true"
+                  />
+                </FrappeListCell>
+              </FrappeListRow>
+              <FrappeListRow
+                v-if="!rows.length"
+                class="min-h-12 text-ink-gray-5"
+              >
+                <FrappeListCell style="grid-column: 1 / -1">
+                  {{ config.emptyMessage }}
+                </FrappeListCell>
+              </FrappeListRow>
+              <!-- As a table's Add row. -->
+              <FrappeListRow
+                v-if="canCreate"
+                class="min-h-12 border-t border-outline-gray-1 text-ink-gray-5"
+                @click="add"
+              >
+                <FrappeListCell class="gap-2" style="grid-column: 1 / -1">
+                  <span class="lucide-plus size-4" aria-hidden="true" />
+                  {{ config.addLabel }}
+                </FrappeListCell>
+              </FrappeListRow>
+            </FrappeList>
+          </div>
+          <FrappeButton
+            v-if="hasMore"
+            class="mt-3"
+            :label="t`View all`"
+            @click="viewAll"
           />
-        </FrappeListCell>
-        <FrappeListCell class="justify-end">
-          <span
-            class="lucide-chevron-right size-4 text-ink-gray-4 rtl-rotate-180"
-            aria-hidden="true"
-          />
-        </FrappeListCell>
-      </FrappeListRow>
-    </FrappeList>
-    <div v-if="hasMore">
-      <FrappeButton :label="t`View all`" @click="viewAll" />
+        </template>
+      </FrappeAccordion>
     </div>
   </section>
 </template>
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { Accordion as FrappeAccordion } from 'frappe-ui-accordion';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -160,6 +185,7 @@ const LIMIT = 20;
 export default defineComponent({
   name: 'LinkedRecordsSection',
   components: {
+    FrappeAccordion,
     FrappeButton,
     FrappeList,
     FrappeListCell,
@@ -176,7 +202,11 @@ export default defineComponent({
     return { isMobile };
   },
   data() {
-    return { rows: [] as RenderData[], total: 0 };
+    return {
+      rows: [] as RenderData[],
+      total: 0,
+      openSection: 'records' as string | undefined,
+    };
   },
   computed: {
     isShown(): boolean {

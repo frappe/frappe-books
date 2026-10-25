@@ -5,6 +5,7 @@ import {
   FiltersMap,
   HiddenMap,
   ListViewSettings,
+  RequiredMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { canOpenLedger, getMappedDocAction } from 'models/helpers';
@@ -90,6 +91,12 @@ export abstract class Party extends FrappeDoc {
     mobile_no: () => this.inserted,
     [this.primaryContactField]: () => this.notInserted,
     [this.primaryAddressField]: () => this.notInserted,
+  };
+
+  // As Desk's quick entry asks: an address line needs its city and country.
+  required: RequiredMap = {
+    city: () => this.notInserted && !!this.address_line1,
+    country: () => this.notInserted && !!this.address_line1,
   };
 
   /** The Account field shows the current company's `accounts` row; rows of other companies stay as they are. */

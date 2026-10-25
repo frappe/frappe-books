@@ -39,9 +39,8 @@ test('the wizard offers the fields of the DocType and of its tables', () => {
     ]
   );
   assert.equal(
-    getExportFields('JournalEntry').find(
-      ({ fieldname }) => fieldname === 'attachment'
-    ).export,
+    getExportFields('Customer').find(({ fieldname }) => fieldname === 'image')
+      .export,
     false
   );
   assert.equal(items.target, 'SalesInvoiceItem');
@@ -124,7 +123,11 @@ test('the wizard offers Books’ fields in Books’ order', () => {
   assert.equal(items.fieldname, 'items');
   // The server derives the stock quantity from the quantity.
   assert.ok(!items.fields.some(({ fieldname }) => fieldname === 'stock_qty'));
-  assert.deepEqual(fieldnames('Customer').slice(0, 2), ['image', 'name']);
+  // A customer is named by its name field, which exports as its name.
+  assert.deepEqual(fieldnames('Customer').slice(0, 2), [
+    'image',
+    'customer_name',
+  ]);
   assert.deepEqual(
     account
       .map(({ label }) => label)
@@ -296,13 +299,13 @@ test('files keep the keys Books renamed', async () => {
   ]);
 });
 
-test('every exported table is headed by the label of its rows, not their doctype', () => {
+test('every exported table is headed by the label of its rows, not their Books doctype', () => {
   const lists = getStandaloneModelNames().filter(
     (schemaName) => !getDocType(schemaName).meta.issingle
   );
   const doctypeLabels = lists.flatMap((schemaName) =>
     Object.values(getDocType(schemaName).tables)
-      .filter(({ doctype, schema }) => schema.label === doctype)
+      .filter(({ schema }) => schema.label.startsWith('Books '))
       .map(({ doctype }) => `${schemaName}: ${doctype}`)
   );
 

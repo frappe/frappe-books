@@ -56,18 +56,28 @@ test('a tax template shows its title and tax rate rows', () => {
   );
 });
 
-test('a mode of payment shows its type, accounts and clearance date', () => {
+test('a mode of payment shows its type, default account and clearance date', () => {
   const mode = getSchema('ModeOfPayment');
   assert.equal(mode.label, 'Mode of Payment');
   assert.deepEqual(getLayout('ModeOfPayment'), [
     'mode_of_payment | Mode of Payment | ',
     'type | Type | ',
     'accounts | Accounts | ',
+    'default_account | Default Account | ',
     'requires_clearance_date | Requires Clearance Date | ',
   ]);
+  // The Default Account field edits the current company's row.
+  assert.equal(
+    mode.fields.find((f) => f.fieldname === 'accounts').hidden,
+    true
+  );
+  assert.equal(
+    mode.fields.find((f) => f.fieldname === 'default_account').companyTable,
+    'accounts'
+  );
   assert.deepEqual(mode.quickEditFields, [
     'type',
-    'accounts',
+    'default_account',
     'requires_clearance_date',
   ]);
   const account = getSchema('ModeofPaymentAccount').fields.find(

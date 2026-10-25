@@ -15,6 +15,7 @@ BOOKS_USER = "accessory-books-user@example.com"
 ERPNEXT_CHECKS = ("accessory", "boot", "frappe_books.doctype.books_erpnext_settings.books_erpnext_settings")
 ACCESSORY_ON = patch("frappe_books.permissions.accessory_company", return_value="Acme")
 ERPNEXT_SET_UP = patch("frappe_books.accessory.erpnext_setup_complete", return_value=True)
+POS_SETTINGS = "frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings"
 
 
 def without_erpnext():
@@ -106,6 +107,3 @@ class IntegrationTestAccessoryPOSSettings(IntegrationTestCase):
 			self.assertRaises(frappe.MandatoryError),
 		):
 			settings.save()
-
-
-POS_SETTINGS = "frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings"

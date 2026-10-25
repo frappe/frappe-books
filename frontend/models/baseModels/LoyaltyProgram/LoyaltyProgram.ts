@@ -4,6 +4,7 @@ import { ValidationError } from 'fyo/utils/errors';
 import { t } from 'fyo';
 import { getLoyaltyProgramStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
+import { getField } from 'src/frappe/registry';
 import { LoyaltyProgramCollection } from './LoyaltyProgramCollection';
 
 /** Books Loyalty Program, served by Frappe. The server keeps its status. */
@@ -54,7 +55,10 @@ export class LoyaltyProgram extends FrappeDoc {
     return {
       columns: [
         'name',
-        getLoyaltyProgramStatusColumn(),
+        // ERPNext's program has no status, only its dates.
+        ...(getField('LoyaltyProgram', 'status')
+          ? [getLoyaltyProgramStatusColumn()]
+          : []),
         'from_date',
         'to_date',
       ],

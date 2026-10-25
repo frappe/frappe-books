@@ -60,6 +60,7 @@ export interface SidebarItem {
   label: string;
   name: string;
   route: string;
+  icon: string;
   schemaName?: string;
   hidden?: () => boolean;
   filters?: Filter[];

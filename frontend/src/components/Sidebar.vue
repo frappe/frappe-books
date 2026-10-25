@@ -13,26 +13,31 @@
     />
 
     <FrappeScrollArea class="min-h-0 flex-1" viewport-class="px-2 pt-0.5 pb-10">
+      <!-- Pages first, then every group open under its label. -->
       <div class="space-y-0.5">
-        <template v-for="group in groups" :key="group.label">
-          <FrappeSidebarItem
-            :label="group.label"
-            :route="getPath(group)"
-            :active="Boolean(isGroupActive(group) && !group.items)"
-            :icon="group.icon"
-          />
-          <template v-if="group.items && isGroupActive(group)">
-            <FrappeSidebarItem
-              v-for="item in group.items"
-              :key="item.label"
-              :label="item.label"
-              :route="getPath(item)"
-              :active="Boolean(isItemActive(item))"
-              class="ps-6"
-            />
-          </template>
-        </template>
+        <FrappeSidebarItem
+          v-for="page in pages"
+          :key="page.label"
+          :label="page.label"
+          :route="getPath(page)"
+          :active="Boolean(isGroupActive(page))"
+          :icon="page.icon"
+        />
       </div>
+      <FrappeSidebarSection
+        v-for="group in sections"
+        :key="group.label"
+        :label="group.label"
+      >
+        <FrappeSidebarItem
+          v-for="item in group.items"
+          :key="item.label"
+          :label="item.label"
+          :route="getPath(item)"
+          :active="Boolean(isItemActive(item))"
+          :icon="item.icon"
+        />
+      </FrappeSidebarSection>
     </FrappeScrollArea>
 
     <div class="flex-shrink-0 px-2 py-2">
@@ -64,6 +69,7 @@ import {
   Sidebar as FrappeSidebar,
   SidebarHeader as FrappeSidebarHeader,
   SidebarItem as FrappeSidebarItem,
+  SidebarSection as FrappeSidebarSection,
   type DropdownOptions,
 } from 'frappe-ui';
 import { getAppMenuItems, openDocumentation } from 'src/utils/appMenu';
@@ -88,6 +94,7 @@ export default defineComponent({
     FrappeSidebar,
     FrappeSidebarHeader,
     FrappeSidebarItem,
+    FrappeSidebarSection,
     FrappeKeyboardShortcutsDialog,
     FrappeScrollArea,
     ShortcutsHelper,
@@ -107,6 +114,12 @@ export default defineComponent({
     };
   },
   computed: {
+    pages(): SidebarConfig {
+      return this.groups.filter((group) => !group.items);
+    },
+    sections(): SidebarConfig {
+      return this.groups.filter((group) => group.items);
+    },
     menuItems(): DropdownOptions {
       return getAppMenuItems(() => (this.viewShortcuts = true));
     },

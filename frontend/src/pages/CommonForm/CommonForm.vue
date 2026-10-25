@@ -79,7 +79,7 @@
             v-if="doc.canSave || doc.showsDisabledSave"
             variant="solid"
             :disabled="doc.isSyncing || !doc.canSave"
-            @click="sync"
+            @click="sync()"
           >
             {{ t`Save` }}
           </FrappeButton>

@@ -203,6 +203,21 @@ class IntegrationTestAccessoryPOS(IntegrationTestCase):
 		self.assertEqual(amounts, [10, 5])
 		self.assertEqual(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount"), 0)
 
+	def test_the_tenders_together_pay_in_full_unless_the_profile_allows_partial(self):
+		from frappe_books.accessory.pos import pay_pos_invoice
+
+		invoice = make_pos_invoice(self.profile, self.customer, self.item, paid=5)
+		self.profile.db_set("allow_partial_payment", 0)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "Partial Payment in POS"):
+			pay_pos_invoice(invoice.name, [{"mode_of_payment": "Cash", "amount": 10}])
+		pay_pos_invoice(
+			invoice.name,
+			[{"mode_of_payment": "Cash", "amount": 10}, {"mode_of_payment": "Cash", "amount": 5}],
+		)
+
+		self.assertEqual(frappe.db.get_value("Sales Invoice", invoice.name, "outstanding_amount"), 0)
+
 	def test_a_submitted_pos_invoice_is_paid_only_by_its_profile_modes(self):
 		from frappe_books.accessory.pos import pay_pos_invoice
 

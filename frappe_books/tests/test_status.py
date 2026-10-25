@@ -30,7 +30,6 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		income = make_account("Status Income", root_type="Income", account_type="Income Account")
 		expense = make_account("Status Expense", root_type="Expense", account_type="Expense Account")
 		set_company_value("default_discount_account", expense.name)
-		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		self.party = make_customer(self.receivable.name)
 		item = make_item(income.name, expense.name)
 		self.invoice = make_invoice(

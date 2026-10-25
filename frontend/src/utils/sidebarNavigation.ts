@@ -54,19 +54,28 @@ export interface SidebarEntry {
   item: SidebarRoot | SidebarItem;
 }
 
-/** The entry that owns the route: its exact path first, else a list of its schema. */
+/**
+ * The entry that owns the route: its exact path first, else a list of its
+ * schema, `previous` when it is one, as a payment opened from Purchase Payment
+ * stays under it.
+ */
 export function findSidebarEntry(
   groups: SidebarRoot[],
-  route: SidebarRoute
+  route: SidebarRoute,
+  previous?: SidebarEntry
 ): SidebarEntry | undefined {
   const path = getSidebarPath(route);
   const exactPath = decodeURI(path);
   const entries = groups.flatMap((group) =>
     (group.items ?? [group]).map((item) => ({ group, item }))
   );
+  const matching = entries.filter(({ item }) =>
+    matchesSidebarPath(path, item.route)
+  );
 
   return (
     entries.find(({ item }) => decodeURI(item.route) === exactPath) ??
-    entries.find(({ item }) => matchesSidebarPath(path, item.route))
+    matching.find(({ item }) => item === previous?.item) ??
+    matching[0]
   );
 }

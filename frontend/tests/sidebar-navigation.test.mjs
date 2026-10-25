@@ -26,12 +26,7 @@ test('detail and print routes select their source list or report', () => {
       '/report/:reportName',
       '/report/GeneralLedger',
     ],
-    [
-      '/template-builder/Invoice',
-      {},
-      '/list/PrintFormat',
-      '/list/PrintFormat',
-    ],
+    ['/template-builder/Invoice', {}, '/list/PrintFormat', '/list/PrintFormat'],
   ]) {
     assert.equal(
       getSidebarPath({ path, params, meta: { sidebarPath } }),
@@ -87,4 +82,29 @@ test('a route belongs to the group whose entry has its exact path', () => {
     'sales/invoices'
   );
   assert.equal(ownerOf('/settings'), undefined);
+});
+
+test('a form of a doctype two entries list stays under the one it was opened from', () => {
+  const sales = { name: 'sales', route: '/list/Payment/Sales Payment' };
+  const purchases = {
+    name: 'purchases',
+    route: '/list/Payment/Purchase Payment',
+  };
+  const groups = [
+    { name: 'sales', route: sales.route, items: [sales] },
+    { name: 'purchases', route: purchases.route, items: [purchases] },
+  ];
+  const form = {
+    path: '/edit/Payment/PAY-1',
+    params: { schemaName: 'Payment' },
+    meta: { sidebarPath: '/list/:schemaName' },
+  };
+  const list = findSidebarEntry(groups, {
+    path: '/list/Payment/Purchase%20Payment',
+    params: {},
+    meta: {},
+  });
+
+  assert.equal(findSidebarEntry(groups, form, list)?.item, purchases);
+  assert.equal(findSidebarEntry(groups, form)?.item, sales);
 });

@@ -147,7 +147,9 @@ def _reset_row(row):
 	if price_type == "Rate" and not row.is_manual_rate:
 		row.price_list_rate = None
 	elif price_type == "Discount Percentage":
+		# Rows keep the percentage's amount per unit, which would discount on its own.
 		row.discount_percentage = 0
+		row.discount_amount = 0
 	elif price_type == "Discount Amount":
 		row.discount_amount = 0
 

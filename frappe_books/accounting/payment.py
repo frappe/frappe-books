@@ -317,22 +317,9 @@ def _validate_allocation(payment, invoice, amount):
 	outstanding = settlement.due(invoice)
 	if amount > outstanding:
 		frappe.throw(_("Allocated amount exceeds the invoice outstanding amount."))
-	# The POS counter checks a sale's tenders together, each paid by its own payment.
-	if not payment.flags.ignore_partial_payment_rule:
-		validate_partial_payment(invoice, amount)
 	payment_type = payment_type_for(invoice.doctype, bool(invoice.return_against))
 	if payment.payment_type != payment_type:
 		frappe.throw(_("A payment for {0} must be a {1} payment.").format(invoice.name, payment_type))
-
-
-def validate_partial_payment(invoice, amount):
-	"""Paying less than the invoice owes needs partial payments switched on."""
-	if amount < settlement.due(invoice) and not frappe.db.get_single_value(
-		"Books Accounting Settings", "enable_partial_payment"
-	):
-		frappe.throw(
-			_("Enable partial payments to pay less than the outstanding amount of {0}.").format(invoice.name)
-		)
 
 
 def _referenced_invoice(payment, doctype, name):

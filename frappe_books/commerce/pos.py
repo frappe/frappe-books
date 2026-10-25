@@ -71,6 +71,16 @@ def counter_payment_amounts(rows, due, is_cash=is_cash_method):
 	return [(row, paid) for row, paid in amounts if paid]
 
 
+def validate_partial_payment(invoice, amount):
+	"""A sale's tenders together may pay less than it owes only with partial payments on."""
+	if amount < settlement.due(invoice) and not frappe.db.get_single_value(
+		"Books Accounting Settings", "enable_partial_payment"
+	):
+		frappe.throw(
+			_("Enable partial payments to pay less than the outstanding amount of {0}.").format(invoice.name)
+		)
+
+
 def lock_pos_settings():
 	"""Lock POS Settings so shift state changes run one at a time."""
 	settings = frappe.get_doc("Books POS Settings", for_update=True)

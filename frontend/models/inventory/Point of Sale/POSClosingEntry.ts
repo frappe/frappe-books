@@ -23,7 +23,11 @@ export class ClosingCash extends FrappeDoc {
 export class POSClosingEntryDetail extends FrappeDoc {
   static override presentation = {
     label: 'Payment Reconciliation',
-    fields: { difference: { negativeInRed: true } },
+    fields: {
+      // The server sets it, but stores it, so lists filter by it.
+      period_end_date: { filter: true },
+      difference: { negativeInRed: true },
+    },
     // Phones count each mode in a block: what is expected beside what was counted.
     mobileBlock: {
       title: 'mode_of_payment',

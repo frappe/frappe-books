@@ -34,6 +34,8 @@ export class POSOpeningEntry extends FrappeDoc {
   static override presentation = {
     label: 'POS Opening Entry',
     fields: {
+      // The server sets it, but stores it, so lists filter by it.
+      period_start_date: { filter: true },
       balance_details: { emptyMessage: 'There are no modes of payment.' },
     },
     // ERPNext's entry opens a POS Profile's shift; the profile lists its modes.

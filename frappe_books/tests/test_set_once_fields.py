@@ -25,7 +25,8 @@ class IntegrationTestSetOnceFields(IntegrationTestCase):
 					make_item(income, received, is_stock_item=1) if is_tracked else make_item(income, expense)
 				)
 				item.update(changes)
-				item.item_defaults[0].expense_account = received
+				if "is_stock_item" in changes:
+					item.item_defaults[0].expense_account = received
 				self.assertRaises(frappe.CannotChangeConstantError, item.save)
 
 	def test_account_tree_fields_cannot_change_after_insert(self):

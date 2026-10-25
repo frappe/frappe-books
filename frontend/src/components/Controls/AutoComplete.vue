@@ -194,7 +194,7 @@ export default {
     ReadOnlyValue,
   },
   extends: Base,
-  emits: ['focus', 'enter', 'search'],
+  emits: ['focus', 'enter', 'search', 'close'],
   props: {
     closeOnEnter: { type: Boolean, default: false },
     showClearButton: { type: Boolean, default: false },
@@ -440,11 +440,15 @@ export default {
     onComboboxBlur() {
       this.isFocused = false;
       this.clearUnlistedValue();
+      if (!this.isDropdownOpen) {
+        this.$emit('close');
+      }
     },
     onPickerOpen(isOpen) {
       if (!isOpen) {
         this.searchQuery = '';
         this.clearUnlistedValue();
+        this.$emit('close');
       }
     },
     /** Frappe desk's Autocomplete takes a typed label as its value and drops one not listed. */
@@ -462,8 +466,12 @@ export default {
       const option = this.options.find(({ label }) => label === this.value);
       this.triggerChange(option?.value ?? '');
     },
+    /** `close` tells a parent the picking is over, with or without a new value. */
     onComboboxOpen(isOpen) {
       this.isDropdownOpen = isOpen;
+      if (!isOpen) {
+        this.$emit('close');
+      }
       // Button mode's search box starts empty on every open.
       if (!isOpen || this.triggerButton) {
         this.searchQuery = '';

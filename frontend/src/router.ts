@@ -1,4 +1,3 @@
-import AccessoryChartOfAccounts from 'src/pages/AccessoryChartOfAccounts.vue';
 import ChartOfAccounts from 'src/pages/ChartOfAccounts.vue';
 import CommonForm from 'src/pages/CommonForm/CommonForm.vue';
 import Dashboard from 'src/pages/Dashboard/Dashboard.vue';
@@ -118,11 +117,7 @@ const routes: RouteRecordRaw[] = [
     name: 'Chart Of Accounts',
     meta: { desktopOnly: true, accessoryOnPhone: true },
     components: {
-      // Accessory mode shows ERPNext's tree, read only.
-      default: () =>
-        Promise.resolve(
-          isAccessoryMode() ? AccessoryChartOfAccounts : ChartOfAccounts
-        ),
+      default: ChartOfAccounts,
       edit: QuickEditForm,
     },
     props: {

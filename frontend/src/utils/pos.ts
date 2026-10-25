@@ -427,6 +427,13 @@ export function getPayableTotal(invoice: SalesInvoice): Money {
   return (invoice.grand_total ?? fyo.pesa(0)).sub(loyalty);
 }
 
+/** What the Pay button takes: what a submitted sale still owes, else its payable total. */
+export function getAmountToPay(invoice: SalesInvoice): Money {
+  return invoice.isSubmitted
+    ? (invoice.outstanding_amount ?? fyo.pesa(0)).abs()
+    : getPayableTotal(invoice);
+}
+
 /** The rows' total before discounts, then each amount that takes it to the payable total. */
 export function getCostLines(invoice: SalesInvoice): CostLine[] {
   const getLabel = (fieldname: string) =>

@@ -127,6 +127,7 @@ import { showToast } from 'src/utils/interactive';
 import {
   CostLine,
   getCostLines,
+  getAmountToPay,
   getPayableTotal,
   getRowPricingRule,
 } from 'src/utils/pos';
@@ -156,7 +157,7 @@ const totals = computed<(CostLine & { strong?: boolean })[]>(() => [
 ]);
 
 const payLabel = computed(() => {
-  const amount = fyo.format(getPayableTotal(sinvDoc.value), 'Currency');
+  const amount = fyo.format(getAmountToPay(sinvDoc.value), 'Currency');
   return sinvDoc.value.isReturn ? t`Refund ${amount}` : t`Pay ${amount}`;
 });
 

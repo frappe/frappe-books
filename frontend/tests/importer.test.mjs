@@ -229,6 +229,25 @@ test('the import file puts each document’s rows together, its values on the fi
   assert.equal(importer.getRowName(2), 'A');
 });
 
+test('a template without a name column imports a document per row, as Frappe names addresses', () => {
+  const importer = new Importer('Address', fyo);
+  importer.assignedTemplateFields = [
+    'Address.address_title',
+    'Address.address_line1',
+  ];
+  importer.valueMatrix = [
+    [{ value: 'Home' }, { value: '1 Road' }],
+    [{ value: 'Shop' }, { value: '2 Road' }],
+  ];
+
+  assert.equal(importer.getNameIndex(), -1);
+  assert.deepEqual(importRows(importer), [
+    ['docstatus', 'address_title', 'address_line1'],
+    ['0', 'Home', '1 Road'],
+    ['0', 'Shop', '2 Road'],
+  ]);
+});
+
 test('named documents import their name under the DocType’s fieldname', async () => {
   const lead = new Importer('Lead', fyo);
   lead.assignedTemplateFields = ['Lead.lead_name', 'Lead.email_id'];

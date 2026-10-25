@@ -55,7 +55,7 @@ def forbid_in_accessory_mode():
 def start_in_accessory_mode():
 	"""Turn accessory mode on, once, on a site whose ERPNext is set up and whose Books never was.
 
-	Turning it off later saves the settings, so Books' own setup wizard shows for standalone data.
+	Turning it off later keeps the company, so Books' own setup wizard shows for standalone data.
 	"""
 	if frappe.flags.read_only or not _starts_in_accessory_mode():
 		return
@@ -76,8 +76,9 @@ def _starts_in_accessory_mode() -> bool:
 		erpnext_installed()
 		and erpnext_setup_complete()
 		and not frappe.db.get_single_value("Books Accounting Settings", "setup_complete")
-		# Saved settings, even with accessory mode off, are someone's choice.
-		and "modified" not in frappe.db.get_singles_dict(SETTINGS)
+		# A chosen company, even with accessory mode off, is someone's choice; install saves the
+		# settings without one.
+		and not frappe.db.get_single_value(SETTINGS, "default_company")
 	)
 
 

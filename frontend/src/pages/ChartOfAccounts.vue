@@ -285,10 +285,11 @@ export default defineComponent({
   },
   setup() {
     // Accessory mode shows the ERPNext tree of its company, read only.
+    const isAccessory = isAccessoryMode();
     return {
       isMobile,
-      isAccessory: isAccessoryMode(),
-      company: getAccessoryCompany(),
+      isAccessory,
+      company: isAccessory ? getAccessoryCompany() : undefined,
     };
   },
   computed: {

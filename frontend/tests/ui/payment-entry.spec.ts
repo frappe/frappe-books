@@ -31,15 +31,19 @@ test('a reference shows the invoice total and what it owes, and a submit what is
   await page.goto(`/books/edit/PaymentEntry/${payment}`);
   await waitForBooks(page);
 
-  const row = page.getByRole('row').filter({ hasText: 'Sales Invoice' });
-  await expect(row).toContainText('₹ 1,000.00');
-  await expect(row.getByRole('textbox').last()).toHaveValue('400.00');
+  // The row's amounts are inputs, read only but for a draft's allocation, named by their values.
+  const row = page.getByRole('row', { name: /Open linked entry/ });
+  const amount = (value: string) => row.getByRole('textbox', { name: value });
+  await expect(amount('₹ 1,000.00')).toHaveCount(2);
+  await expect(row.getByRole('textbox', { name: 'Allocated' })).toHaveValue(
+    '400.00'
+  );
 
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page.getByText('Submitted', { exact: true })).toBeVisible();
   // Outstanding is what the invoice owes after this payment.
-  await expect(row).toContainText('₹ 600.00');
+  await expect(amount('₹ 600.00')).toBeVisible();
 });
 
 test('an allocation above what the invoice owes shows the server error', async ({

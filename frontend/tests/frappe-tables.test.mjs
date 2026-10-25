@@ -124,7 +124,7 @@ test('rows of a table take the model its parent names, with its presentation', (
   assert.equal(getSchema('BillLine').label, 'Bill Line');
   assert.deepEqual(getSchema('BillLine').quickEditFields, ['amount', 'item']);
   assert.deepEqual(getSchema('BillLine').tableFields, ['amount', 'item']);
-  assert.equal(getSchema('BillNote').label, 'Books Bill Note');
+  assert.equal(getSchema('BillNote').label, 'Bill Note');
 });
 
 test('a model opens the rows of the tables it names in the row editor', () => {

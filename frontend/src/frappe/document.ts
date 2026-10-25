@@ -42,6 +42,7 @@ import {
 import { getIsNullOrUndef, getMapFromList, getRandomString } from 'utils';
 import type { LinkedDoc } from 'utils/db/types';
 import { markRaw, reactive, toRaw } from 'vue';
+import { VALUELESS_FIELDTYPES } from './accessoryLayout';
 import * as api from './api';
 import type { DocValues } from './api';
 import type { EvalDoc } from './dependsOn';
@@ -476,6 +477,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       if (
         field.meta ||
         field.clientOnly ||
+        VALUELESS_FIELDTYPES.includes(field.fieldtype) ||
         (field.insertOnly && this.inserted) ||
         (options.clearServerFilled && this._serverFilled.has(field.fieldname))
       ) {

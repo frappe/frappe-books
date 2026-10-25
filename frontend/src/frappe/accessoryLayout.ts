@@ -16,8 +16,8 @@ export const OTHER_APPS_TAB = 'other';
 export const DEFAULT_SECTION = 'Default';
 
 const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
-// Desk renders these with form scripts; they hold no value.
-const NEVER_SHOWN_FIELDTYPES = ['HTML', 'Button', 'Heading', 'Image', 'Fold'];
+// Desk renders these with form scripts; they hold no value, so they are never shown or saved.
+export const VALUELESS_FIELDTYPES = ['HTML', 'Button', 'Heading', 'Image', 'Fold'];
 
 let appTitles: string[] = [];
 
@@ -113,7 +113,7 @@ export interface AccessoryPlacement {
 
 function toExtraField(field: Field, layout: AccessoryLayout): Field {
   const extra = { ...field, section: DEFAULT_SECTION, tab: undefined };
-  if (NEVER_SHOWN_FIELDTYPES.includes(field.fieldtype)) {
+  if (VALUELESS_FIELDTYPES.includes(field.fieldtype)) {
     extra.hidden = true;
   }
 

@@ -14,6 +14,7 @@ import {
   stubFrappe,
 } from './helpers/frappe.mjs';
 import { baseTemplate } from '../src/utils/printFormats.ts';
+import { getStandaloneModelNames } from './helpers/frappeModels.mjs';
 import { getLayout } from './helpers/models.mjs';
 import { previousForms } from './helpers/previousForms.mjs';
 
@@ -25,7 +26,8 @@ stubFrappe(({ path, body }) =>
 registerFrappeModels(frappeModels);
 await loadFrappeDocTypes();
 
-const hidden = (doc, fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).hidden;
+const hidden = (doc, fieldname) =>
+  doc.getFieldState(doc.fieldMap[fieldname]).hidden;
 const readOnly = (doc, fieldname) =>
   doc.getFieldState(doc.fieldMap[fieldname]).readOnly;
 const fieldnames = (schemaName) =>
@@ -102,24 +104,23 @@ test('a saved inventory feature cannot be turned off; an unsaved one can', async
 });
 
 test('the rules of each Frappe-backed model name fields of its DocType', () => {
-  const problems = Object.entries(frappeModels).flatMap(
-    ([schemaName, Model]) => {
-      const known = fieldnames(schemaName);
-      const doc = newFrappeDoc(schemaName);
-      const maps = {
-        filters: Model.filters,
-        createFilters: Model.createFilters,
-        hidden: doc.hidden,
-        readOnly: doc.readOnly,
-        validations: doc.validations,
-      };
-      return Object.entries(maps).flatMap(([map, rules]) =>
-        Object.keys(rules ?? {})
-          .filter((fieldname) => !known.includes(fieldname))
-          .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
-      );
-    }
-  );
+  const problems = getStandaloneModelNames().flatMap((schemaName) => {
+    const Model = frappeModels[schemaName];
+    const known = fieldnames(schemaName);
+    const doc = newFrappeDoc(schemaName);
+    const maps = {
+      filters: Model.filters,
+      createFilters: Model.createFilters,
+      hidden: doc.hidden,
+      readOnly: doc.readOnly,
+      validations: doc.validations,
+    };
+    return Object.entries(maps).flatMap(([map, rules]) =>
+      Object.keys(rules ?? {})
+        .filter((fieldname) => !known.includes(fieldname))
+        .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
+    );
+  });
   assert.deepEqual(problems, []);
 });
 

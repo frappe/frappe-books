@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { parseCSV } from './helpers/accounting.mjs';
-import { loadFrappeModels } from './helpers/frappeModels.mjs';
+import {
+  getStandaloneModelNames,
+  loadFrappeModels,
+} from './helpers/frappeModels.mjs';
 import {
   frappeModels,
   getCsvExportData,
@@ -59,7 +62,7 @@ test('customer, supplier and address exports leave out Indian GST fields', () =>
 });
 
 test('the file fields of every model are fields of its schema', () => {
-  const schemaNames = Object.keys(frappeModels).flatMap((schemaName) => [
+  const schemaNames = getStandaloneModelNames().flatMap((schemaName) => [
     schemaName,
     ...Object.values(getDocType(schemaName).tables).map(
       ({ schema }) => schema.name
@@ -294,7 +297,7 @@ test('files keep the keys Books renamed', async () => {
 });
 
 test('every exported table is headed by the label of its rows, not their doctype', () => {
-  const lists = Object.keys(frappeModels).filter(
+  const lists = getStandaloneModelNames().filter(
     (schemaName) => !getDocType(schemaName).meta.issingle
   );
   const doctypeLabels = lists.flatMap((schemaName) =>

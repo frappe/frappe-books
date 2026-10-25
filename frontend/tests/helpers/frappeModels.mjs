@@ -1,5 +1,6 @@
 import { getBooksMeta } from './doctypes.mjs';
 import {
+  frappeModels,
   getModel,
   getSchema,
   loadFrappeDocTypes,
@@ -22,6 +23,13 @@ export async function loadFrappeModels(models, respond = () => ({ data: [] })) {
   await loadFrappeDocTypes();
   requests.length = 0;
   return requests;
+}
+
+/** The models standalone loads: accessory-only ones have no Books doctype. */
+export function getStandaloneModelNames() {
+  return Object.keys(frappeModels).filter(
+    (schemaName) => frappeModels[schemaName].doctype
+  );
 }
 
 /** The form's fields as `fieldname | label | placeholder | section`. */

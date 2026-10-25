@@ -257,6 +257,11 @@ class IntegrationTestAccessoryFormFills(IntegrationTestCase):
 
 		self.assertEqual(doc["references"][0]["allocated_amount"], 20)
 
+	def test_a_new_journal_entry_is_dated_today(self):
+		doc = self.preview({"doctype": "Journal Entry", "__islocal": 1}, {})
+
+		self.assertEqual(str(doc["posting_date"]), nowdate())
+
 	def test_a_transfer_receives_what_it_pays(self):
 		values = {
 			"doctype": "Payment Entry",

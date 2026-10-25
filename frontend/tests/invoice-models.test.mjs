@@ -361,7 +361,12 @@ test('taxes show as being calculated until the preview answers, and failed rows 
   assert.equal(getCalculatedState(freight, 'total'), undefined);
 
   // The next edit asks again, and a preview that answers clears the failure.
-  stubFrappe(({ body }) => ({ docs: [body.document] }));
+  // The server fills the follow-up checks the form leaves to it.
+  stubFrappe(({ body }) => ({
+    docs: [
+      { ...body.document, make_auto_payment: 0, make_auto_stock_transfer: 0 },
+    ],
+  }));
   await vat.set('rate', 6);
   assert.equal(invoice.previewError, undefined);
   await invoice.preview();

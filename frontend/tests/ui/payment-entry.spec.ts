@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { insertDocument, updateSingle } from './helpers/records';
+import { insertDocument } from './helpers/records';
 import { useBooksSession, waitForBooks } from './helpers/session';
 
 // The Payment Entry design: references show what each invoice owes, a transfer has no party.
@@ -93,9 +93,6 @@ test.describe('on a phone', () => {
 
 /** A draft receipt of `amount` against a new customer's 1,000 invoice. */
 async function insertPayment(page: Page, amount: number): Promise<string> {
-  await updateSingle(page, 'Books Accounting Settings', {
-    enable_partial_payment: 1,
-  });
   const stamp = Date.now();
   const customer = await insertDocument(page, 'Books Customer', {
     customer_name: `Payment Customer ${stamp}`,

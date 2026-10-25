@@ -50,7 +50,6 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.expense = make_account("Print Expense", root_type="Expense", account_type="Expense Account")
 		self.cash = make_account("Print Cash", account_type="Cash")
 		set_company_value("default_discount_account", self.expense.name)
-		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		self.party = make_customer(self.receivable.name)
 		self.tax_account = make_account("Print Tax", root_type="Liability", account_type="Tax")
 		self.item = make_item(self.income.name, self.expense.name, make_tax(self.tax_account.name).name)

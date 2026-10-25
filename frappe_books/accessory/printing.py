@@ -1,10 +1,13 @@
 """The print formats and letter heads the print view offers for ERPNext documents, as Desk offers them."""
 
 import frappe
+from frappe.modules.import_file import import_file_by_path
 
-from frappe_books.accessory import accessory_company
+from frappe_books.accessory import accessory_company, erpnext_installed
 
 STANDARD = "Standard"
+# Books' receipt for ERPNext's POS sales, whose own receipts are for the POS Invoice doctype
+POS_RECEIPT = "Books POS Receipt"
 
 
 @frappe.whitelist()
@@ -37,13 +40,15 @@ def get_print_formats(doctype: str, default: str | None = None) -> list[str]:
 
 
 def get_pos_print_format(doctype: str, name: str | None) -> str | None:
-	"""The print format of a POS invoice's POS Profile."""
+	"""The print format of a POS invoice's POS Profile, else Books' POS receipt."""
 	if doctype != "Sales Invoice" or not name:
 		return None
 
 	is_pos, pos_profile = frappe.db.get_value(doctype, name, ["is_pos", "pos_profile"]) or (0, None)
-	if is_pos and pos_profile:
-		return frappe.db.get_value("POS Profile", pos_profile, "print_format")
+	if is_pos:
+		return (
+			pos_profile and frappe.db.get_value("POS Profile", pos_profile, "print_format")
+		) or POS_RECEIPT
 
 
 def _enabled_print_formats(doctype: str) -> list[dict]:
@@ -87,3 +92,19 @@ def get_default_letter_head(letter_heads: list[str]) -> str | None:
 	company_default = company and frappe.db.get_value("Company", company, "default_letter_head")
 	marked_default = frappe.db.get_value("Letter Head", {"is_default": 1, "letter_head_for": "DocType"})
 	return next((name for name in (company_default, marked_default) if name in letter_heads), None)
+
+
+def sync_pos_receipt():
+	"""Install Books' POS receipt where ERPNext is; without ERPNext its Sales Invoice does not exist."""
+	if erpnext_installed():
+		import_file_by_path(
+			frappe.get_app_path(
+				"frappe_books", "accessory", "print_format", "books_pos_receipt", "books_pos_receipt.json"
+			)
+		)
+
+
+def sync_pos_receipt_for(app_name: str):
+	"""ERPNext installed after Books gets the receipt at once."""
+	if app_name == "erpnext":
+		sync_pos_receipt()

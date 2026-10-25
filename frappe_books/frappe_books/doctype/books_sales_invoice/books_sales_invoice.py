@@ -12,12 +12,16 @@ from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.payment import (
 	map_invoice_payment,
 	payment_account_field,
-	validate_partial_payment,
 	validate_payment_details,
 )
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
-from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
+from frappe_books.commerce.pos import (
+	counter_payment_account,
+	counter_payment_amounts,
+	open_shift_name,
+	validate_partial_payment,
+)
 from frappe_books.inventory.availability import validate_pos_stock
 from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
@@ -212,7 +216,6 @@ class BooksSalesInvoice(PostingInvoiceController):
 			}
 		)
 		payment.references[0].allocated_amount = amount
-		payment.flags.ignore_partial_payment_rule = True
 		payment.insert()
 		payment.submit()
 		return payment.name

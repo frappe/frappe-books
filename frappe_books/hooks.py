@@ -47,7 +47,14 @@ jinja = {
 
 # The search palette's index; a new site builds it now, not at Frappe's next three-hourly check.
 sqlite_search = ["frappe_books.search.BooksSearch"]
-after_install = ["frappe_books.setup.bootstrap", "frappe_books.search.build_search_index"]
+after_install = [
+	"frappe_books.setup.bootstrap",
+	"frappe_books.search.build_search_index",
+	"frappe_books.accessory.printing.sync_pos_receipt",
+]
+# Books' POS receipt for ERPNext's Sales Invoice, on sites with ERPNext only
+after_app_install = ["frappe_books.accessory.printing.sync_pos_receipt_for"]
+after_migrate = ["frappe_books.accessory.printing.sync_pos_receipt"]
 before_tests = [
 	"frappe_books.setup.before_tests",
 	"frappe_books.tests.accounting.enable_features",

@@ -253,12 +253,10 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		values = {"paid_to": bank.name, "mode_of_payment": "Bank", "reference_no": "TRF-1"}
 		self._payment(self.invoice, **values).insert()
 
-	def test_partial_payment_needs_the_setting(self):
+	def test_partial_payments_off_holds_only_the_pos(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 0)
-		with self.assertRaisesRegex(frappe.ValidationError, "Enable partial payments"):
-			self._payment(self.invoice, paid_amount=100).insert()
-		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
-		self._payment(self.invoice, paid_amount=100).insert()
+		self._payment(self.invoice, paid_amount=100).insert().submit()
+		self.assertEqual(self.invoice.db_get("outstanding_amount"), 80)
 
 	def test_missing_type_and_accounts_are_filled(self):
 		set_mode_of_payment_account("Cash", self.cash.name)
@@ -409,7 +407,6 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.save()
 
 	def test_server_builds_the_realised_tax_rows(self):
-		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		for discount_after_tax, tax_amount in ((0, Decimal("18")), (1, Decimal("20"))):
 			with self.subTest(discount_after_tax=discount_after_tax):
 				unrealised = make_account("Unrealised Tax", root_type="Liability", account_type="Tax")
@@ -532,7 +529,6 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			payment.insert()
 
 	def test_submit_and_cancel_show_what_each_invoice_still_owes(self):
-		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		payment = self._payment(self.invoice, paid_amount=100).insert()
 		row = payment.references[0]
 		self.assertEqual(row.total_amount, self.invoice.base_grand_total)

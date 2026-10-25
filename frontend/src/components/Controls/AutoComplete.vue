@@ -111,16 +111,19 @@
         </template>
       </FrappeButton>
     </template>
+    <!-- frappe-ui's footer slot is unpadded; inset Clear as the options are, below a rule as MultiSelect's footer is. -->
     <template v-if="triggerButton && value" #footer="{ clear, close }">
-      <FrappeButton
-        class="w-full"
-        variant="ghost"
-        :label="t`Clear`"
-        @click="
-          clear();
-          close();
-        "
-      />
+      <div class="border-t border-outline-gray-1 p-1">
+        <FrappeButton
+          class="w-full"
+          variant="ghost"
+          :label="t`Clear`"
+          @click="
+            clear();
+            close();
+          "
+        />
+      </div>
     </template>
     <template v-if="inlineLabel && !triggerButton" #prefix>
       <span class="shrink-0 text-base text-ink-gray-5">{{ df.label }}</span>

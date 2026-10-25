@@ -4,6 +4,7 @@ import { getIsNullOrUndef } from 'utils';
 import { reactive, toRaw } from 'vue';
 import { sortEndTabs } from './accessoryLayout';
 import type { FrappeDoc } from './document';
+import { isHiddenByCondition } from './fieldState';
 
 /**
  * Accessory mode's ERPNext fields with no Books position: More details and
@@ -59,11 +60,17 @@ export function forgetFilledExtras(doc: FrappeDoc, filled: Set<string>) {
 /** The fields More details shows now, in ERPNext order. */
 export function getMoreDetailsFields(doc: FrappeDoc): Field[] {
   const shown = getShown(doc);
-  return getVisible(doc).filter(
-    (field) =>
-      field.moreDetails === 'picked' ||
-      (field.moreDetails === 'ifMissing' && shown.has(field.fieldname))
-  );
+  return doc.schema.fields.filter((field) => {
+    if (field.meta) {
+      return false;
+    }
+
+    if (field.moreDetails === 'ifMissing' && shown.has(field.fieldname)) {
+      return isFieldShown(doc, field) || isHiddenOnlyByCondition(doc, field);
+    }
+
+    return field.moreDetails === 'picked' && isFieldShown(doc, field);
+  });
 }
 
 /** The fields of each end tab, in tab order; tabs without visible fields are left out. */
@@ -90,9 +97,19 @@ function getEmptyMandatory(doc: FrappeDoc): string[] {
     .filter((field) => field.moreDetails === 'ifMissing')
     .filter((field) => {
       const state = doc.getFieldState(field);
-      return !state.hidden && !state.readOnly && isMissing(doc, field);
+      const canShow = !state.hidden || isHiddenOnlyByCondition(doc, field);
+      return canShow && !state.readOnly && isMissing(doc, field);
     })
     .map(({ fieldname }) => fieldname);
+}
+
+/**
+ * Hidden by its depends_on alone, not by its DocType. Frappe's save checks a
+ * mandatory field whatever its depends_on says, as it does a POS Profile made
+ * mandatory, so More details shows it while it is empty.
+ */
+function isHiddenOnlyByCondition(doc: FrappeDoc, field: Field): boolean {
+  return field.hidden !== true && isHiddenByCondition(doc, field);
 }
 
 function getShown(doc: FrappeDoc): Set<string> {

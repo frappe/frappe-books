@@ -367,8 +367,8 @@ export function getFormRoute(schemaName: string, name: string): string {
     return route;
   }
 
-  // Use `encodeURIComponent` if more name issues
-  return `/edit/${schemaName}/${name.replaceAll('/', '%2F')}`;
+  // ERPNext names may hold any character, like the % of "GST 18% - AR".
+  return `/edit/${schemaName}/${encodeURIComponent(name)}`;
 }
 
 export async function openNewDoc(schemaName: string, initData?: DocValueMap) {

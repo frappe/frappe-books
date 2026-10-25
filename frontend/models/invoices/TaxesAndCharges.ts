@@ -22,7 +22,11 @@ const GET_TAX_RATE = 'erpnext.controllers.accounts_controller.get_tax_rate';
 export class TaxesAndCharges extends FrappeDoc {
   static override presentation = {
     label: 'Taxes and Charges',
-    fields: withoutCreate(['account_head']),
+    fields: {
+      ...withoutCreate(['account_head']),
+      // As Books' rows start; ERPNext's sales rows have no default.
+      charge_type: { default: 'On Net Total' },
+    },
     tableFields: ['charge_type', 'account_head', 'rate', 'tax_amount', 'total'],
     mobileTableFields: ['account_head', 'charge_type', 'rate', 'tax_amount'],
     mobileRowDetail: 'total',

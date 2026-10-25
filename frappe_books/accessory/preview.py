@@ -99,10 +99,19 @@ def get_document(values: dict) -> Document:
 
 
 def set_default_taxes(document: Document):
-	"""A new document takes the company's default tax template, as Desk gives it, until the user clears it."""
+	"""A new document takes the company's default tax template, as Desk gives it, until the user clears it.
+
+	The client sends a template it was given empty, so rows already there came
+	from it on an earlier preview and stay as they are.
+	"""
 	field = document.meta.get_field("taxes_and_charges")
-	if field and document.get("taxes_and_charges") is None and not document.get("taxes"):
-		document.update(get_default_taxes_and_charges(field.options, company=document.company) or {})
+	if not field or document.get("taxes_and_charges") is not None:
+		return
+
+	default = get_default_taxes_and_charges(field.options, company=document.company) or {}
+	if document.get("taxes"):
+		default.pop("taxes", None)
+	document.update(default)
 
 
 def set_payment_party_type(document: Document, values: dict):

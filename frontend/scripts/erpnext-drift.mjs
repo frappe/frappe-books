@@ -54,8 +54,6 @@ const BOOKS_ONLY = [
   'Print Settings',
   'Realised Tax',
   'Setup Wizard',
-  'Stock Entry',
-  'Stock Entry Detail',
   'System Settings',
 ].map((name) => `Books ${name}`);
 const STANDARD_FIELDS = [

@@ -58,6 +58,12 @@ const noteMeta = {
     },
     { fieldname: 'amount', fieldtype: 'Currency', label: 'Amount' },
     { fieldname: 'held_on', fieldtype: 'Date', label: 'Held On' },
+    {
+      fieldname: 'escalation_section',
+      fieldtype: 'Section Break',
+      depends_on: "eval:doc.priority == 'High'",
+    },
+    { fieldname: 'escalated_to', fieldtype: 'Data', label: 'Escalated To' },
   ],
 };
 
@@ -115,6 +121,14 @@ test("a field without its own property follows its condition, then the model's r
   await note.set('priority', 'Low');
   assert.equal(state(note, 'due_on').required, false);
   assert.equal(state(note, 'owner_note').required, true);
+});
+
+test("a section's depends_on hides its fields with it, as in Desk", async () => {
+  const note = newFrappeDoc('Note');
+  assert.equal(state(note, 'escalated_to').hidden, true);
+
+  await note.set('priority', 'High');
+  assert.equal(state(note, 'escalated_to').hidden, false);
 });
 
 test('a saved field set once, and every field of a submitted document, is read only', async () => {

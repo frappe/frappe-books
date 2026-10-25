@@ -50,8 +50,13 @@ export class StockEntry extends FrappeDoc {
 
   static filters: FiltersMap = {
     naming_series: () => [['reference_type', '=', ModelNameEnum.StockEntry]],
-    // Accessory mode: the ERPNext types of the purposes standalone Books has.
-    stock_entry_type: () => [['purpose', 'in', STOCK_ENTRY_PURPOSES]],
+    // Accessory mode: the ERPNext types of the purposes standalone Books has, less
+    // batch splits and transfers through transit, which it does not.
+    stock_entry_type: () => [
+      ['purpose', 'in', STOCK_ENTRY_PURPOSES],
+      ['batch_split', '=', 0],
+      ['add_to_transit', '=', 0],
+    ],
   };
 
   static getListViewSettings(): ListViewSettings {

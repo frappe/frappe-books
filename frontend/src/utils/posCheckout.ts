@@ -341,8 +341,16 @@ async function submitSale(sale: SalesInvoice, tenders: Tender[]) {
   }
 
   await validatePOSCheckout(sale);
-  await sale.sync();
-  await sale.submit();
+  try {
+    await sale.sync();
+    await sale.submit();
+  } catch (error) {
+    // An ERPNext draft owes its total less its payment rows; a refused checkout leaves it unpaid.
+    if (isAccessoryMode()) {
+      await clearPayments(sale);
+    }
+    throw error;
+  }
 }
 
 /**

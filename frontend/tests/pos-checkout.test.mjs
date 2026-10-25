@@ -50,7 +50,7 @@ function withServerDefaults(values) {
   return { ...values, make_auto_payment: 0, make_auto_stock_transfer: 1 };
 }
 
-/** A previewed POS sale of 500 for Asha. */
+/** A previewed POS sale of 500 for Asha; the preview filled its item names and stock quantities. */
 function makeSale(values = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,
@@ -61,8 +61,10 @@ function makeSale(values = {}) {
     items: [
       {
         item_code: 'Pen',
+        item_name: 'Pen',
         income_account: 'Sales',
         qty: 2,
+        stock_qty: 2,
         price_list_rate: fyo.pesa(250),
       },
     ],

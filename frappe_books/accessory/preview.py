@@ -1,10 +1,13 @@
 """Previews of ERPNext documents: what a save would fill, worked out by ERPNext's own code."""
 
+from contextlib import contextmanager
+
 import frappe
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import get_loyalty_program_details
 from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 from erpnext.accounts.party import get_party_details
 from erpnext.accounts.services.taxes import get_default_taxes_and_charges
+from erpnext.stock.doctype.stock_entry.stock_entry import get_uom_details
 from frappe.model import no_value_fields
 from frappe.model.document import Document
 from frappe.utils import flt
@@ -63,18 +66,24 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 	untouched = document.is_new() and not (edited or edited_rows)
 	frappe.db.savepoint("books_preview")
 	try:
+		fetch_links(document)
 		refresh_party(document, edited)
 		refresh_items(document, edited_rows)
+		fill_stock_entry_rows(document)
+		if hasattr(document, "set_use_serial_batch_fields"):
+			# What its save sets, which shows the rows' Batch No and Serial No as Desk's form does
+			document.set_use_serial_batch_fields()
 		fill_payment_account(document)
 		reallocate_payment(document, edited)
 		if edited & PRICE_SOURCES:
 			reprice_rows(document, edited_rows)
 		if check_coupons and document.get("coupon_code"):
 			validate_coupon_code(document.coupon_code)
-		if untouched:
-			fill_untouched(document)
-		else:
-			fill(document, edited)
+		with without_blank_rows(document):
+			if untouched:
+				fill_untouched(document)
+			else:
+				fill(document, edited)
 		# What the steps announced, like an Item Price added, is rolled back; the save says it again.
 		frappe.clear_messages()
 		return document.as_dict()
@@ -129,6 +138,32 @@ def set_payment_party_type(document: Document, values: dict):
 		document.party_type = PARTY_TYPE_OF_PAYMENT.get(document.payment_type)
 
 
+def fetch_links(document: Document):
+	"""Fields fetched from a link take the linked record's values, as the save fetches them, like a stock
+	entry's purpose from its type; the client sends them empty once the server filled them.
+	"""
+	for field in document.meta.get_link_fields():
+		if document.get(field.fieldname):
+			fetch_link_values(document, field)
+
+
+def fetch_link_values(document: Document, field):
+	fetched = [
+		df
+		for df in document.meta.get_fields_to_fetch(field.fieldname)
+		if not df.fetch_if_empty or not document.get(df.fieldname)
+	]
+	sources = [df.fetch_from.split(".")[-1] for df in fetched]
+	values = fetched and frappe.db.get_value(
+		field.options, document.get(field.fieldname), sources, as_dict=True
+	)
+	if not values:
+		return
+
+	for df in fetched:
+		document.set_fetch_from_value(field.options, df, values)
+
+
 def refresh_party(document: Document, edited: set[str]):
 	"""A new party's details replace the old party's, prices included, as Desk does."""
 	fieldname = next((field for field in PARTY_TYPES if field in edited and document.get(field)), None)
@@ -149,6 +184,46 @@ def refresh_party(document: Document, edited: set[str]):
 		# ERPNext fills the new template's rows into an empty table.
 		document.set("taxes", [])
 	reprice_rows(document, {})
+
+
+def fill_stock_entry_rows(document: Document):
+	"""Stock entry rows take their item's details, as Desk's form asks ERPNext for them once an item is chosen.
+
+	What a row holds stays; a unit other than the stock unit takes its conversion factor.
+	"""
+	if document.doctype != "Stock Entry":
+		return
+
+	for row in document.get("items") or []:
+		if not row.item_code or row.conversion_factor:
+			continue
+
+		args = frappe._dict(
+			item_code=row.item_code,
+			warehouse=row.s_warehouse or row.t_warehouse,
+			qty=row.qty,
+			company=document.company,
+		)
+		details = document.get_item_details(args)
+		if row.uom and row.uom != details.stock_uom:
+			details.update(get_uom_details(row.item_code, row.uom, row.qty))
+		row.update({key: value for key, value in details.items() if value and not row.get(key)})
+
+
+@contextmanager
+def without_blank_rows(document: Document):
+	"""Rows with no item yet sit out ERPNext's fills, which refuse them; Desk never sends them either."""
+	rows = document.get("items") or []
+	filled = [row for row in rows if row.get("item_code")]
+	if len(filled) == len(rows):
+		yield
+		return
+
+	document.set("items", filled)
+	try:
+		yield
+	finally:
+		document.set("items", rows)
 
 
 def fill_payment_account(document: Document):

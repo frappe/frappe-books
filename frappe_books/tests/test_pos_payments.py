@@ -100,7 +100,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 	def test_failed_payment_fails_the_submit(self):
 		card = make_mode_of_payment("Card", account=make_account("Card Clearing", account_type="Bank").name)
 		# A card payment's account must be a bank or cash account, which this is not.
-		card.db_set("account", self.income.name)
+		card.accounts[0].db_set("default_account", self.income.name)
 		invoice = self.make_pos_invoice(
 			payments=[{"mode_of_payment": card.name, "amount": 180, "reference_no": "R1"}]
 		)
@@ -154,7 +154,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		)
 
 		payment = frappe.get_doc("Books Payment Entry", names[0])
-		self.assertEqual((payment.paid_to, payment.reference_no), (card.account, "R1"))
+		self.assertEqual((payment.paid_to, payment.reference_no), (card.accounts[0].default_account, "R1"))
 		self.assertEqual(invoice.reload().outstanding_amount, 0)
 
 	def test_refund_is_paid_from_the_counter(self):

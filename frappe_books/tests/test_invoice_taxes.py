@@ -27,6 +27,8 @@ class IntegrationTestInvoiceTaxes(IntegrationTestCase):
 		# 400 at an item template of 5%, 250 without one.
 		self.taxed_item = make_item(self.income, self.expense, make_tax(self.vat, 5).name, standard_rate=400)
 		self.item = make_item(self.income, self.expense, standard_rate=250)
+		# Tests in a class share a transaction, and one of them makes a default template.
+		frappe.db.set_value("Books Sales Taxes and Charges Template", {"is_default": 1}, "is_default", 0)
 
 	def test_a_template_fills_the_rows_and_an_item_template_overrides_their_rate(self):
 		template = self.make_template(

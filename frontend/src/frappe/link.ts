@@ -67,7 +67,8 @@ function toDescriptionText(html: string): string {
  * Link options from Frappe's link search, each with its record's `fields`.
  * Letters typed are matched in order, e.g. `rce` finds `Rice`, as Books'
  * link search always has; Frappe matches a translated doctype's names, in the
- * user's language, by the text typed. Labels are those of Frappe's link search.
+ * user's language, and those of a doctype Books has no screen for, by the
+ * text typed. Labels are those of Frappe's link search.
  */
 export async function searchFrappeLink(
   schemaName: string,
@@ -76,11 +77,11 @@ export async function searchFrappeLink(
   limit: number,
   fields: string[] = []
 ): Promise<LinkOption[]> {
-  const { doctype, translated } = getLinkDoctype(schemaName);
+  const { doctype, asTyped } = getLinkDoctype(schemaName);
   const words = text.trim();
   const records = await call<LinkRecord[]>('frappe.desk.search.search_widget', {
     doctype,
-    txt: translated ? words : [...words].join('%'),
+    txt: asTyped ? words : [...words].join('%'),
     filters: filters ?? [],
     filter_fields: fields,
     page_length: limit,
@@ -100,15 +101,18 @@ export function getLinkLabel(schemaName: string, label: string): string {
 
 /**
  * The doctype a link searches: its schema's, or, for an ERPNext doctype
- * Books has no screen for, like a Cost Center in accessory mode, the target itself.
+ * Books has no screen for, like a Cost Center in accessory mode, the target
+ * itself. Books has no meta of those, which may be translated, like a Stock
+ * Entry Type, so their search takes the text as typed, as Desk's does.
  */
 function getLinkDoctype(schemaName: string) {
   if (!isFrappeBacked(schemaName)) {
-    return { doctype: schemaName, translated: false };
+    return { doctype: schemaName, translated: false, asTyped: true };
   }
 
   const { doctype, meta } = getDocType(schemaName);
-  return { doctype, translated: !!meta.translated_doctype };
+  const translated = !!meta.translated_doctype;
+  return { doctype, translated, asTyped: translated };
 }
 
 /**

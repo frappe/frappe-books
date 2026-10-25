@@ -254,11 +254,14 @@ export class Importer {
       tf: TemplateField;
     }[];
 
+    // A row without a name belongs to no document, so the import would leave it out.
+    const nameIndex = this.getNameIndex();
     const cellErrors = [];
     for (let i = 0; i < this.valueMatrix.length; i++) {
       const row = this.valueMatrix[i];
       for (const { tf, index } of assigned) {
-        if (!row[index]?.error) {
+        const isUnnamed = index === nameIndex && !row[index]?.value;
+        if (!row[index]?.error && !isUnnamed) {
           continue;
         }
 

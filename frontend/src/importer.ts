@@ -325,9 +325,17 @@ export class Importer {
     });
   }
 
-  /** Grid rows by document, as the name column groups them. Rows without a name are left out. */
+  /**
+   * Grid rows by document, as the name column groups them. Rows without a
+   * name are left out. A DocType its template gives no name column, like an
+   * address its script names, takes a document per row.
+   */
   getDocumentRows(): number[][] {
     const nameIndex = this.getNameIndex();
+    if (nameIndex === -1) {
+      return this.valueMatrix.map((_, index) => [index]);
+    }
+
     const documents = new Map<string, number[]>();
     for (const [index, row] of this.valueMatrix.entries()) {
       const name = row[nameIndex]?.value;

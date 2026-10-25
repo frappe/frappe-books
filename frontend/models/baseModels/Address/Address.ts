@@ -66,10 +66,7 @@ export class Address extends FrappeDoc {
     getContent: (address) => ({
       title: String(address.name),
       lines: [
-        {
-          icon: 'lucide-map-pin',
-          text: join(address, ['address_line1', 'address_line2'], ', '),
-        },
+        { text: join(address, ['address_line1', 'address_line2'], ', ') },
         { text: getPlace(address) },
       ].filter(({ text }) => text),
     }),

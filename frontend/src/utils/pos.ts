@@ -427,11 +427,12 @@ export function getPayableTotal(invoice: SalesInvoice): Money {
   return (invoice.grand_total ?? fyo.pesa(0)).sub(loyalty);
 }
 
-/** What the Pay button takes: what a submitted sale still owes, else its payable total. */
+/** What the Pay or Refund button takes, as a positive amount: what a submitted sale still owes, else its payable total. */
 export function getAmountToPay(invoice: SalesInvoice): Money {
-  return invoice.isSubmitted
-    ? (invoice.outstanding_amount ?? fyo.pesa(0)).abs()
+  const amount = invoice.isSubmitted
+    ? invoice.outstanding_amount ?? fyo.pesa(0)
     : getPayableTotal(invoice);
+  return amount.abs();
 }
 
 /** The rows' total before discounts, then each amount that takes it to the payable total. */

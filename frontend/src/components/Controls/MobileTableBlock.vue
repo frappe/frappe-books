@@ -1,20 +1,26 @@
 <template>
-  <div class="flex flex-col gap-3 border-b border-outline-gray-1 py-4">
-    <button
-      v-if="canEdit"
-      type="button"
-      class="flex items-center gap-2 text-start text-lg-semibold text-ink-gray-8"
-      @click="$emit('edit')"
+  <div class="flex flex-col gap-3 px-3 py-2.5">
+    <!-- Headed like the card's other rows: number, title and, when it opens, a chevron. -->
+    <component
+      :is="canEdit ? 'button' : 'div'"
+      :type="canEdit ? 'button' : undefined"
+      class="flex min-h-8 items-center gap-2.5 text-start"
+      @click="canEdit && $emit('edit')"
     >
-      <span class="min-w-0 flex-1 truncate">{{ title }}</span>
       <span
+        class="grid size-5.5 shrink-0 place-items-center rounded-3 bg-surface-gray-2 text-xs-medium tabular-nums text-ink-gray-6"
+      >
+        {{ (row.idx ?? 0) + 1 }}
+      </span>
+      <span class="min-w-0 flex-1 truncate text-lg text-ink-gray-8">
+        {{ title }}
+      </span>
+      <span
+        v-if="canEdit"
         class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
         aria-hidden="true"
       />
-    </button>
-    <h3 v-else class="truncate text-lg-semibold text-ink-gray-8">
-      {{ title }}
-    </h3>
+    </component>
     <div class="grid grid-cols-2 gap-3">
       <MobileFormField
         v-for="field of fields"
@@ -49,7 +55,7 @@ import { getErrorMessage } from 'src/utils';
 import { computed, provide, reactive } from 'vue';
 import { isRedAmount } from './rowSummary';
 
-/** A phone table row as a block: its title, two fields side by side and a result line. */
+/** A phone table row as a block in MobileTableRows' card: its title, two fields side by side and a result line. */
 const props = defineProps<{
   row: FrappeDoc;
   title: string;

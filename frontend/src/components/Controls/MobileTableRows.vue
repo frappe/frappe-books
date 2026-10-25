@@ -27,7 +27,20 @@
     >
       {{ emptyMessage }}
     </p>
-    <FrappeList class="list-gap-2.5 list-row-px-3">
+    <div v-if="block" class="divide-y divide-outline-gray-1">
+      <MobileTableBlock
+        v-for="row of rows"
+        :key="row.name"
+        :row="row"
+        :title="getBlockTitle(row, block.title)"
+        :fields="block.fields"
+        :result="block.result"
+        :can-edit="canAdd"
+        @edit="$emit('edit', row)"
+        @change="(field, value) => $emit('row-change', field, value)"
+      />
+    </div>
+    <FrappeList v-else class="list-gap-2.5 list-row-px-3">
       <FrappeListRow
         v-for="{
           row,
@@ -117,8 +130,10 @@ import {
 } from 'frappe-ui/list';
 import { t } from 'fyo';
 import type { FrappeDoc } from 'src/frappe/document';
+import type { DocValue } from 'fyo/core/types';
 import { Field } from 'schemas/types';
 import { computed } from 'vue';
+import MobileTableBlock from './MobileTableBlock.vue';
 import { getRowSummary } from './rowSummary';
 
 /** A child table as a card of rows, numbered like the desktop idx column. */
@@ -134,9 +149,19 @@ const props = defineProps<{
   detailField?: Field;
   /** Fields shown with their labels; see `getRowSummary`. */
   labelledFields?: string[];
+  /** Rows shown as blocks of fields to fill in place; see `MobileBlock`. */
+  block?: { title: Field; result: Field; fields: Field[] };
 }>();
 
-defineEmits<{ edit: [row: FrappeDoc]; add: [] }>();
+defineEmits<{
+  edit: [row: FrappeDoc];
+  add: [];
+  'row-change': [field: Field, value: DocValue];
+}>();
+
+function getBlockTitle(row: FrappeDoc, field: Field): string {
+  return row.fyo.format(row.get(field.fieldname), field, row);
+}
 
 const summaries = computed(() =>
   props.rows.map((row) => ({

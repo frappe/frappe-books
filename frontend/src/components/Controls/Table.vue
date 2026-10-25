@@ -1,33 +1,5 @@
 <template>
-  <div v-if="tableFields?.length && isMobile && mobileBlock" class="min-w-0">
-    <h2 v-if="title" class="text-lg-semibold text-ink-gray-8">{{ title }}</h2>
-    <FrappeFormLabel v-else-if="showLabel" :label="df.label" />
-    <p
-      v-if="df.emptyMessage && !value.length"
-      class="py-3 text-md text-ink-gray-5"
-    >
-      {{ df.emptyMessage }}
-    </p>
-    <MobileTableBlock
-      v-for="row of value"
-      :key="row.name"
-      :row="row"
-      :title="getBlockTitle(row)"
-      :fields="mobileBlock.fields"
-      :result="mobileBlock.result"
-      :can-edit="canAddRemoveRows"
-      @edit="$emit('editrow', row)"
-      @change="(field, value) => $emit('row-change', field, value, df)"
-    />
-    <FrappeButton
-      v-if="canAddRemoveRows"
-      class="mt-3"
-      icon-left="lucide-plus"
-      :label="t`Add row`"
-      @click="addRowAndEdit"
-    />
-  </div>
-  <div v-else-if="tableFields?.length && isMobile" class="min-w-0">
+  <div v-if="tableFields?.length && isMobile" class="min-w-0">
     <FrappeFormLabel
       v-if="showLabel"
       class="mb-1.5"
@@ -42,8 +14,10 @@
       :can-add="canAddRemoveRows"
       :title="title"
       :empty-message="df.emptyMessage"
+      :block="mobileBlock"
       @edit="(row) => $emit('editrow', row)"
       @add="addRowAndEdit"
+      @row-change="(field, value) => $emit('row-change', field, value, df)"
     />
   </div>
   <div v-else-if="tableFields?.length" class="min-w-0">
@@ -180,10 +154,7 @@
 </template>
 
 <script>
-import {
-  Button as FrappeButton,
-  FormLabel as FrappeFormLabel,
-} from 'frappe-ui';
+import { FormLabel as FrappeFormLabel } from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
@@ -197,7 +168,6 @@ import { languageDirectionKey } from 'src/utils/injectionKeys';
 import { nextTick } from 'vue';
 import ColumnResizeHandle from '../ColumnResizeHandle.vue';
 import Base from './Base.vue';
-import MobileTableBlock from './MobileTableBlock.vue';
 import MobileTableRows from './MobileTableRows.vue';
 import TableRow from './TableRow.vue';
 
@@ -205,14 +175,12 @@ export default {
   name: 'Table',
   components: {
     ColumnResizeHandle,
-    FrappeButton,
     FrappeFormLabel,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,
     FrappeListHeaderCell,
     FrappeListRow,
-    MobileTableBlock,
     MobileTableRows,
     TableRow,
   },
@@ -354,10 +322,6 @@ export default {
   },
   methods: {
     focus() {},
-    getBlockTitle(row) {
-      const { title } = this.mobileBlock;
-      return this.fyo.format(row.get(title.fieldname), title, row);
-    },
     isLink(field) {
       return ['Link', 'DynamicLink'].includes(field.fieldtype);
     },

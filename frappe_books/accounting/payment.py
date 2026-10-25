@@ -216,12 +216,16 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		paid, settled = self.paid_amount, self.party_amount
 		debit, credit = (paid, settled) if self.payment_type == "Receive" else (settled, paid)
 		posting = LedgerPosting(self)
-		posting.debit(self.paid_to, debit, self.party)
-		posting.credit(self.paid_from, credit, self.party)
+		posting.debit(self.paid_to, debit, self._party_on("paid_to"))
+		posting.credit(self.paid_from, credit, self._party_on("paid_from"))
 		_post_deductions(self, posting)
 		_post_taxes(self, posting)
 		posting.post()
 		self.settle_references(reverse=False)
+
+	def _party_on(self, fieldname):
+		"""The party, on its own ledger's entry only, as ERPNext posts it; the cash or bank entry has none."""
+		return self.party if fieldname == party_account_field(self.payment_type) else None
 
 	def on_cancel(self):
 		reverse_entries(self)

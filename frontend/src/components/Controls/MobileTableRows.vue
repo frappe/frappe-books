@@ -109,16 +109,22 @@
         </FrappeListCell>
       </FrappeListRow>
     </FrappeList>
-    <!-- A 44px row: Button stops at 40px (frappe/frappe-ui#1250). -->
-    <button
+    <!-- A 44px list row, as the rows above; Button stops at 40px (frappe/frappe-ui#1250). -->
+    <FrappeList
       v-if="canAdd"
-      class="flex h-11 w-full items-center gap-2 border-outline-gray-1 px-3 text-md-medium text-ink-gray-8 active:bg-surface-gray-2"
-      :class="{ 'border-t': rows.length || emptyMessage }"
-      @click="$emit('add')"
+      class="list-row-px-3"
+      :class="{ 'border-t border-outline-gray-1': rows.length || emptyMessage }"
     >
-      <span class="lucide-plus size-5" aria-hidden="true" />
-      {{ t`Add row` }}
-    </button>
+      <FrappeListRow
+        class="min-h-11 text-md-medium text-ink-gray-8"
+        @click="$emit('add')"
+      >
+        <FrappeListCell class="gap-2">
+          <span class="lucide-plus size-5" aria-hidden="true" />
+          {{ t`Add row` }}
+        </FrappeListCell>
+      </FrappeListRow>
+    </FrappeList>
   </div>
 </template>
 <script setup lang="ts">

@@ -1,3 +1,4 @@
+from contextlib import ExitStack
 from unittest.mock import patch
 
 import frappe
@@ -10,9 +11,18 @@ from frappe_books.permissions import has_app_permission
 from frappe_books.tests import needs_erpnext
 
 BOOKS_USER = "accessory-books-user@example.com"
-WITHOUT_ERPNEXT = patch("frappe_books.accessory.erpnext_installed", return_value=False)
+# Modules that import the ERPNext check by name, so each needs its own patch
+ERPNEXT_CHECKS = ("accessory", "boot", "frappe_books.doctype.books_erpnext_settings.books_erpnext_settings")
 ACCESSORY_ON = patch("frappe_books.permissions.accessory_company", return_value="Acme")
 ERPNEXT_SET_UP = patch("frappe_books.accessory.erpnext_setup_complete", return_value=True)
+
+
+def without_erpnext():
+	"""ERPNext as uninstalled, wherever Books asks."""
+	stack = ExitStack()
+	for module in ERPNEXT_CHECKS:
+		stack.enter_context(patch(f"frappe_books.{module}.erpnext_installed", return_value=False))
+	return stack
 
 
 def forget_settings_and_books_setup():
@@ -25,12 +35,12 @@ class IntegrationTestAccessoryMode(IntegrationTestCase):
 	def test_accessory_mode_needs_erpnext(self):
 		settings = frappe.get_single(SETTINGS)
 		settings.accessory_mode = 1
-		with WITHOUT_ERPNEXT, self.assertRaisesRegex(frappe.ValidationError, "Install ERPNext"):
+		with without_erpnext(), self.assertRaisesRegex(frappe.ValidationError, "Install ERPNext"):
 			settings.save()
 
 	def test_stored_mode_without_erpnext_is_standalone(self):
 		frappe.db.set_single_value(SETTINGS, "accessory_mode", 1)
-		with WITHOUT_ERPNEXT:
+		with without_erpnext():
 			self.assertIsNone(accessory_company())
 			bootinfo = frappe._dict()
 			extend_bootinfo(bootinfo)

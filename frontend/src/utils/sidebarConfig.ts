@@ -364,6 +364,14 @@ function getCompleteSidebar(): SidebarConfig {
           schemaName: 'Item',
         },
         {
+          label: t`Warehouse`,
+          name: 'warehouse',
+          icon: 'lucide-warehouse',
+          route: '/list/Warehouse',
+          schemaName: 'Warehouse',
+          hidden: isInventoryOff,
+        },
+        {
           // Standalone only; accessory mode has no Stock Entry.
           label: t`Stock Entry`,
           name: 'stock-entry',

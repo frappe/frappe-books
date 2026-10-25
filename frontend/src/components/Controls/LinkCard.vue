@@ -9,6 +9,7 @@
     :border="true"
     :focus-input="!isMobile"
     @change="onPick"
+    @close="onClose"
   />
   <div
     v-else-if="value"
@@ -135,6 +136,11 @@ async function change() {
 function onPick(value: string | null) {
   isChanging.value = false;
   emit('change', value);
+}
+
+/** Picking over without a new value, e.g. the same record again, shows the card; a pick's change lands first. */
+function onClose() {
+  setTimeout(() => (isChanging.value = false));
 }
 
 async function open() {

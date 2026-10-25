@@ -15,7 +15,11 @@ export class CouponCode extends FrappeDoc {
       'maximum_use',
       'used',
     ],
-    fields: { pricing_rule: { create: false } },
+    fields: {
+      pricing_rule: { create: false },
+      // Books' coupons are promotional; ERPNext's type has no default.
+      coupon_type: { default: 'Promotional' },
+    },
   };
 
   coupon_name?: string;

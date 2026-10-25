@@ -1,5 +1,5 @@
 <template>
-  <section v-if="visibleFields.length" class="border-b border-outline-gray-1">
+  <section v-if="fields.length" class="border-b border-outline-gray-1">
     <!-- The press state is inset, as on nav sheet rows, so it keeps clear of the fields. -->
     <div v-if="kind === 'collapsible'" class="px-2 py-1">
       <button
@@ -193,7 +193,7 @@ const blocks = computed<FieldBlock[]>(() => {
   let fields: Field[] = [];
   const close = (key: string) =>
     blocks.push({ key, groups: groupFields(fields) });
-  for (const field of visibleFields.value) {
+  for (const field of props.fields) {
     if (isLineTable(field)) {
       close(blocks.length ? `after-${blocks.length}` : 'before');
       blocks.push({
@@ -256,15 +256,6 @@ function getListClass(block: FieldBlock) {
   ];
 }
 
-// A finished document hides its empty fields.
-const visibleFields = computed(() => {
-  if (!props.doc.isSubmitted && !props.doc.isCancelled) {
-    return props.fields;
-  }
-
-  return props.fields.filter((field) => hasFieldValue(props.doc, field));
-});
-
 // A Table MultiSelect is a field, not a table of rows.
 function isTable(field: Field) {
   return field.fieldtype === FieldTypeEnum.Table && !field.control;
@@ -291,7 +282,7 @@ function getTotalLines(field: Field) {
   const emphasis =
     kind.value === 'totals' &&
     field ===
-      visibleFields.value
+      props.fields
         .filter((f) => f.fieldtype === FieldTypeEnum.Currency)
         .at(-1);
 

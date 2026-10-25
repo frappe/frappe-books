@@ -174,7 +174,6 @@ import PageHeader from 'src/components/PageHeader.vue';
 import StatusPill from 'src/components/StatusPill.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { revealActiveTab } from 'src/mobile/revealActiveTab';
-import { hasFieldValue } from 'src/utils/doc';
 import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc } from 'src/utils/ui';
 import { computed, nextTick, useTemplateRef, watch } from 'vue';
@@ -219,19 +218,12 @@ const isAccessory = isAccessoryMode();
 
 const router = useRouter();
 
-// A finished document hides empty fields, so tabs without values go too.
-const tabOptions = computed(() => {
-  const isFinished = props.doc.isSubmitted || props.doc.isCancelled;
-  return [...(props.groupedFields ?? [])]
-    .filter(
-      ([, sections]) =>
-        !isFinished ||
-        [...sections.values()]
-          .flat()
-          .some((field) => hasFieldValue(props.doc, field))
-    )
-    .map(([tab]) => ({ value: tab, label: tab }));
-});
+const tabOptions = computed(() =>
+  [...(props.groupedFields?.keys() ?? [])].map((tab) => ({
+    value: tab,
+    label: tab,
+  }))
+);
 
 const activeSections = computed(() => {
   const tab = props.groupedFields?.get(props.activeTab);

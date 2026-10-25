@@ -82,3 +82,12 @@ export function hasFieldValue(doc: FrappeDoc, field: Field): boolean {
     value !== null && value !== undefined && value !== '' && value !== false
   );
 }
+
+/** Whether a form shows the field: not hidden, and on a submitted or cancelled document, not empty. */
+export function isFieldShown(doc: FrappeDoc, field: Field): boolean {
+  if (doc.getFieldState(field).hidden) {
+    return false;
+  }
+
+  return (!doc.isSubmitted && !doc.isCancelled) || hasFieldValue(doc, field);
+}

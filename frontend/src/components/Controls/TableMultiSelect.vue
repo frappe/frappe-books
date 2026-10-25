@@ -261,9 +261,7 @@ export default defineComponent({
   methods: {
     focus() {
       const trigger = this.$refs.trigger as
-        | HTMLElement
-        | { $el: HTMLElement }
-        | undefined;
+        HTMLElement | { $el: HTMLElement } | undefined;
       (trigger && '$el' in trigger ? trigger.$el : trigger)?.focus();
     },
     getLabel(name: string): string {

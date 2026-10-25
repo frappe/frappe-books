@@ -103,8 +103,13 @@ test("a form's prices are its first 20, with View all for more, and phone rows s
   assert.equal(list.body.limit_page_length, 20);
   assert.equal(section.hasMore, true);
   const [from, range] = section.rows.map((row) => section.getMeta(row));
-  assert.match(from, /^Retail · Unit · from /);
-  assert.match(range, /^Retail · Unit · .+ – .+$/);
+  // The price list titles the row, so its second line leaves it out.
+  assert.equal(
+    section.getValue(section.rows[0], section.titleColumn),
+    'Retail'
+  );
+  assert.match(from, /^Unit · from /);
+  assert.match(range, /^Unit · .+ – .+$/);
   assert.equal(section.getValue(section.rows[0], section.columns.at(-1)), '—');
 });
 

@@ -95,10 +95,10 @@ class IntegrationTestFeatureSwitches(IntegrationTestCase):
 		program = self.loyalty_program()
 		self.switch_off("enable_loyalty_point_program")
 
-		with self.assertRaisesRegex(frappe.ValidationError, f"Loyalty Program {OFF}"):
+		with self.assertRaisesRegex(frappe.ValidationError, f"Loyalty Point Program {OFF}"):
 			self.loyalty_program()
 		self.party.loyalty_program = program.name
-		with self.assertRaisesRegex(frappe.ValidationError, f"Loyalty Program {OFF}"):
+		with self.assertRaisesRegex(frappe.ValidationError, f"Loyalty Point Program {OFF}"):
 			self.party.save()
 
 	def test_stock_entrys_need_inventory(self):

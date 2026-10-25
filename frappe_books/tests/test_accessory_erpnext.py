@@ -257,6 +257,19 @@ class IntegrationTestAccessoryFormFills(IntegrationTestCase):
 
 		self.assertEqual(doc["references"][0]["allocated_amount"], 20)
 
+	def test_a_transfer_receives_what_it_pays(self):
+		values = {
+			"doctype": "Payment Entry",
+			"__islocal": 1,
+			"payment_type": "Internal Transfer",
+			"paid_from": cash_account(),
+			"paid_to": cash_account(),
+			"paid_amount": 25,
+		}
+		doc = self.preview(values, {"doc": ["paid_amount"]})
+
+		self.assertEqual(doc["received_amount"], 25)
+
 	def test_a_stock_entry_takes_its_purpose_and_its_rows_their_item_details(self):
 		warehouse = frappe.db.get_value("Warehouse", {"is_group": 0, "company": erpnext_default_company()})
 		values = {

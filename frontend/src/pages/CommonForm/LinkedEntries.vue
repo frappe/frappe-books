@@ -89,13 +89,13 @@
                   <FrappeBadge
                     v-if="
                       isPesa(e.outstanding_amount) &&
-                      !e.outstanding_amount.isZero()
+                      e.outstanding_amount.isPositive()
                     "
                     theme="amber"
                     variant="subtle"
                   >
                     {{
-                      t`Unpaid ${fyo.format(e.outstanding_amount.abs(), 'Currency')}`
+                      t`Unpaid ${fyo.format(e.outstanding_amount, 'Currency')}`
                     }}
                   </FrappeBadge>
                   <FrappeBadge
@@ -289,7 +289,7 @@ export default defineComponent({
     },
     /** A payment's amount, or a stock entry's total. */
     getAmount(entry: Record<string, unknown>): Money | undefined {
-      const amount = entry.amount ?? entry.total_amount;
+      const amount = entry.amount ?? entry.paid_amount ?? entry.total_amount;
       return isPesa(amount) ? amount : undefined;
     },
     async routeTo(schemaName: string, name: string) {

@@ -75,6 +75,7 @@
           >
             <FrappeList
               :columns="tracks"
+              :row-height="48"
               divider="full"
               class="text-base text-ink-gray-8 list-gap-4 list-row-px-3"
             >

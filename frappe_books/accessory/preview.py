@@ -313,7 +313,7 @@ def refresh_items(document: Document, edited_rows: dict[str, list[str]]):
 			for field in row.meta.fields:
 				if field.fieldtype not in no_value_fields and field.fieldname not in kept:
 					row.set(field.fieldname, None)
-		if row.item_code and not row.qty:
+		if row.item_code and row.meta.has_field("qty") and not row.qty:
 			row.qty = 1
 
 

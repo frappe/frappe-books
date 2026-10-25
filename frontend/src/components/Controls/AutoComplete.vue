@@ -27,6 +27,7 @@
   <div v-else-if="isMobile" :style="containerStyles">
     <MobileFieldTrigger
       :label="showLabel ? df.label : undefined"
+      :description="showLabel ? df.sub_label : undefined"
       :required="isRequired"
       :placeholder="inputPlaceholder"
       :display-value="linkValue || String(value ?? '')"

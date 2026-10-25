@@ -1,54 +1,28 @@
 <template>
-  <div
+  <!-- Read as a comma list, as the filter pill names the picked records. -->
+  <ReadOnlyValue
     v-if="isReadOnly"
-    class="flex min-w-0 flex-col gap-1.5"
-    :style="containerStyles"
-  >
-    <FrappeFormLabel v-if="showLabel" :label="df.label" />
-    <div v-if="picked.length" class="flex flex-wrap gap-1">
-      <FrappeBadge
-        v-for="name in picked"
-        :key="name"
-        variant="outline"
-        :size="isMobile ? 'lg' : 'md'"
-        :label="getLabel(name)"
-      />
-    </div>
-    <p v-else class="text-base text-ink-gray-4">{{ t`Not set` }}</p>
-  </div>
+    :df="df"
+    :value="value"
+    :display-value="pickedLabels"
+    :doc="doc"
+    :border="border"
+    :show-label="showLabel"
+    :required="isRequired"
+    :size="size"
+    :container-styles="containerStyles"
+  />
 
-  <div
-    v-else-if="isMobile"
-    class="min-w-0 space-y-1.5"
-    :style="containerStyles"
-  >
-    <FrappeFormLabel
-      v-if="showLabel"
-      :label="df.label"
+  <div v-else-if="isMobile" class="min-w-0" :style="containerStyles">
+    <MobileFieldTrigger
+      :label="showLabel ? df.label : undefined"
+      :description="showLabel ? df.sub_label : undefined"
       :required="isRequired"
-    />
-    <button
-      type="button"
-      class="flex min-h-10 w-full flex-wrap items-center gap-1 rounded-5 border bg-surface-gray-2 px-2 py-1.5 text-start text-lg active:bg-surface-gray-3"
-      :class="invalid ? 'border-outline-red-3' : 'border-transparent'"
-      :aria-label="showLabel ? undefined : df.label"
+      :placeholder="inputPlaceholder"
+      :display-value="pickedLabels"
+      :invalid="invalid"
       @click="openSheet"
-    >
-      <FrappeBadge
-        v-for="name in picked"
-        :key="name"
-        variant="outline"
-        size="lg"
-        :label="getLabel(name)"
-      />
-      <span v-if="!picked.length" class="px-1 text-ink-gray-4">
-        {{ inputPlaceholder }}
-      </span>
-      <span
-        class="lucide-chevrons-up-down ms-auto size-4 shrink-0 text-ink-gray-5"
-        aria-hidden="true"
-      />
-    </button>
+    />
     <FrappeBottomSheet v-model:open="sheetOpen" :title="df.label">
       <div class="flex flex-col gap-3 px-4">
         <p class="text-end text-base text-ink-gray-5">
@@ -194,18 +168,19 @@ import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
   Checkbox as FrappeCheckbox,
-  FormLabel as FrappeFormLabel,
   MultiSelect as FrappeMultiSelect,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
 import type { Field, TargetField } from 'schemas/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { searchFrappeLink } from 'src/frappe/link';
+import MobileFieldTrigger from 'src/mobile/MobileFieldTrigger.vue';
 import { getSchema } from 'src/frappe/registry';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
 import { LINK_PAGE_LENGTH } from 'src/utils';
 import { defineComponent } from 'vue';
 import Base from './Base.vue';
+import ReadOnlyValue from './ReadOnlyValue.vue';
 
 type Option = { label: string; value: string };
 
@@ -217,10 +192,11 @@ export default defineComponent({
     FrappeBottomSheet,
     FrappeButton,
     FrappeCheckbox,
-    FrappeFormLabel,
     FrappeMultiSelect,
     FrappeTextInput,
+    MobileFieldTrigger,
     MobileSheetFooter,
+    ReadOnlyValue,
   },
   extends: Base,
   data() {

@@ -413,7 +413,6 @@ export const previousForms = {
     'Supplier.supplier_primary_address': false,
     'PartyAccount.account': true,
     'Supplier.default_currency': true,
-    'Lead.address': true,
     'Address.country': false,
     'Item.item_group': true,
     'Item.stock_uom': true,

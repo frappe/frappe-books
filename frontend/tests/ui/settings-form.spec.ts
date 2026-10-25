@@ -39,7 +39,9 @@ test('the System tab saves through Frappe and keeps the value after a reload', a
   await expect(page.getByRole('combobox', { name: 'Date Format' })).toHaveValue(
     /\d{4}/
   );
-  await expect(page.getByRole('textbox', { name: 'Currency' })).toBeDisabled();
+  await expect(
+    page.getByRole('textbox', { name: 'Currency', exact: true })
+  ).toBeDisabled();
   const save = page.getByRole('button', { name: 'Save', exact: true });
   await expect(save).toBeDisabled();
 

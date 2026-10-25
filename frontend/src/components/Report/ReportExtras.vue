@@ -32,40 +32,19 @@
         >
           {{ item.value }}
         </div>
-        <div
+        <!-- The dashboard's number card, in ERPNext's indicator colour. -->
+        <FrappeNumberCard
           v-else
-          class="flex flex-col rounded-6 border border-outline-gray-1"
-          :class="
-            phone
-              ? 'w-[150px] shrink-0 gap-1 px-3 py-2.5'
-              : 'flex-1 gap-1.5 px-3.5 py-3'
-          "
-        >
-          <span
-            class="text-ink-gray-5"
-            :class="phone ? 'text-sm' : 'text-[13px]'"
-          >
-            {{ item.label }}
-          </span>
-          <span
-            class="font-semibold tabular-nums"
-            :class="[
-              getIndicatorClass(item),
-              phone ? 'text-[17px]' : 'text-xl',
-            ]"
-            dir="ltr"
-          >
-            {{ formatSummaryValue(item) }}
-          </span>
-        </div>
+          :class="phone ? 'w-40 shrink-0' : 'min-w-0 flex-1'"
+          :title="item.label ?? ''"
+          :value="toCardValue(item.value)"
+          :format="(value: number) => formatSummaryValue(item, value)"
+          :color="getIndicatorColor(item)"
+        />
       </template>
     </div>
 
-    <div
-      v-if="chart"
-      class="rounded-6 border border-outline-gray-1"
-      :class="phone ? 'h-40 p-3' : 'h-52 px-4 py-3.5'"
-    >
+    <div v-if="chart" :class="phone ? 'h-40' : 'h-52'">
       <component
         :is="chart.type === 'line' ? FrappeLineChart : FrappeBarChart"
         :data="chart.rows"
@@ -84,21 +63,24 @@ import { Alert as FrappeAlert } from 'frappe-ui';
 import {
   BarChart as FrappeBarChart,
   LineChart as FrappeLineChart,
+  NumberCard as FrappeNumberCard,
   type ChartPalette,
 } from 'frappe-ui/charts';
+import { DEFAULT_LOCALE } from 'fyo/utils/consts';
 import { formatCurrencyValue } from 'fyo/utils/format';
 import type { Report } from 'reports/Report';
 import type { SummaryItem } from 'reports/types';
+import { getCompactCurrencyFormat } from 'src/utils/chart';
 import { renderSafeRichText } from 'src/utils/safeRichText';
 import { computed } from 'vue';
 
 /** What a report returns besides its rows: a message, summary cards and a chart, in that order. */
 const props = defineProps<{ report: Report; phone?: boolean }>();
 
-const INDICATOR_CLASSES: Record<string, string> = {
-  green: 'text-ink-green-6',
-  red: 'text-ink-red-6',
-  blue: 'text-ink-blue-6',
+const INDICATOR_COLORS: Record<string, string> = {
+  green: 'var(--ink-green-6)',
+  red: 'var(--ink-red-6)',
+  blue: 'var(--ink-blue-6)',
 };
 
 const cards = computed(() =>
@@ -141,22 +123,29 @@ const hasExtras = computed(
   () => !!props.report.message || !!cards.value.length || !!chart.value
 );
 
-function getIndicatorClass(item: SummaryItem): string {
-  return (
-    INDICATOR_CLASSES[item.indicator?.toLowerCase() ?? ''] ?? 'text-ink-gray-9'
-  );
+function getIndicatorColor(item: SummaryItem): string | undefined {
+  return INDICATOR_COLORS[item.indicator?.toLowerCase() ?? ''];
 }
 
-function formatSummaryValue(item: SummaryItem): string {
-  if (item.datatype === 'Currency') {
-    return formatCurrencyValue(
-      item.value,
-      item.currency ?? '',
-      props.report.fyo
-    );
+function toCardValue(value: unknown): number | null {
+  const number = Number(value);
+  return value === null || value === '' || Number.isNaN(number) ? null : number;
+}
+
+/** Phones print amounts compactly, as the dashboard's cards do. */
+function formatSummaryValue(item: SummaryItem, value: number): string {
+  const { fyo } = props.report;
+  if (item.datatype === 'Currency' && props.phone) {
+    const locale = fyo.singles.SystemSettings?.locale ?? DEFAULT_LOCALE;
+    const symbol = fyo.currencySymbols[item.currency ?? ''];
+    return getCompactCurrencyFormat(String(locale), symbol)(value);
   }
 
-  return props.report.fyo.format(item.value, item.datatype ?? 'Data');
+  if (item.datatype === 'Currency') {
+    return formatCurrencyValue(value, item.currency ?? '', fyo);
+  }
+
+  return props.report.fyo.format(value, item.datatype ?? 'Data');
 }
 
 function formatChartValue(value: number): string {

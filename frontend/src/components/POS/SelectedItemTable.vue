@@ -15,7 +15,6 @@
           >
             <SelectedItemRow
               :row="row as SalesInvoiceItem"
-              :layout="layout"
               :expanded-row="expandedRow"
               @expand="(name?: string) => $emit('expand', name)"
               @select="
@@ -49,7 +48,6 @@ import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import EmptyState from 'src/components/EmptyState.vue';
 import { defineComponent, inject, PropType } from 'vue';
 import SelectedItemRow from './SelectedItemRow.vue';
-import { POSLayout } from './types';
 
 /** The cart's rows, or what to do when it is empty. */
 export default defineComponent({
@@ -63,7 +61,6 @@ export default defineComponent({
     SelectedItemRow,
   },
   props: {
-    layout: { type: String as PropType<POSLayout>, required: true },
     expandedRow: {
       type: String as PropType<string | undefined>,
       default: undefined,

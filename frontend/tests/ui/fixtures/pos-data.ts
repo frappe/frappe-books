@@ -148,7 +148,6 @@ export async function preparePOSData() {
     enable_discounts_and_margin: true,
   });
   Object.assign(fyo.singles.POSSettings!, {
-    pos_ui: 'Modern',
     allow_rate_change: true,
     allow_discount_change: true,
   });

@@ -38,7 +38,6 @@ const RENAMED_KEYS: Record<string, Record<string, string>> = {
     smallest_currency_fraction_value: 'smallestValue',
   },
   JournalEntry: { posting_date: 'date' },
-  POSProfile: { pos_ui: 'posUI' },
   ItemTaxTemplateDetail: { payment_account: 'payment_account' },
   RealisedTax: { from_account: 'from_account' },
 };

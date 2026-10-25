@@ -88,7 +88,7 @@
         :value="row.qty"
         :read-only="isFieldReadOnly('qty')"
         @click="openKeypad('qty')"
-        @change="(value: number) => editInline('qty', value)"
+        @change="(value: number) => setValue('qty', value)"
       />
     </div>
 
@@ -127,7 +127,7 @@
         :value="row.stock_qty"
         :read-only="isFieldReadOnly('stock_qty')"
         @click="openKeypad('stock_qty')"
-        @change="(value: number) => editInline('stock_qty', value)"
+        @change="(value: number) => setValue('stock_qty', value)"
       />
     </div>
 
@@ -144,7 +144,7 @@
         :value="row.price_list_rate"
         :read-only="isFieldReadOnly('price_list_rate')"
         @click="openKeypad('price_list_rate')"
-        @change="(value: Money) => editInline('price_list_rate', value)"
+        @change="(value: Money) => setValue('price_list_rate', value)"
       />
     </div>
 
@@ -162,7 +162,7 @@
         :value="row.discount_amount"
         :read-only="isFieldReadOnly('discount_amount')"
         @click="openKeypad('discount_amount')"
-        @change="(value: Money) => editInline('discount_amount', value)"
+        @change="(value: Money) => setValue('discount_amount', value)"
       />
     </div>
 
@@ -179,7 +179,7 @@
         :value="row.discount_percentage"
         :read-only="isFieldReadOnly('discount_percentage')"
         @click="openKeypad('discount_percentage')"
-        @change="(value: number) => editInline('discount_percentage', value)"
+        @change="(value: number) => setValue('discount_percentage', value)"
       />
     </div>
 
@@ -234,10 +234,7 @@
       />
     </div>
 
-    <p
-      v-if="!isClassic && !isSaleSubmitted"
-      class="col-span-2 text-xs text-ink-gray-5"
-    >
+    <p v-if="!isSaleSubmitted" class="col-span-2 text-xs text-ink-gray-5">
       {{ t`Tap a number to use the keypad.` }}
     </p>
   </div>
@@ -276,9 +273,9 @@ import {
 import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
-import { POSLayout, POS_ITEM_TOAST_ID } from './types';
+import { POS_ITEM_TOAST_ID } from './types';
 
-/** A cart row: its fields edit inline in the Classic layout, with the keypad in Modern. */
+/** A cart row: a tap on a number opens the keypad; typing into it works too. */
 export default defineComponent({
   name: 'SelectedItemRow',
   components: {
@@ -292,7 +289,6 @@ export default defineComponent({
   },
   props: {
     row: { type: SalesInvoiceItem, required: true },
-    layout: { type: String as PropType<POSLayout>, required: true },
     expandedRow: {
       type: String as PropType<string | undefined>,
       default: undefined,
@@ -320,9 +316,6 @@ export default defineComponent({
     };
   },
   computed: {
-    isClassic(): boolean {
-      return this.layout === 'Classic';
-    },
     isUOMConversionEnabled(): boolean {
       return fyo.isFeatureOn('enable_uom_conversions');
     },
@@ -352,14 +345,10 @@ export default defineComponent({
     pricingRule(): string {
       return getRowPricingRule(this.row);
     },
-    /** The rate per unit, its unit in Classic, and any item discount. */
+    /** The rate per unit and any item discount. */
     rateLabel(): string {
       const rate = fyo.format(this.row.price_list_rate, 'Currency');
-      const parts = [
-        this.isClassic
-          ? t`${rate} per ${this.row.uom || this.row.stock_uom || ''}`
-          : t`${rate} each`,
-      ];
+      const parts = [t`${rate} each`];
       if (this.row.discount_percentage) {
         parts.push(t`${this.row.discount_percentage}% off`);
       }
@@ -411,13 +400,8 @@ export default defineComponent({
       return getPOSRowFieldLabel(this.row, field);
     },
     openKeypad(field: POSRowField) {
-      if (!this.isClassic && !this.isFieldReadOnly(field)) {
+      if (!this.isFieldReadOnly(field)) {
         this.$emit('select', this.row, field);
-      }
-    },
-    async editInline(field: POSRowField, value: number | Money) {
-      if (this.isClassic) {
-        await this.setValue(field, value);
       }
     },
     async setValue(field: POSRowField, value: number | Money) {

@@ -14,7 +14,6 @@ export class POSScreenSettings extends FrappeDoc {
   static override presentation = {
     label: 'POS Settings',
     onlyFields: [
-      'pos_ui',
       'item_visibility',
       'weight_enabled_barcode',
       'check_digits',

@@ -11,7 +11,6 @@ import {
 
 const profile = {
   name: 'Counter 1',
-  pos_ui: 'Modern',
   item_visibility: 'Non-Inventory Items',
   allow_rate_change: 1,
   allow_discount_change: 0,
@@ -38,7 +37,6 @@ test('the POS profile form shows the fields and quick edit fields it showed', ()
     'customer',
     'warehouse',
     'print_format',
-    'pos_ui',
     'item_visibility',
     'allow_rate_change',
     'hide_unavailable_items',
@@ -67,7 +65,6 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
   });
   const profile = await posSetup.getPOSProfile();
   assert.equal(posSetup.getItemVisibility(profile), 'Non-Inventory Items');
-  assert.equal(profile.pos_ui, 'Modern');
 });
 
 test('All Items lists stock and service items, hiding only stock that is out', () => {

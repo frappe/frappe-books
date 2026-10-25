@@ -101,7 +101,7 @@ test('Fix Failed keeps only the rows Frappe could not save', async ({
   await selectImportFile(
     page,
     'Customer',
-    `Customer Name,Email\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
+    `Customer Name,Email Id\n${existing},eve@example.com\nImport Fay ${run},fay@example.com\n`
   );
 
   const results = page.getByRole('dialog', { name: 'Import complete' });

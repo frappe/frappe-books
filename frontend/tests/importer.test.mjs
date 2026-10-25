@@ -113,6 +113,20 @@ test('each table’s columns start with its row ID, which is not imported', () =
   ]);
 });
 
+test('a row without the name that groups it is a cell error, as the import would leave it out', () => {
+  const importer = new Importer('SalesInvoice', fyo);
+  importer.assignedTemplateFields = [
+    'SalesInvoice.name',
+    'SalesInvoice.customer',
+  ];
+  importer.valueMatrix = [
+    [{ value: 'A' }, { value: 'Acme' }],
+    [{ value: null }, { value: 'Acme' }],
+  ];
+
+  assert.deepEqual(importer.checkCellErrors(), ['(Row 2, Invoice No)']);
+});
+
 test('a list export’s CSV maps onto the template by its keys', async () => {
   const pick = (fields, fieldnames) =>
     fields.filter(({ fieldname }) => fieldnames.includes(fieldname));

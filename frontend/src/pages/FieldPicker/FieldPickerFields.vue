@@ -7,7 +7,7 @@
       <!-- md is the largest TabButtons size (frappe/frappe-ui#1221). -->
       <FrappeTabButtons
         v-model="tab"
-        class="w-full [&>*]:flex-1"
+        class="self-start"
         size="md"
         :options="tabOptions"
       />

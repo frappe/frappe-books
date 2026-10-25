@@ -9,7 +9,7 @@ import {
   LinkValidationError,
 } from 'fyo/utils/errors';
 import { Field, FieldType, FieldTypeEnum, NumberField } from 'schemas/types';
-import { getSchema } from 'src/frappe/registry';
+import { getSchema, toSchemaName } from 'src/frappe/registry';
 
 export function fuzzyMatch(input: string, target: string) {
   const keywordLetters = [...input];
@@ -76,6 +76,19 @@ export function sortByFuzzyMatch<T>(
 /** Link options load a page at a time, as Frappe's link search returns them. */
 export const LINK_PAGE_LENGTH = 50;
 
+/** The record Frappe's link check names, as "Delivery Note SHPM-1001", from its "is linked with <doctype> <a>name</a>". */
+function getLinkedRecord(message: string): string | undefined {
+  const match = /is linked with (.+?) <a [^>]*>([^<]+)<\/a>/.exec(message);
+  if (!match) {
+    return;
+  }
+
+  const [, doctype, linkedName] = match;
+  const schemaName = toSchemaName(doctype);
+  const label = (schemaName && getSchema(schemaName)?.label) || doctype;
+  return `${label} ${linkedName}`;
+}
+
 export function getErrorMessage(e: Error, doc?: FrappeDoc): string {
   const errorMessage = e.message || t`An error occurred.`;
 
@@ -91,7 +104,10 @@ export function getErrorMessage(e: Error, doc?: FrappeDoc): string {
 
   const label = getSchema(schemaName)?.label ?? schemaName;
   if (e instanceof LinkValidationError) {
-    return t`${label} ${name} is linked with existing records.`;
+    const linked = getLinkedRecord(errorMessage);
+    return linked
+      ? t`${label} ${name} is linked with ${linked}.`
+      : t`${label} ${name} is linked with existing records.`;
   } else if (e instanceof DuplicateEntryError) {
     return t`${label} ${name} already exists.`;
   }

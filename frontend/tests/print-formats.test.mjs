@@ -53,8 +53,10 @@ test('a print page wraps the html in the print stylesheet', () => {
 });
 
 test("a print's scripts are left out, as the print sheet runs none", () => {
+  globalThis.window = {};
   const html = '<p>SINV-1001</p><script>window.print()</script>';
   const page = getPrintDocument({ html, style: '' });
+  delete globalThis.window;
 
   assert.doesNotMatch(page, /script/);
   assert.match(page, /<p>SINV-1001<\/p>/);

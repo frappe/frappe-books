@@ -1,4 +1,4 @@
-import { toActiveDoctype } from 'src/frappe/mode';
+import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
 import { Fyo } from 'fyo';
 import {
   Action,
@@ -100,7 +100,6 @@ export class PaymentEntry extends FrappeDoc {
   static override refills = {
     party_type: ['payment_type', 'paid_from', 'paid_to'],
     payment_type: ['paid_from', 'paid_to'],
-    references: ['paid_amount', 'payment_type'],
   };
 
   get isTransactional() {
@@ -160,6 +159,11 @@ export class PaymentEntry extends FrappeDoc {
 
     if (changed === 'mode_of_payment') {
       this.leaveToServer([getPaymentAccountField(this.payment_type as string)]);
+    }
+
+    // Books' server totals the references; ERPNext keeps the amount the user entered, as Desk does.
+    if (changed === 'references' && !isAccessoryMode()) {
+      this.leaveToServer(['paid_amount', 'payment_type']);
     }
 
     await super.change(arg);

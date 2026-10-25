@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 import frappe
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import get_loyalty_program_details
+from erpnext.accounts.doctype.payment_entry.payment_entry import get_reference_details
 from erpnext.accounts.doctype.pricing_rule.utils import validate_coupon_code
 from erpnext.accounts.party import get_party_details
 from erpnext.accounts.services.taxes import get_default_taxes_and_charges
@@ -84,6 +85,7 @@ def preview(doc: dict, changed: dict | None = None, check_coupons: bool = False)
 				fill_untouched(document)
 			else:
 				fill(document, edited)
+				allocate_references(document)
 		# What the steps announced, like an Item Price added, is rolled back; the save says it again.
 		frappe.clear_messages()
 		return document.as_dict()
@@ -247,6 +249,37 @@ def reallocate_payment(document: Document, edited: set[str]):
 	paid_by_received = document.payment_type == "Pay" and "received_amount" in edited
 	amount = document.received_amount if paid_by_received else document.paid_amount
 	document.allocate_amount_to_references(flt(amount), True, True)
+
+
+def allocate_references(document: Document):
+	"""A reference with no allocation takes what is left of the payment, up to its outstanding amount, as Desk's
+	form allocates a reference just chosen; a payment with no amount takes the references' outstanding amounts.
+	The client sends an allocation the server made empty, so it is made again.
+	"""
+	if document.doctype != "Payment Entry":
+		return
+
+	chosen = [
+		row for row in document.get("references") or [] if row.reference_name and not row.allocated_amount
+	]
+	if not chosen:
+		return
+
+	receiving = document.payment_type == "Receive"
+	currency = document.paid_from_account_currency if receiving else document.paid_to_account_currency
+	for row in chosen:
+		row.update(
+			get_reference_details(
+				row.reference_doctype, row.reference_name, currency, document.party_type, document.party
+			)
+		)
+		left = flt(document.unallocated_amount) if document.paid_amount else flt(row.outstanding_amount)
+		row.allocated_amount = min(left, flt(row.outstanding_amount))
+		document.set_amounts()
+
+	if not document.paid_amount:
+		document.paid_amount = sum(flt(row.allocated_amount) for row in document.references)
+		document.set_amounts()
 
 
 def refresh_items(document: Document, edited_rows: dict[str, list[str]]):

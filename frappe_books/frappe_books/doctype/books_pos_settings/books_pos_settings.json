@@ -48,8 +48,7 @@
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Counter Cash Account",
-   "options": "Books Account",
-   "reqd": 1
+   "options": "Books Account"
   },
   {
    "fieldname": "write_off_account",

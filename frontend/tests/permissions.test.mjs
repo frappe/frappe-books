@@ -183,11 +183,11 @@ test('Setup lists Number Series for a user who can read them', () => {
     fyo.store.permissions = {
       doctypes: {
         NumberSeries: 'Books Number Series',
-        AccountingSettings: 'Books Accounting Settings',
+        SystemSettings: 'Books System Settings',
       },
       user: {
         can_read: canRead ? ['Books Number Series'] : [],
-        can_write: ['Books Accounting Settings'],
+        can_write: ['Books System Settings'],
       },
     };
     const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
@@ -204,11 +204,11 @@ test('Setup lists the taxes and charges templates the user can read', () => {
       SalesTaxesAndChargesTemplate: 'Books Sales Taxes and Charges Template',
       PurchaseTaxesAndChargesTemplate:
         'Books Purchase Taxes and Charges Template',
-      AccountingSettings: 'Books Accounting Settings',
+      SystemSettings: 'Books System Settings',
     },
     user: {
       can_read: ['Books Sales Taxes and Charges Template'],
-      can_write: ['Books Accounting Settings'],
+      can_write: ['Books System Settings'],
     },
   };
   const setup = getSidebarConfig().find(({ label }) => label === 'Setup');
@@ -280,16 +280,16 @@ test('a submitted document links only to the ledgers the user may open', () => {
 });
 
 test("a row's field levels follow its parent's permissions", async () => {
-  const account = (fields) =>
-    fields.find(({ fieldname }) => fieldname === 'account');
+  const findField = (fields, name) =>
+    fields.find(({ fieldname }) => fieldname === name);
   window.frappe.boot.user.roles = ['Books User'];
 
   try {
     await loadFrappeModels();
     const invoice = getDocType('SalesInvoice');
     for (const field of [
-      account(invoice.schema.fields),
-      account(invoice.tables.items.schema.fields),
+      findField(invoice.schema.fields, 'debit_to'),
+      findField(invoice.tables.items.schema.fields, 'income_account'),
     ]) {
       assert.equal(field.hidden, true);
       assert.equal(field.required, undefined);

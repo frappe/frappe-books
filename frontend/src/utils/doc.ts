@@ -83,11 +83,16 @@ export function hasFieldValue(doc: FrappeDoc, field: Field): boolean {
   );
 }
 
-/** Whether a form shows the field: not hidden, and on a submitted or cancelled document, not empty. */
+/**
+ * Whether a form shows the field: not hidden, and not empty where it can't be
+ * filled in, as Desk hides an empty read-only field. A new document keeps them,
+ * so its layout holds while the server fills them.
+ */
 export function isFieldShown(doc: FrappeDoc, field: Field): boolean {
-  if (doc.getFieldState(field).hidden) {
+  const { hidden, readOnly } = doc.getFieldState(field);
+  if (hidden) {
     return false;
   }
 
-  return (!doc.isSubmitted && !doc.isCancelled) || hasFieldValue(doc, field);
+  return hasFieldValue(doc, field) || !(doc.inserted && readOnly);
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { getFilterFields } from './helpers/accounting.mjs';
-import { frappeModels, getDocType } from './helpers/frappe.mjs';
+import { getDocType } from './helpers/frappe.mjs';
 import { getStandaloneModelNames } from './helpers/frappeModels.mjs';
 import { loadFrappeModels } from './helpers/models.mjs';
 

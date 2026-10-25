@@ -75,7 +75,7 @@ test('one request searches the text in the doctypes the filters allow', async ()
   assert.equal(requests.length, 2);
   assert.equal(requests[0].path, '/api/method/frappe_books.search.search');
   assert.equal(requests[0].body.text, 'Karen SINV-1');
-  assert.equal(requests[0].body.doctypes.length, 19);
+  assert.equal(requests[0].body.doctypes.length, 23);
   assert.equal(requests[0].body.doctypes.includes('Books Sales Invoice'), true);
   assert.equal(
     requests[1].body.doctypes.includes('Books Sales Invoice'),
@@ -204,8 +204,8 @@ test('a document shows its search fields and opens its form', async () => {
     {
       doctype: 'Books Customer',
       name: 'Acme',
-      email: 'acme@example.com',
-      phone: '9876543210',
+      email_id: 'acme@example.com',
+      mobile_no: '9876543210',
       docstatus: 0,
     },
   ]);

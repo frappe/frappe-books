@@ -103,7 +103,11 @@
         <FrappeSettingsBody>
           <div class="space-y-11">
             <section v-for="group in posScreenGroups" :key="group.title">
-              <h2 class="mb-2 text-lg-semibold text-ink-gray-8">
+              <!-- A lone field's own label names it. -->
+              <h2
+                v-if="group.fields.length > 1"
+                class="mb-2 text-lg-semibold text-ink-gray-8"
+              >
                 {{ group.title }}
               </h2>
               <div class="divide-y divide-outline-gray-1">

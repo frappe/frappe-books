@@ -39,7 +39,13 @@
         :key="group.title"
         class="flex flex-col gap-4 border-b border-outline-gray-1 p-4"
       >
-        <h2 class="text-lg-semibold text-ink-gray-8">{{ group.title }}</h2>
+        <!-- A lone field's own label names it. -->
+        <h2
+          v-if="group.fields.length > 1"
+          class="text-lg-semibold text-ink-gray-8"
+        >
+          {{ group.title }}
+        </h2>
         <CommonFormSection
           switches
           :fields="group.fields"

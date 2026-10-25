@@ -34,7 +34,7 @@ def forget_settings_and_books_setup():
 class IntegrationTestAccessoryMode(IntegrationTestCase):
 	def test_accessory_mode_needs_erpnext(self):
 		settings = frappe.get_single(SETTINGS)
-		settings.accessory_mode = 1
+		settings.update({"accessory_mode": 1, "default_company": None})
 		with without_erpnext(), self.assertRaisesRegex(frappe.ValidationError, "Install ERPNext"):
 			settings.save()
 

@@ -453,7 +453,9 @@ export default defineComponent({
         return '';
       }
 
-      if (this.schema.isSubmittable && this.docOrNull.notInserted) {
+      // A random temporary name means nothing to the user.
+      const { isSubmittable, naming } = this.schema;
+      if (this.docOrNull.notInserted && (isSubmittable || naming === 'random')) {
         return this.t`New entry`;
       }
 

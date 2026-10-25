@@ -179,8 +179,10 @@ test.describe('on a phone', () => {
     await waitForBooks(page);
     await page.getByRole('textbox', { name: /^Customer Name/ }).fill(name);
 
-    // Phones collapse sections that hold no value.
-    await page.getByRole('button', { name: 'Contact', exact: true }).click();
+    // A new party's Contact section starts open for its quick entry.
+    await expect(
+      page.getByRole('button', { name: 'Contact', exact: true })
+    ).toHaveAttribute('aria-expanded', 'true');
     await page
       .getByRole('textbox', { name: 'Mobile No' })
       .fill('+91 98200 00000');

@@ -291,6 +291,7 @@ export class SalesInvoiceItem extends InvoiceItem {
   static override presentation = {
     ...InvoiceItem.presentation,
     label: 'Sales Invoice Item',
+    fileFields: getFileFields(['expense_account']),
   };
 }
 
@@ -298,6 +299,7 @@ export class PurchaseInvoiceItem extends InvoiceItem {
   static override presentation = {
     ...InvoiceItem.presentation,
     label: 'Purchase Invoice Item',
+    fileFields: getFileFields(['income_account']),
   };
 }
 
@@ -316,10 +318,15 @@ export class QuotationItem extends InvoiceItem {
     quickEditFields: QUICK_EDIT_FIELDS.filter(
       (fieldname) => !NOT_QUOTED.includes(fieldname)
     ),
-    fileFields: withTypedRate(
-      FILE_FIELDS.filter((fieldname) => !NOT_QUOTED.includes(fieldname))
-    ),
+    fileFields: getFileFields(NOT_QUOTED),
   };
+}
+
+/** The row's file fields, less those its DocType lacks. */
+function getFileFields(lacking: string[]): string[] {
+  return withTypedRate(
+    FILE_FIELDS.filter((fieldname) => !lacking.includes(fieldname))
+  );
 }
 
 /**

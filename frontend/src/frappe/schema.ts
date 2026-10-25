@@ -18,6 +18,7 @@ import {
   getPositionedFields,
   layOutAccessoryFields,
   type AccessoryLayout,
+  type AccessoryPlacement,
 } from './accessoryLayout';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
@@ -57,6 +58,8 @@ export interface Presentation {
    * payment's positive Write Off in its signed deductions.
    */
   clientFields?: ClientField[];
+  /** Accessory mode: ERPNext fields the Books twin lacks, placed before twin fields, like a POS Opening Entry's POS Profile. */
+  accessoryPlacements?: AccessoryPlacement[];
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
   /**
@@ -245,7 +248,12 @@ function getDocFields(
   };
   const convert = (docfield: DocField) => toField(docfield, fieldContext);
   if (context.layout) {
-    return layOutAccessoryFields(shown, context.layout, convert);
+    return layOutAccessoryFields(
+      shown,
+      context.layout,
+      convert,
+      presentation.accessoryPlacements
+    );
   }
 
   const fields: Field[] = [];

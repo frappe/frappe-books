@@ -1,6 +1,8 @@
 import { ListViewSettings } from 'fyo/model/types';
 import type { Money } from 'pesa';
+import type { Field } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
+import { isAccessoryMode } from 'src/frappe/mode';
 
 /** A row of cash counted by denomination. */
 export type CashCount = FrappeDoc & { denomination?: Money; count?: number };
@@ -34,6 +36,11 @@ export class POSOpeningEntry extends FrappeDoc {
     fields: {
       balance_details: { emptyMessage: 'There are no modes of payment.' },
     },
+    // ERPNext's entry opens a POS Profile's shift; the profile lists its modes.
+    accessoryPlacements: [
+      { fieldname: 'pos_profile', before: 'period_start_date' },
+      { fieldname: 'user', before: 'balance_details' },
+    ],
     fileFields: [
       'name',
       'period_start_date',
@@ -53,6 +60,20 @@ export class POSOpeningEntry extends FrappeDoc {
   declare pos_profile?: string;
   declare opening_cash?: CashCount[];
   declare balance_details?: OpeningBalance[];
+
+  /** Accessory mode: the modes of payment come from the POS Profile, so their table says what is missing. */
+  override getFormFields(fields: Field[]): Field[] {
+    if (!isAccessoryMode()) {
+      return fields;
+    }
+
+    const emptyMessage = this.pos_profile
+      ? this.fyo.t`This POS Profile has no modes of payment`
+      : this.fyo.t`Select a POS Profile to load its modes of payment`;
+    return fields.map((field) =>
+      field.fieldname === 'balance_details' ? { ...field, emptyMessage } : field
+    );
+  }
 
   /** The cash the counted denominations add up to. */
   get openingCashAmount(): Money {

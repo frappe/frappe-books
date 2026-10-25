@@ -66,11 +66,13 @@ export function getPositionedFields(meta: DocTypeMeta): Positioned[] {
  * ERPNext order: custom fields in their end tab, others in More details when
  * picked, else only while mandatory and empty (see `FrappeDoc._extrasShown`).
  * Every field stays, so the document keeps all its values when saved.
+ * `placements` put ERPNext fields the twin lacks before twin fields.
  */
 export function layOutAccessoryFields(
   meta: DocTypeMeta,
   layout: AccessoryLayout,
-  toField: (docfield: DocField) => Field
+  toField: (docfield: DocField) => Field,
+  placements: AccessoryPlacement[] = []
 ): Field[] {
   const docfields = new Map(
     meta.fields.map((field) => [field.fieldname, field])
@@ -79,6 +81,13 @@ export function layOutAccessoryFields(
   for (const { docfield: twin, section, tab } of getPositionedFields(
     layout.meta
   )) {
+    for (const { fieldname, before } of placements) {
+      const placed = docfields.get(fieldname);
+      if (placed && before === twin.fieldname) {
+        fields.push({ ...toField(placed), section, tab });
+      }
+    }
+
     const docfield = docfields.get(twin.fieldname);
     if (docfield) {
       const { label, hidden } = twin;
@@ -94,6 +103,12 @@ export function layOutAccessoryFields(
   }
 
   return fields;
+}
+
+/** An ERPNext field the Books twin lacks, placed before the twin field `before`, like a POS Opening Entry's POS Profile. */
+export interface AccessoryPlacement {
+  fieldname: string;
+  before: string;
 }
 
 function toExtraField(field: Field, layout: AccessoryLayout): Field {

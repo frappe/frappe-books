@@ -46,11 +46,15 @@ function makeRow(values = {}) {
   return invoice.items[0];
 }
 
-/** The locations the stock requests asked about. */
+/** The locations and items the stock requests asked about; each also leaves out cancelled entries. */
 function getStockLocations() {
   return requests
     .filter(isLedgerSum)
-    .map(({ body }) => body.filters.map(([, , value]) => value));
+    .map(({ body }) =>
+      body.filters
+        .filter(([fieldname]) => fieldname !== 'is_cancelled')
+        .map(([, , value]) => value)
+    );
 }
 
 test('sales batch choices are the batches in stock where the invoice ships from', async () => {

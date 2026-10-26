@@ -63,3 +63,44 @@ test('Desk rules become rules of the document, unless they branch on its values'
   // `party_type == "Customer"` adds a filter, which no rule of the values gives
   assert.deepEqual(skipped['Sales Invoice'], ['project']);
 });
+
+const check = (fieldname) => ({ fieldname, fieldtype: 'Check' });
+const invoiceMetas = {
+  Invoice: {
+    name: 'Invoice',
+    fields: [
+      check('is_return'),
+      link('address'),
+      { fieldname: 'items', fieldtype: 'Table', options: 'Invoice Item' },
+    ],
+  },
+  'Invoice Item': {
+    name: 'Invoice Item',
+    fields: [link('item_code'), link('batch'), check('drop_ship')],
+  },
+};
+const generateInvoice = (setup) =>
+  generate({
+    bundles: [],
+    forms: {
+      Invoice: `frappe.ui.form.on("Invoice", { setup(frm) { ${setup} } });`,
+    },
+    metas: invoiceMetas,
+    boot: { sysdefaults: {} },
+  });
+
+test("A row's rule takes its parent's Checks", async () => {
+  const { queries } = await generateInvoice(`
+    frm.set_query("batch", "items", (doc, cdt, cdn) => ({
+      query: "batch_query",
+      filters: { item_code: locals[cdt][cdn].item_code, is_return: doc.is_return },
+    }));`);
+
+  assert.deepEqual(queries.Invoice['items.batch'], {
+    query: 'batch_query',
+    filters: {
+      item_code: 'eval:doc.item_code',
+      is_return: 'eval:parent.is_return',
+    },
+  });
+});

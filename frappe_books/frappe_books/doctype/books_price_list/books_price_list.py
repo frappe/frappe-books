@@ -2,7 +2,6 @@
 # For license information, please see license.txt
 
 import frappe
-from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.money import company_currency
@@ -38,13 +37,6 @@ class BooksPriceList(Document):
 		"""Fill the currency a save would fill, without saving, for the form to show it."""
 		check_preview_permission(self)
 		self.set_missing_values()
-
-	def validate(self):
-		# Books rates are in the company currency.
-		if self.currency != company_currency():
-			frappe.throw(
-				_("Price List {0} must be in the company currency {1}.").format(self.name, company_currency())
-			)
 
 	def on_update(self):
 		"""Its prices keep the currency and sides of the list, as ERPNext keeps them."""

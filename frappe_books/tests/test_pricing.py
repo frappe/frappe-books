@@ -589,10 +589,6 @@ class IntegrationTestPricing(IntegrationTestCase):
 		)
 		self.assertEqual([tuple(row.values()) for row in price], [(1, 1, company_currency())])
 
-	def test_price_list_is_in_the_company_currency(self):
-		with self.assertRaisesRegex(frappe.ValidationError, "company currency"):
-			make_price_list(currency=foreign_currency())
-
 	def test_item_price_without_unit_gets_the_item_unit(self):
 		price_list = make_price_list()
 

@@ -20,6 +20,11 @@ books.ui.form.on("Stock Entry", {
 			return { query: "erpnext.controllers.queries.get_batch_no", filters };
 		});
 
+		// India Compliance's, from its taxes_controller.js
+		frm.set_query("item_tax_template", "items", (doc, cdt, cdn) =>
+			item_tax_template_query(doc, locals[cdt][cdn])
+		);
+
 		// The transit warehouse query of erpnext.stock.StockEntry.setup_warehouse_query
 		frm.set_query("t_warehouse", "items", (doc) => {
 			const filters = { is_group: 0, company: doc.company };

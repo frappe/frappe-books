@@ -678,14 +678,24 @@ test('coupon and invoice links filter pricing rules and price lists by Frappe fi
   assert.deepEqual(frappeModels.CouponCode.filters.pricing_rule(), [
     ['coupon_code_based', '=', 1],
   ]);
-  assert.deepEqual(frappeModels.SalesInvoice.filters.selling_price_list(), [
-    ['enabled', '=', 1],
-    ['selling', '=', 1],
-  ]);
-  assert.deepEqual(frappeModels.PurchaseInvoice.filters.buying_price_list(), [
-    ['enabled', '=', 1],
-    ['buying', '=', 1],
-  ]);
+  // A foreign currency invoice offers lists in its currency and the company's
+  const invoice = { companyCurrency: 'INR', currency: 'USD' };
+  assert.deepEqual(
+    frappeModels.SalesInvoice.filters.selling_price_list(invoice),
+    [
+      ['enabled', '=', 1],
+      ['selling', '=', 1],
+      ['currency', 'in', ['INR', 'USD']],
+    ]
+  );
+  assert.deepEqual(
+    frappeModels.PurchaseInvoice.filters.buying_price_list(invoice),
+    [
+      ['enabled', '=', 1],
+      ['buying', '=', 1],
+      ['currency', 'in', ['INR', 'USD']],
+    ]
+  );
 });
 
 test('the coupon form shows what it showed and makes a new coupon a code from its name', async () => {

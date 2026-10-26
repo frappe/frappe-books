@@ -668,6 +668,7 @@ test('links filter by the doctypes they point to', async () => {
     [
       ['enabled', '=', 1],
       ['buying', '=', 1],
+      ['currency', 'in', ['INR', 'INR']],
     ]
   );
   assert.deepEqual(filters.taxes_and_charges(sale), [['disabled', '=', 0]]);
@@ -675,6 +676,7 @@ test('links filter by the doctypes they point to', async () => {
   assert.deepEqual(frappeModels.Quotation.filters.selling_price_list(quote), [
     ['enabled', '=', 1],
     ['selling', '=', 1],
+    ['currency', 'in', ['INR', 'INR']],
   ]);
 });
 
@@ -717,6 +719,7 @@ test('a record created from a link takes the values its filters choose', () => {
     {
       enabled: true,
       selling: true,
+      currency: 'INR',
     }
   );
 });

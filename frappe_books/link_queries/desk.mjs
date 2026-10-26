@@ -214,7 +214,11 @@ export function createDesk({
   /** `utils` on `erpnext.utils` for good: the bundle's own assignments to them do nothing. */
   function stubUtils(object) {
     for (const [key, value] of Object.entries(utils)) {
-      Object.defineProperty(object, key, { get: () => value, set() {}, configurable: true });
+      Object.defineProperty(object, key, {
+        get: () => value,
+        set() {},
+        configurable: true,
+      });
     }
   }
 
@@ -263,7 +267,9 @@ export function createDesk({
     context.cur_frm = frm;
     locals[doctype] = { [doc.name]: doc };
     for (const df of metas.get(doctype).fields) {
-      for (const row of TABLE_TYPES.includes(df.fieldtype) ? (doc[df.fieldname] ?? []) : []) {
+      for (const row of TABLE_TYPES.includes(df.fieldtype)
+        ? (doc[df.fieldname] ?? [])
+        : []) {
         (locals[row.doctype] ??= {})[row.name] = row;
       }
     }

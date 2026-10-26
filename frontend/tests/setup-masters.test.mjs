@@ -62,7 +62,6 @@ test('a mode of payment shows its type, default account and clearance date', () 
   assert.deepEqual(getLayout('ModeOfPayment'), [
     'mode_of_payment | Mode of Payment | ',
     'type | Type | ',
-    'accounts | Accounts | ',
     'default_account | Default Account | ',
     'requires_clearance_date | Requires Clearance Date | ',
   ]);

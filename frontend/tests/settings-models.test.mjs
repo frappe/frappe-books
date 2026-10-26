@@ -103,6 +103,9 @@ test('a saved inventory feature cannot be turned off; an unsaved one can', async
   assert.equal(readOnly(saved, 'enable_point_of_sale'), false);
 });
 
+// Rules for fields only the ERPNext doctype has, which accessory mode shows
+const ACCESSORY_RULES = ['StockEntry.filters.stock_entry_type'];
+
 test('the rules of each Frappe-backed model name fields of its DocType', () => {
   const problems = getStandaloneModelNames().flatMap((schemaName) => {
     const Model = frappeModels[schemaName];
@@ -119,6 +122,7 @@ test('the rules of each Frappe-backed model name fields of its DocType', () => {
       Object.keys(rules ?? {})
         .filter((fieldname) => !known.includes(fieldname))
         .map((fieldname) => `${schemaName}.${map}.${fieldname}`)
+        .filter((rule) => !ACCESSORY_RULES.includes(rule))
     );
   });
   assert.deepEqual(problems, []);

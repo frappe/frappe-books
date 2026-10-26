@@ -34,6 +34,27 @@ test('a new item takes its accounts from the server and saves', async ({
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
 });
 
+test('an item named with URL characters stays open and reopens', async ({
+  page,
+}) => {
+  const name = `ITEM-${Date.now()}#-BLUE 50% A/B?&`;
+  await page.getByRole('button', { name: 'New', exact: true }).click();
+  await page
+    .getByRole('textbox', { name: 'Item Code (required)', exact: true })
+    .fill(name);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: 'Yes', exact: true }).click();
+  const route = new RegExp(`/books/edit/Item/${encodeURIComponent(name)}$`);
+  await expect(page).toHaveURL(route);
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+  // A new form would show 'Not Saved' under a new route.
+  await page.reload();
+  await waitForBooks(page);
+  await expect(page).toHaveURL(route);
+  await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+});
+
 test.describe('on a phone', () => {
   test.use({
     viewport: { width: 390, height: 844 },

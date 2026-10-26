@@ -145,7 +145,15 @@ export class Generator {
     const forms = [full, empty].filter((form) => form.queries.has(key));
     const samples = this.getSamples(doctype, child, forms, base.reads);
     const guards = this.getGuards(full, key, row, base);
-    for (const rule of getCandidates(base.value, !!child, guards)) {
+    const checks = {
+      side: (fieldname) =>
+        child &&
+        !this.getField(child, fieldname) &&
+        this.getField(doctype, fieldname)
+          ? 'parent'
+          : 'doc',
+    };
+    for (const rule of getCandidates(base.value, !!child, guards, checks)) {
       if (samples.every((sample) => this.agrees(rule, key, sample)))
         return rule;
     }
@@ -345,13 +353,14 @@ export class Generator {
 
 /**
  * Rules that may stand for Desk's `value` on the all-set sample: its tokens as
- * the fields they name, then with a Check's 1 as the Check, each with and
- * without `guards`. None when it holds a value /books cannot work out.
+ * the fields they name, then with a Check's 1 as the Check (of the side
+ * `checks` gives), each with and without `guards`. None when it holds a value
+ * /books cannot work out.
  */
-function getCandidates(value, isRow, guards) {
+function getCandidates(value, isRow, guards, checks) {
   const rules = [
-    toRule(value, isRow, false),
-    toRule(value, isRow, true),
+    toRule(value, isRow, null),
+    toRule(value, isRow, checks),
   ].filter(Boolean);
   const distinct = [
     ...new Map(rules.map((rule) => [JSON.stringify(rule), rule])).values(),
@@ -373,7 +382,7 @@ function toRule({ query, filters, ...rest }, isRow, checks) {
       if (/(^|\W)[PRT]\.\w+|^@/.test(value)) convertible = false;
       return value;
     }
-    if (checks && value === 1 && key) return `eval:doc.${key}`;
+    if (checks && value === 1 && key) return `eval:${checks.side(key)}.${key}`;
     if (Array.isArray(value)) return value.map((item) => convert(item));
     if (value && typeof value === 'object') {
       // An object of the sandbox's realm, so its prototype is not this one's

@@ -1,4 +1,5 @@
 import type { DocValue } from 'fyo/core/types';
+import { DateTime } from 'luxon';
 import type { EvalDoc } from './dependsOn';
 import type { FrappeDoc } from './document';
 import { getAllOpenFrappeDocs } from './documents';
@@ -15,7 +16,8 @@ import type { DeskFilters } from './link';
  * reads a row, as on Desk.
  *
  * `frm.doc` holds the document's current values and is read only; change
- * them with `frm.set_value` or `books.model.set_value`.
+ * them with `frm.set_value` or `books.model.set_value`. `books.boot` is Desk's
+ * `frappe.boot`, and `books.datetime` has Desk's `nowdate` and `now_time`.
  */
 
 /** What a link's `set_query` gives: Desk's filters and maybe a whitelisted query method. */
@@ -52,6 +54,13 @@ const handlers = new Map<string, Record<string, Handler>[]>();
 const forms = new WeakMap<FrappeDoc, FormState>();
 
 const books = {
+  get boot(): unknown {
+    return globalThis.window?.frappe?.boot;
+  },
+  datetime: {
+    nowdate: () => DateTime.now().toISODate(),
+    now_time: () => DateTime.now().toFormat('HH:mm:ss'),
+  },
   ui: {
     form: {
       on(doctype: string, events: Record<string, Handler>) {

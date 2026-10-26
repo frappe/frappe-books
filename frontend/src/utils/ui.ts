@@ -371,6 +371,10 @@ export function getFormRoute(schemaName: string, name: string): string {
   return `/edit/${schemaName}/${encodeURIComponent(name)}`;
 }
 
+export function getPrintRoute(schemaName: string, name: string): string {
+  return `/print/${schemaName}/${encodeURIComponent(name)}`;
+}
+
 export async function openNewDoc(schemaName: string, initData?: DocValueMap) {
   const doc = newFrappeDoc(schemaName, initData);
   await routeTo(getFormRoute(schemaName, doc.name!));

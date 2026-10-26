@@ -224,7 +224,7 @@ import ReturnSalesInvoiceModal from './ReturnSalesInvoiceModal.vue';
 import { ModelNameEnum } from 'models/types';
 import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
-import { routeTo, toggleSidebar } from 'src/utils/ui';
+import { getPrintRoute, routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick, shallowRef } from 'vue';
@@ -824,7 +824,7 @@ export default defineComponent({
 
         if (shouldPrint) {
           await routeTo(
-            `/print/${this.sinvDoc.schemaName}/${this.sinvDoc.name}`
+            getPrintRoute(this.sinvDoc.schemaName, this.sinvDoc.name!)
           );
         }
 

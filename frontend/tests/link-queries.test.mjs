@@ -104,3 +104,22 @@ test("A row's rule takes its parent's Checks", async () => {
     },
   });
 });
+
+test('A rule takes a field of each row of a table', async () => {
+  const { queries } = await generateInvoice(`
+    frm.set_query("address", (doc) => ({
+      query: "address_query",
+      filters: {
+        items: doc.items.map((item) => item.item_code),
+        drop_ship: doc.items.map((item) => item.drop_ship),
+      },
+    }));`);
+
+  assert.deepEqual(queries.Invoice.address, {
+    query: 'address_query',
+    filters: {
+      items: 'eval:(doc.items || []).map((row) => row.item_code)',
+      drop_ship: 'eval:(doc.items || []).map((row) => row.drop_ship)',
+    },
+  });
+});

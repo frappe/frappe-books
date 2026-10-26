@@ -3,7 +3,6 @@ import { serverHtmlToLine } from 'src/utils/serverHtml';
 import { call } from 'src/web/api';
 import { getValue } from './api';
 import { getDocType, isFrappeBacked } from './doctypes';
-import type { DeskFilters } from './erpnextQueries';
 import { getOpenFrappeDocs } from './documents';
 import { getSchema } from './registry';
 
@@ -17,6 +16,9 @@ export type LinkOption = {
   record: LinkRecord;
   description?: string;
 };
+
+/** Desk's link filters: a dict, or a list of filters. */
+export type DeskFilters = Record<string, unknown> | unknown[][];
 
 /** How a Link searches: with Desk's filters, a list or a dict, and maybe a whitelisted query method. */
 export interface LinkSearch {

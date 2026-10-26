@@ -15,6 +15,7 @@ import {
 } from './doctypes';
 import { isTableDocField } from './fieldProperties';
 import { getOpenFrappeDocs } from './documents';
+import { addFormScripts } from './formScripts';
 import { setAppTitles, type AccessoryLayout } from './accessoryLayout';
 import { isAccessoryMode } from './mode';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
@@ -32,7 +33,9 @@ const QUICK_VIEW_SKIPPED_FIELDTYPES = ['Table', 'AttachImage', 'Attachment'];
 /** Loads the meta of every model's schema in one request. Screens read it synchronously after this. */
 export async function loadFrappeDocTypes() {
   const models = getFrappeModels();
-  setDocTypes(models, await getModelsMeta(models));
+  const booksMeta = await getModelsMeta(models);
+  addFormScripts(booksMeta.scripts);
+  setDocTypes(models, booksMeta);
 
   fyo.observer.on('sync:CustomForm', reloadCustomized);
   fyo.observer.on('delete:CustomForm', reloadCustomized);

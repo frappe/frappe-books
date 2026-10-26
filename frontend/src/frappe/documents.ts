@@ -161,6 +161,11 @@ export function forgetFrappeDoc(doc: FrappeDoc) {
   }
 }
 
+/** Every open document, e.g. to find one a form script names. */
+export function getAllOpenFrappeDocs(): FrappeDoc[] {
+  return [...docs.values()];
+}
+
 /** The open documents of a schema, e.g. to show a customized form. */
 export function getOpenFrappeDocs(schemaName: string): FrappeDoc[] {
   return [...docs.values()].filter((doc) => doc.schemaName === schemaName);

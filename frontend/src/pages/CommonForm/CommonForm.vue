@@ -176,6 +176,7 @@
 import { DocValue } from 'fyo/core/types';
 import { Action, LinkedRecords } from 'fyo/model/types';
 import { FrappeDoc, setFormShowsPreviewErrors } from 'src/frappe/document';
+import { openForm } from 'src/frappe/formScripts';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import {
@@ -438,7 +439,10 @@ export default defineComponent({
 
       // A random temporary name means nothing to the user.
       const { isSubmittable, naming } = this.schema;
-      if (this.docOrNull.notInserted && (isSubmittable || naming === 'random')) {
+      if (
+        this.docOrNull.notInserted &&
+        (isSubmittable || naming === 'random')
+      ) {
         return this.t`New entry`;
       }
 
@@ -769,6 +773,7 @@ export default defineComponent({
 
       try {
         await this.loadDoc(this.schemaName, this.name, true);
+        await openForm(this.doc);
       } catch (error) {
         await handleErrorWithDialog(error);
       }

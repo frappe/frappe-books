@@ -49,6 +49,7 @@ import type { EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import { isAccessoryMode } from './mode';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
+import { triggerFieldChange } from './formScripts';
 import { forgetFilledExtras } from './extraFields';
 import { getServerMessages, type ServerMessage } from 'src/web/api';
 import {
@@ -637,6 +638,7 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       doc: this,
       changed: changedFieldname,
     });
+    await triggerFieldChange(this, changedFieldname);
 
     return true;
   }

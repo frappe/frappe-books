@@ -80,6 +80,8 @@ export interface BooksMeta {
   metas: DocTypeMeta[];
   /** Where Books Custom Forms put custom fields, by doctype and fieldname. */
   placements: Record<string, Placements | undefined>;
+  /** The form scripts apps add with the `books_doctype_js` hook, by doctype. */
+  scripts?: Record<string, string>;
   /** In accessory mode, with the Books doctypes whose positions lay out the ERPNext ones. */
   accessory?: AccessoryLayoutMeta;
 }

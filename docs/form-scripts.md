@@ -53,7 +53,19 @@ books.ui.form.on("Sales Invoice Item", {
 | `frm.set_value(fieldname, value)` | Sets a value of the document. |
 | `books.model.set_value(cdt, cdn, fieldname, value)` | Sets a value of a row. |
 | `locals[cdt][cdn]` | A row's current values, as on Desk. |
+| `books.boot` | Desk's `frappe.boot`. |
+| `books.datetime.nowdate()`, `books.datetime.now_time()` | Today's date and the time now, as Desk's `frappe.datetime` gives them. |
 
-A Link searches with the script's `set_query` first. With ERPNext installed, the DocField's `link_filters` then apply over it, as on Desk. Without either, the field searches with the Books model's filters.
+## Generated link queries
+
+With ERPNext installed, an app does not need a form script for most of its `set_query` rules. When the site migrates or an app is installed, Books runs the installed apps' Desk JS in Node.js (`frappe_books/link_queries/generate.mjs`). It keeps each rule that only reads the document's values, and checks it against Desk's results on samples of the document. Rules that branch on the values are left out; the migrate output counts them.
+
+For such a rule, add a form script with the same `set_query`. Books' own, for ERPNext's and India Compliance's rules, are in `frappe_books/link_queries/scripts`. A nightly check compares them with Desk's.
+
+A site without Node.js has no generated queries.
+
+## How a Link searches
+
+A Link searches with the script's `set_query` first, else the generated query. With ERPNext installed, the DocField's `link_filters` then apply over it, as on Desk. Without any of them, the field searches with the Books model's filters.
 
 The server still checks every value. A form script only shapes what the form offers.

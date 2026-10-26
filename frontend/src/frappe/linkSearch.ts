@@ -4,7 +4,7 @@ import { evaluateExpression, type EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import type { FrappeDoc } from './document';
 import { getScriptQuery, type LinkQuery } from './formScripts';
-import type { DeskFilters, LinkSearch } from './link';
+import type { DeskFilters, LinkRule, LinkSearch } from './link';
 import { getAccessoryCompany, isAccessoryMode } from './mode';
 
 interface Context {
@@ -15,11 +15,22 @@ interface Context {
 type LinkFilter = [string, string, string, unknown];
 
 const failed = new Set<string>();
+const rules = new Map<string, Record<string, LinkRule>>();
+
+/** Keeps the link queries generated from the apps' Desk JS, by doctype. */
+export function addLinkRules(
+  queries: Record<string, Record<string, LinkRule>> = {}
+) {
+  for (const [doctype, byKey] of Object.entries(queries)) {
+    rules.set(doctype, byKey);
+  }
+}
 
 /**
  * How the Link `fieldname` of `doc` searches, as Desk's link control works it
- * out: a form script's `set_query` for the field, then, in accessory mode, the
- * DocField's link_filters over its filters. Undefined when there is neither.
+ * out: a form script's `set_query` for the field, else the query generated
+ * from the apps' Desk JS, then, in accessory mode, the DocField's link_filters
+ * over its filters. Undefined when there is none of them.
  */
 export async function getLinkSearch(
   fieldname: string,
@@ -58,31 +69,57 @@ export function toFilterList(filters: LinkSearch['filters']): Filter[] | null {
   );
 }
 
-/**
- * The field's `set_query`; a row's is keyed by its table, as
- * `frm.set_query(field, table)` sets it. A field kept in a per-company row
- * searches as that row's field.
- */
+/** The field's `set_query`, else its generated rule. */
 async function getQuery(
   fieldname: string,
   doc: FrappeDoc
 ): Promise<LinkQuery | undefined> {
+  const { form, key, row } = getQueryKey(fieldname, doc);
+  return (
+    (await getScriptQuery(form, key, row)) ??
+    getRuleQuery(form.doctype, key, getContext(fieldname, doc))
+  );
+}
+
+/**
+ * The form the field's query is set on, and its key there: a row's is keyed
+ * by its table, as `frm.set_query(field, table)` sets it. A field kept in a
+ * per-company row searches as that row's field.
+ */
+function getQueryKey(
+  fieldname: string,
+  doc: FrappeDoc
+): { form: FrappeDoc; key: string; row?: { cdt: string; cdn?: string } } {
   const table = doc.fieldMap[fieldname]?.companyTable;
   if (table) {
     const cdt = getTableDoctype(doc, table);
     const cdn = getCompanyRow(doc, table)?.name;
-    return await getScriptQuery(doc, `${table}.${fieldname}`, { cdt, cdn });
+    return { form: doc, key: `${table}.${fieldname}`, row: { cdt, cdn } };
   }
 
   const { parentdoc, parentFieldname } = doc;
   if (parentdoc) {
-    return await getScriptQuery(parentdoc, `${parentFieldname}.${fieldname}`, {
-      cdt: doc.doctype,
-      cdn: doc.name,
-    });
+    const row = { cdt: doc.doctype, cdn: doc.name };
+    return { form: parentdoc, key: `${parentFieldname}.${fieldname}`, row };
   }
 
-  return await getScriptQuery(doc, fieldname);
+  return { form: doc, key: fieldname };
+}
+
+/** The generated rule of a form's field, worked out; none while a `when` value is not set. */
+function getRuleQuery(
+  doctype: string,
+  key: string,
+  context: Context
+): LinkQuery | undefined {
+  const rule = rules.get(doctype)?.[key];
+  if (!rule || rule.when?.some((value) => !resolve(value, context))) {
+    return undefined;
+  }
+
+  const filters =
+    rule.filters && (resolve(rule.filters, context) as DeskFilters);
+  return { query: rule.query, filters };
 }
 
 function getTableDoctype(doc: FrappeDoc, table: string): string {
@@ -126,10 +163,16 @@ function withoutEmpty(filters: DeskFilters): DeskFilters {
   );
 }
 
-/** A value with its `eval:` strings worked out, in arrays too. */
+/** A value with its `eval:` strings worked out, in arrays and dicts too. */
 function resolve(value: unknown, context: Context): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => resolve(item, context));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, resolve(item, context)])
+    );
   }
 
   if (typeof value === 'string' && value.startsWith('eval:')) {

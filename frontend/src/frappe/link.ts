@@ -20,6 +20,17 @@ export type LinkOption = {
 /** Desk's link filters: a dict, or a list of filters. */
 export type DeskFilters = Record<string, unknown> | unknown[][];
 
+/**
+ * A link query generated from the apps' Desk JS: its `eval:` values read the
+ * document, or the row (`doc`) and its `parent`, and it applies only when
+ * each `when` value is set.
+ */
+export interface LinkRule {
+  query?: string;
+  filters?: DeskFilters;
+  when?: string[];
+}
+
 /** How a Link searches: with Desk's filters, a list or a dict, and maybe a whitelisted query method. */
 export interface LinkSearch {
   query?: string;

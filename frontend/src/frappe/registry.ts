@@ -16,6 +16,7 @@ import {
 import { isTableDocField } from './fieldProperties';
 import { getOpenFrappeDocs } from './documents';
 import { addFormScripts } from './formScripts';
+import { addLinkRules } from './linkSearch';
 import { setAppTitles, type AccessoryLayout } from './accessoryLayout';
 import { isAccessoryMode } from './mode';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
@@ -35,6 +36,7 @@ export async function loadFrappeDocTypes() {
   const models = getFrappeModels();
   const booksMeta = await getModelsMeta(models);
   addFormScripts(booksMeta.scripts);
+  addLinkRules(booksMeta.queries);
   setDocTypes(models, booksMeta);
 
   fyo.observer.on('sync:CustomForm', reloadCustomized);

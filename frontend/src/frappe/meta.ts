@@ -1,4 +1,5 @@
 import { call } from 'src/web/api';
+import type { LinkRule } from './link';
 import type { Placements } from './schema';
 
 /** The DocField properties /books reads. Custom fields and property setters are applied. */
@@ -82,6 +83,8 @@ export interface BooksMeta {
   placements: Record<string, Placements | undefined>;
   /** The form scripts apps add with the `books_doctype_js` hook, by doctype. */
   scripts?: Record<string, string>;
+  /** Link queries generated from the apps' Desk JS, by doctype, then `fieldname` or `table.fieldname`. */
+  queries?: Record<string, Record<string, LinkRule>>;
   /** In accessory mode, with the Books doctypes whose positions lay out the ERPNext ones. */
   accessory?: AccessoryLayoutMeta;
 }

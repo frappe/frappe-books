@@ -52,9 +52,17 @@ after_install = [
 	"frappe_books.search.build_search_index",
 	"frappe_books.accessory.printing.sync_pos_receipt",
 ]
-# Books' POS receipt for ERPNext's Sales Invoice, on sites with ERPNext only
-after_app_install = ["frappe_books.accessory.printing.sync_pos_receipt_for"]
-after_migrate = ["frappe_books.accessory.printing.sync_pos_receipt"]
+# Books' POS receipt for ERPNext's Sales Invoice, on sites with ERPNext only, and the link
+# queries of the installed apps' Desk JS
+after_app_install = [
+	"frappe_books.accessory.printing.sync_pos_receipt_for",
+	"frappe_books.link_queries.generate_link_queries",
+]
+after_app_uninstall = ["frappe_books.link_queries.generate_link_queries"]
+after_migrate = [
+	"frappe_books.accessory.printing.sync_pos_receipt",
+	"frappe_books.link_queries.generate_link_queries",
+]
 before_tests = [
 	"frappe_books.setup.before_tests",
 	"frappe_books.tests.accounting.enable_features",

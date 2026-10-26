@@ -6,6 +6,7 @@ from frappe_books.accessory import accessory_company
 from frappe_books.accessory.form_tabs import get_app_titles, get_custom_field_tabs
 from frappe_books.customization import get_placements
 from frappe_books.frappe_books.doctype.books_field_pick.books_field_pick import get_field_picks
+from frappe_books.link_queries import get_link_queries
 
 
 @frappe.whitelist()
@@ -13,8 +14,9 @@ def get_books_meta(doctypes: list[str], layouts: list[str] | None = None) -> dic
 	"""What /books builds its forms from, in one request.
 
 	`metas` holds what Frappe's getdoctype sends for each doctype, its tables' meta included, once
-	each. `placements` holds where Books Custom Forms put custom fields, and `scripts` the form
-	scripts apps add with the `books_doctype_js` hook, by doctype. In accessory mode,
+	each. `placements` holds where Books Custom Forms put custom fields, `scripts` the form
+	scripts apps add with the `books_doctype_js` hook, and `queries` the link queries generated
+	from the apps' Desk JS, by doctype. In accessory mode,
 	`layouts` names the Books doctypes whose positions lay out the ERPNext `doctypes`; their meta
 	comes too, with `accessory` saying where the other ERPNext fields go.
 	"""
@@ -24,6 +26,7 @@ def get_books_meta(doctypes: list[str], layouts: list[str] | None = None) -> dic
 		"metas": list(metas.values()),
 		"placements": get_placements(),
 		"scripts": get_form_scripts(list(metas)),
+		"queries": get_link_queries(list(metas)),
 	}
 	if layouts and accessory_company():
 		books_meta["accessory"] = get_accessory_layout(doctypes, list(metas))

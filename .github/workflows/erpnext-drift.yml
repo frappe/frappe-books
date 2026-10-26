@@ -1,7 +1,8 @@
 name: ERPNext drift
 
-# Books copies some of ERPNext's Desk JS (report filters) and
-# calls ERPNext by name; this compares them with ERPNext develop every night.
+# Books copies some of ERPNext's Desk JS (report filters), hand-writes the link
+# queries of Desk JS it cannot generate, and calls ERPNext by name; this
+# compares them with ERPNext and India Compliance develop every night.
 on:
   schedule:
     - cron: '30 1 * * *'
@@ -42,3 +43,69 @@ jobs:
           npm install --global yarn@1.22.22
           yarn install --frozen-lockfile
           node scripts/erpnext-drift.mjs "$GITHUB_WORKSPACE/upstream/erpnext" "$GITHUB_WORKSPACE/upstream/frappe"
+
+  link-queries:
+    name: Link queries against ERPNext and India Compliance develop
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    services:
+      mariadb:
+        image: mariadb:11.8
+        env:
+          MARIADB_ROOT_PASSWORD: books-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=10
+      redis-cache:
+        image: redis:7
+        ports:
+          - 13000:6379
+      redis-queue:
+        image: redis:7
+        ports:
+          - 11000:6379
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcups2-dev libmariadb-dev mariadb-client redis-server
+          npm install --global yarn@1.22.22
+          uv tool install frappe-bench
+
+      # The apps' Desk bundles are built, as on a site, since the queries come from them.
+      - name: Create a bench with ERPNext, India Compliance and Books
+        run: |
+          bench init "$RUNNER_TEMP/books-bench" --frappe-branch develop \
+            --python "$(command -v python)" --skip-assets --no-backups
+          cd "$RUNNER_TEMP/books-bench"
+          bench set-config -g redis_cache redis://127.0.0.1:13000
+          bench set-config -g redis_queue redis://127.0.0.1:11000
+          bench set-config -g redis_socketio redis://127.0.0.1:13000
+          bench get-app --branch develop --skip-assets erpnext
+          bench get-app --branch develop --skip-assets https://github.com/resilient-tech/india-compliance
+          bench get-app --soft-link --skip-assets "$GITHUB_WORKSPACE"
+          bench build
+
+      # Migrating generates the site's link queries.
+      - name: Create a site
+        working-directory: ${{ runner.temp }}/books-bench
+        run: |
+          bench new-site books-test.localhost --admin-password admin --db-host 127.0.0.1 \
+            --db-port 3306 --db-root-username root --db-root-password books-test
+          bench --site books-test.localhost install-app erpnext india_compliance frappe_books
+          bench --site books-test.localhost migrate
+
+      - name: Compare /books' link queries with Desk's
+        working-directory: ${{ runner.temp }}/books-bench
+        run: bench --site books-test.localhost execute frappe_books.link_queries.check_link_queries

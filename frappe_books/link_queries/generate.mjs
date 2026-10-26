@@ -101,18 +101,7 @@ export class Generator {
 
   /** The kept rules of a form, and the keys of the ones left out. */
   async generateForm(doctype, code) {
-    const forms = [];
-    for (const empty of [false, true]) {
-      const doc = this.makeSample(doctype, 'P', empty);
-      const desk = createDesk(this.deskOptions);
-      forms.push({
-        desk,
-        doc,
-        empty,
-        ...(await desk.openForm(doctype, code, doc)),
-      });
-    }
-
+    const forms = await this.openForms(doctype, code);
     const queries = {};
     const skipped = [];
     const keys = new Set(forms.flatMap((form) => [...form.queries.keys()]));
@@ -124,6 +113,22 @@ export class Generator {
       else skipped.push(key);
     }
     return { queries, skipped };
+  }
+
+  /** The form of `doctype` on its two base samples: all fields set, and none. */
+  async openForms(doctype, code) {
+    const forms = [];
+    for (const empty of [false, true]) {
+      const doc = this.makeSample(doctype, 'P', empty);
+      const desk = createDesk(this.deskOptions);
+      forms.push({
+        desk,
+        doc,
+        empty,
+        ...(await desk.openForm(doctype, code, doc)),
+      });
+    }
+    return forms;
   }
 
   /** A rule that gives Desk's results for `key` on every sample, or undefined. */

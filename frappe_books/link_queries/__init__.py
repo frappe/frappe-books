@@ -18,6 +18,7 @@ from frappe.utils import get_assets_json
 from frappe_books.accessory import erpnext_installed
 
 GENERATOR = os.path.join(os.path.dirname(__file__), "generate.mjs")
+CHECKER = os.path.join(os.path.dirname(__file__), "check.mjs")
 FILE = "books_link_queries.json"
 TIMEOUT = 600
 # Read-only methods ERPNext's forms call as they load, with their args
@@ -46,6 +47,28 @@ def get_link_queries(doctypes: list[str]) -> dict:
 	with open(path) as f:
 		queries = json.load(f)["queries"]
 	return {doctype: queries[doctype] for doctype in doctypes if doctype in queries}
+
+
+def check_link_queries():
+	"""The nightly check (check.mjs): fails when /books searches a link field it shows other than Desk."""
+	from frappe_books.meta import get_form_scripts
+
+	frappe.set_user("Administrator")
+	doctypes = get_form_doctypes()
+	data = get_generator_input(doctypes) | {
+		"scripts": get_form_scripts(doctypes),
+		"shown": get_shown_keys(doctypes),
+	}
+	result = subprocess.run(
+		[shutil.which("node"), CHECKER],
+		input=frappe.as_json(data, indent=None),
+		capture_output=True,
+		text=True,
+		timeout=TIMEOUT,
+	)
+	print(result.stdout or result.stderr)
+	if result.returncode:
+		raise SystemExit(1)
 
 
 def _generate():
@@ -88,6 +111,32 @@ def get_form_doctypes() -> list[str]:
 	return frappe.get_all(
 		"DocType", {"name": ["in", twins], "istable": 0, "issingle": 0}, pluck="name", order_by="name"
 	)
+
+
+def get_shown_keys(doctypes: list[str]) -> dict[str, list[str]]:
+	"""The link fields /books shows on each form, as `fieldname` or `table.fieldname`: those of its
+	Books twin, and the custom fields its custom field tabs show."""
+	return {
+		doctype: [*get_link_keys(f"Books {doctype}"), *get_link_keys(doctype, custom=True)]
+		for doctype in doctypes
+	}
+
+
+def get_link_keys(doctype: str, custom: bool = False) -> list[str]:
+	"""The doctype's link fields and its tables', only custom ones when `custom`."""
+	meta = frappe.get_meta(doctype)
+
+	def links(meta, prefix=""):
+		return [
+			f"{prefix}{df.fieldname}"
+			for df in meta.fields
+			if df.fieldtype in ("Link", "Dynamic Link") and (df.get("is_custom_field") or not custom)
+		]
+
+	keys = links(meta)
+	for table in meta.get_table_fields():
+		keys += links(frappe.get_meta(table.options), f"{table.fieldname}.")
+	return keys
 
 
 def get_generator_input(doctypes: list[str]) -> dict:

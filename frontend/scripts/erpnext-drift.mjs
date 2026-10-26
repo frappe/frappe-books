@@ -3,14 +3,12 @@
  *
  *   node scripts/erpnext-drift.mjs <erpnext checkout> <frappe checkout>
  *
- * 1. Link queries: each form of `erpnextQueries.ts` loads as Desk loads it
- *    (scripts/erpnext-desk.mjs); every `set_query` rule runs on sample docs and
- *    must give Books' filters and query method.
- * 2. Report filters: each `reports/erpnext` definition's filters must match its
- *    ERPNext report JS; tokens stand for the values ERPNext works out on load.
- * 3. Methods: every ERPNext method Books calls exists, whitelisted if the
+ * 1. Report filters: each `reports/erpnext` definition's filters must match its
+ *    ERPNext report JS (loaded as Desk loads it, scripts/erpnext-desk.mjs);
+ *    tokens stand for the values ERPNext works out on load.
+ * 2. Methods: every ERPNext method Books calls exists, whitelisted if the
  *    client calls it.
- * 4. Names: every ERPNext doctype and field Books names exists.
+ * 3. Names: every ERPNext doctype and field Books names exists.
  *
  * Prints each difference and exits 1 when there is any.
  */
@@ -68,17 +66,6 @@ const STANDARD_FIELDS = [
   'parenttype',
   'parentfield',
 ];
-const NO_VALUE_TYPES = [
-  'Section Break',
-  'Column Break',
-  'Tab Break',
-  'HTML',
-  'Button',
-  'Heading',
-  'Fold',
-  'Image',
-];
-const NUMBER_TYPES = ['Check', 'Int', 'Float', 'Currency', 'Percent'];
 const TABLE_TYPES = ['Table', 'Table MultiSelect'];
 const FILTER_KEYS = [
   'fieldtype',
@@ -191,8 +178,7 @@ globalThis.window = { frappe: { boot } }; // and its report option tokens `windo
 
 const erpnextReports = readMetas(path.join(erpnextRoot, 'erpnext'), 'Report');
 const problems = {};
-const checked = { rules: 0, samples: 0, filters: 0, methods: 0 };
-await checkQueries();
+const checked = { filters: 0, methods: 0 };
 await checkReports();
 checkMethods();
 checkNames();
@@ -208,8 +194,6 @@ async function loadBooks() {
     absWorkingDir: frontend,
     stdin: {
       contents: [
-        "export { ERPNEXT_QUERIES } from './src/frappe/erpnextQueries';",
-        "export { resolveRule } from './src/frappe/linkSearch';",
         "export { resolveOptions } from './reports/erpnext/defaults';",
         ...definitions.map(
           (file, index) =>
@@ -281,112 +265,6 @@ function getField(doctype, fieldname) {
   return getMeta(doctype)?.fields.find((df) => df.fieldname === fieldname);
 }
 
-/** A doc of `doctype` with every field set (`P.<fieldname>`, 1 for numbers), or none when `empty`. */
-function makeSample(doctype, prefix, empty = false) {
-  const doc = { doctype, name: `${prefix}.name`, docstatus: 0 };
-  for (const df of getMeta(doctype).fields) {
-    if (TABLE_TYPES.includes(df.fieldtype)) doc[df.fieldname] = [];
-    else if (!empty && !NO_VALUE_TYPES.includes(df.fieldtype)) {
-      doc[df.fieldname] = NUMBER_TYPES.includes(df.fieldtype)
-        ? 1
-        : `${prefix}.${df.fieldname}`;
-    }
-  }
-  return doc;
-}
-
-/**
- * Sample (parent, row) pairs for a rule: all fields set, none set, and on
- * each of those every combination of the values its expressions compare
- * fields with, e.g. `doc.payment_type == "Pay"`.
- */
-function getSamples(rule, doctype, child) {
-  const source = collectExpressions(rule).join('\n');
-  const values = new Map();
-  const add = (field, literal) =>
-    values.set(field, new Set([...(values.get(field) ?? []), literal]));
-  for (const [, field, literal] of source.matchAll(
-    /\b((?:doc|parent)\.\w+)\s*[!=]==?\s*"([^"]*)"/g
-  ))
-    add(field, literal);
-  for (const [, list, field] of source.matchAll(
-    /\[([^\]]*)\]\.includes\(((?:doc|parent)\.\w+)\)/g
-  )) {
-    for (const [, literal] of list.matchAll(/"([^"]*)"/g)) add(field, literal);
-  }
-  let combinations = [[]];
-  for (const [field, literals] of values) {
-    combinations = combinations.flatMap((set) =>
-      [...literals].map((literal) => [...set, [field, literal]])
-    );
-  }
-
-  return [false, true].flatMap((empty) =>
-    combinations.map((set) => {
-      const parent = makeSample(doctype, 'P', empty);
-      const row = child && makeSample(child, 'R', empty);
-      for (const [field, literal] of set) {
-        const [side, fieldname] = field.split('.');
-        (side === 'doc' && row ? row : parent)[fieldname] = literal;
-      }
-      const label = [
-        empty ? 'no fields set' : 'all fields set',
-        ...set.map(([field, literal]) => `${field} = "${literal}"`),
-      ];
-      return { label: label.join(', '), parent, row };
-    })
-  );
-}
-
-function collectExpressions(value) {
-  if (typeof value === 'string')
-    return value.startsWith('eval:') ? [value.slice(5)] : [];
-  return value && typeof value === 'object'
-    ? Object.values(value).flatMap(collectExpressions)
-    : [];
-}
-
-/** Desk's link search args from a form's `get_query` for `key`, as `{ query, filters }` with empty values left out. */
-function runERPNextQuery({ desk, frm, queries }, key, row) {
-  const getQuery = queries.get(key);
-  const parent = frm.doc;
-  if (row) desk.locals[row.doctype] = { [row.name]: row };
-  desk.thrown.length = 0;
-  let result;
-  if (typeof getQuery !== 'function') {
-    result =
-      getQuery?.filters || !getQuery?.query
-        ? { filters: getQuery?.filters ?? getQuery }
-        : { query: getQuery.query };
-  } else {
-    const found = getQuery(
-      parent,
-      (row ?? parent).doctype,
-      (row ?? parent).name,
-      frm
-    );
-    result = typeof found === 'string' ? { query: found } : (found ?? {});
-  }
-  if (desk.thrown.length) throw new Error(desk.thrown[0]);
-  return normalize(result);
-}
-
-function normalize({ query, filters }) {
-  const kept = Array.isArray(filters)
-    ? filters
-    : filters &&
-      Object.fromEntries(
-        Object.entries(filters).filter(
-          ([, value]) => ![undefined, null, ''].includes(value)
-        )
-      );
-  const isEmpty = !kept || !Object.keys(kept).length;
-  return canonical({
-    query: query || undefined,
-    filters: isEmpty ? undefined : kept,
-  });
-}
-
 /** JSON with sorted keys; a function (a value ERPNext works out at runtime) shows as such. */
 function canonical(value) {
   return JSON.stringify(value, (_, item) => {
@@ -398,126 +276,6 @@ function canonical(value) {
     }
     return item;
   });
-}
-
-async function checkQueries() {
-  for (const [doctype, rules] of Object.entries(books.ERPNEXT_QUERIES)) {
-    const entry = metas.erpnext.get(doctype);
-    if (!entry) continue; // checkNames reports it
-    const formScript = path.relative(
-      erpnextRoot,
-      entry.file.replace(/\.json$/, '.js')
-    );
-    const forms = new Map();
-    // A form per sample document, as its rules may depend on the values its events saw.
-    const openForm = async (parent) => {
-      const id = canonical(parent);
-      if (!forms.has(id)) {
-        const desk = createDesk(deskOptions);
-        forms.set(id, {
-          desk,
-          ...(await desk.openForm(
-            doctype,
-            formScript,
-            structuredClone(parent)
-          )),
-        });
-        if (process.env.DRIFT_DEBUG) console.log(doctype, desk.errors);
-      }
-      return forms.get(id);
-    };
-
-    for (const [key, rule] of Object.entries(rules)) {
-      const [table, fieldname] = key.includes('.') ? key.split('.') : [];
-      const child = fieldname && getField(doctype, table)?.options;
-      const samples = getSamples(rule, doctype, child);
-      for (const sample of samples) sample.form = await openForm(sample.parent);
-      if (!samples.some(({ form }) => form.queries.has(key))) {
-        problem('Link queries', `${doctype} ${key}: ERPNext sets no query`);
-        continue;
-      }
-      compareRule(`${doctype} ${key}`, rule, samples, key);
-      checked.rules += 1;
-      checked.samples += samples.length;
-    }
-
-    const bases = [
-      await openForm(makeSample(doctype, 'P')),
-      await openForm(makeSample(doctype, 'P', true)),
-    ];
-    for (const key of new Set(
-      bases.flatMap(({ queries }) => [...queries.keys()])
-    )) {
-      if (key in rules || !isShownByBooks(doctype, key)) continue;
-      const results = bases.map((form) => {
-        try {
-          return runERPNextQuery(form, key, getRowSample(doctype, key));
-        } catch {
-          return normalize({});
-        }
-      });
-      if (results.some((result) => result !== normalize({}))) {
-        problem(
-          'Link queries',
-          `${doctype} ${key}: ERPNext sets a query, Books has no rule: ${results[0]}`
-        );
-      }
-    }
-  }
-}
-
-function getRowSample(doctype, key) {
-  const [table, fieldname] = key.includes('.') ? key.split('.') : [];
-  return fieldname
-    ? makeSample(getField(doctype, table).options, 'R')
-    : undefined;
-}
-
-function compareRule(label, rule, samples, key) {
-  const failures = [];
-  for (const { form, row, label: sampleLabel } of samples) {
-    let erpnext;
-    try {
-      erpnext = runERPNextQuery(form, key, row);
-    } catch (error) {
-      failures.push(`${sampleLabel}: ${error.message}`);
-      continue;
-    }
-    const context = row
-      ? { doc: row, parent: form.frm.doc }
-      : { doc: form.frm.doc, parent: null };
-    const ours = normalize(books.resolveRule(rule, context));
-    if (ours !== erpnext) {
-      problem(
-        'Link queries',
-        `${label}, ${sampleLabel}:\n      Books:   ${ours}\n      ERPNext: ${erpnext}`
-      );
-      return;
-    }
-  }
-  if (failures.length === samples.length) {
-    problem(
-      'Link queries',
-      `${label}: ERPNext's query failed on every sample, e.g. ${failures[0]}`
-    );
-  }
-}
-
-/**
- * Whether the Books twin of `doctype` has the field `key` names, so its form
- * shows it; a Link to DocType shows Books' own choice of doctypes instead.
- */
-function isShownByBooks(doctype, key) {
-  const [fieldname, child] = key.split('.').reverse();
-  const df = child
-    ? getField(getField(doctype, child)?.options, fieldname)
-    : getField(doctype, fieldname);
-  if (df?.fieldtype === 'Link' && df.options === 'DocType') return false;
-  const twin = metas.books.get(`Books ${doctype}`)?.meta;
-  const table = child && twin?.fields.find((df) => df.fieldname === child);
-  const fields =
-    (table ? metas.books.get(table.options)?.meta : twin)?.fields ?? [];
-  return (!child || table) && fields.some((df) => df.fieldname === fieldname);
 }
 
 async function checkReports() {
@@ -589,7 +347,7 @@ function toValue(value, key) {
 
 /** The ERPNext methods Books calls: the client's (which must be whitelisted) and the server's. */
 function checkMethods() {
-  const client = new Set(collectQueryMethods(books.ERPNEXT_QUERIES));
+  const client = new Set();
   for (const file of listFiles(
     frontend,
     ['src', 'models', 'reports'],
@@ -629,13 +387,6 @@ function checkMethods() {
   }
 }
 
-function collectQueryMethods(value) {
-  if (!value || typeof value !== 'object') return [];
-  return Object.entries(value).flatMap(([key, item]) =>
-    key === 'query' ? [item] : collectQueryMethods(item)
-  );
-}
-
 /** A dotted path's function, constant or module in ERPNext, following re-exports; null when missing. */
 function findPython(dotted) {
   const parts = dotted.split('.');
@@ -662,7 +413,7 @@ function findPython(dotted) {
   return reexport ? findPython(`${reexport[1]}.${name}`) : null;
 }
 
-/** ERPNext (and Frappe) doctypes and fields Books names: rules, reports, server code, Books' twins. */
+/** ERPNext (and Frappe) doctypes and fields Books names: reports, server code, Books' twins. */
 function checkNames() {
   const exists = (doctype) =>
     metas.erpnext.has(doctype) ||
@@ -674,28 +425,6 @@ function checkNames() {
     !!metas.books
       .get(doctype)
       ?.meta.fields.some((df) => df.fieldname === fieldname);
-
-  for (const [doctype, rules] of Object.entries(books.ERPNEXT_QUERIES)) {
-    if (!metas.erpnext.has(doctype)) {
-      problem('Names', `${doctype}: not an ERPNext doctype (link queries)`);
-      continue;
-    }
-    for (const key of Object.keys(rules)) {
-      const [fieldname, table] = key.split('.').reverse();
-      const tableField = table && getField(doctype, table);
-      if (table && !TABLE_TYPES.includes(tableField?.fieldtype))
-        problem(
-          'Names',
-          `${doctype}.${table}: not an ERPNext table (link queries)`
-        );
-      else if (!getField(table ? tableField.options : doctype, fieldname))
-        problem(
-          'Names',
-          `${doctype} ${key}: not an ERPNext field (link queries)`
-        );
-    }
-  }
-  checkQueryRuleFiles();
 
   for (const { reportName, source, filters } of books.reports) {
     if (!erpnextReports.has(reportName))
@@ -749,18 +478,6 @@ function checkNames() {
   }
 }
 
-/** The ERPNext files the rules' comments name exist. */
-function checkQueryRuleFiles() {
-  const source = readFileSync(
-    path.join(frontend, 'src/frappe/erpnextQueries.ts'),
-    'utf8'
-  );
-  for (const [, file] of source.matchAll(/^\s*\/\/ ([\w/]+\.js)/gm)) {
-    if (!existsSync(path.join(erpnextRoot, 'erpnext', file)))
-      problem('Names', `erpnext/${file}: not in ERPNext (erpnextQueries.ts)`);
-  }
-}
-
 function listFiles(root, dirs, pattern) {
   return dirs.flatMap((dir) =>
     readdirSync(path.join(root, dir), { recursive: true })
@@ -777,10 +494,9 @@ function listPython() {
 }
 
 function report() {
-  const sections = ['Link queries', 'Report filters', 'Methods', 'Names'];
+  const sections = ['Report filters', 'Methods', 'Names'];
   console.log(
-    `Compared ${checked.rules} link rules on ${checked.samples} sample documents, ` +
-      `${checked.filters} filters of ${books.reports.length} reports, ${checked.methods} ERPNext methods.`
+    `Compared ${checked.filters} filters of ${books.reports.length} reports, ${checked.methods} ERPNext methods.`
   );
   let count = 0;
   for (const section of sections) {

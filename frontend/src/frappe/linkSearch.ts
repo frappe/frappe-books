@@ -3,14 +3,9 @@ import { getCompanyRow } from './companyRow';
 import { evaluateExpression, type EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import type { FrappeDoc } from './document';
-import {
-  ERPNEXT_QUERIES,
-  type DeskFilters,
-  type LinkQuery,
-  type LinkQueryRule,
-} from './erpnextQueries';
-import type { LinkSearch } from './link';
-import { getAccessoryCompany } from './mode';
+import { getScriptQuery, type LinkQuery } from './formScripts';
+import type { DeskFilters, LinkSearch } from './link';
+import { getAccessoryCompany, isAccessoryMode } from './mode';
 
 interface Context {
   doc: EvalDoc;
@@ -22,26 +17,30 @@ type LinkFilter = [string, string, string, unknown];
 const failed = new Set<string>();
 
 /**
- * How the Link `fieldname` of `doc` searches in accessory mode, as Desk's link control
- * works it out: ERPNext's `set_query` rule for the field, then the DocField's
- * link_filters over its filters. Undefined when ERPNext has neither.
+ * How the Link `fieldname` of `doc` searches, as Desk's link control works it
+ * out: a form script's `set_query` for the field, then, in accessory mode, the
+ * DocField's link_filters over its filters. Undefined when there is neither.
  */
-export function getERPNextLinkSearch(
+export async function getLinkSearch(
   fieldname: string,
   doc: FrappeDoc
-): LinkSearch | undefined {
-  const rule = getRule(fieldname, doc);
-  const linkFilters = getLinkFilters(fieldname, doc);
-  if (!rule && !linkFilters) {
+): Promise<LinkSearch | undefined> {
+  const found = await getQuery(fieldname, doc);
+  const linkFilters = isAccessoryMode()
+    ? getLinkFilters(fieldname, doc)
+    : undefined;
+  if (!found && !linkFilters) {
     return undefined;
   }
 
-  const context = getContext(fieldname, doc);
-  const { query, filters } = rule ? resolveRule(rule, context) : {};
+  const filters = found?.filters && withoutEmpty(found.filters);
   return {
-    query,
+    query: found?.query,
     filters: linkFilters
-      ? withLinkFilters(filters, parseLinkFilters(linkFilters, context))
+      ? withLinkFilters(
+          filters,
+          parseLinkFilters(linkFilters, getContext(fieldname, doc))
+        )
       : (filters ?? null),
   };
 }
@@ -60,23 +59,36 @@ export function toFilterList(filters: LinkSearch['filters']): Filter[] | null {
 }
 
 /**
- * The field's rule; a row's is keyed by its table, as `frm.set_query(field, table)` sets it.
- * A field kept in a per-company row searches as that row's field.
+ * The field's `set_query`; a row's is keyed by its table, as
+ * `frm.set_query(field, table)` sets it. A field kept in a per-company row
+ * searches as that row's field.
  */
-function getRule(fieldname: string, doc: FrappeDoc): LinkQueryRule | undefined {
+async function getQuery(
+  fieldname: string,
+  doc: FrappeDoc
+): Promise<LinkQuery | undefined> {
   const table = doc.fieldMap[fieldname]?.companyTable;
   if (table) {
-    const { doctype } = getDocType(doc.schemaName);
-    return ERPNEXT_QUERIES[doctype]?.[`${table}.${fieldname}`];
+    const cdt = getTableDoctype(doc, table);
+    const cdn = getCompanyRow(doc, table)?.name;
+    return await getScriptQuery(doc, `${table}.${fieldname}`, { cdt, cdn });
   }
 
   const { parentdoc, parentFieldname } = doc;
   if (parentdoc) {
-    const { doctype } = getDocType(parentdoc.schemaName);
-    return ERPNEXT_QUERIES[doctype]?.[`${parentFieldname}.${fieldname}`];
+    return await getScriptQuery(parentdoc, `${parentFieldname}.${fieldname}`, {
+      cdt: doc.doctype,
+      cdn: doc.name,
+    });
   }
 
-  return ERPNEXT_QUERIES[getDocType(doc.schemaName).doctype]?.[fieldname];
+  return await getScriptQuery(doc, fieldname);
+}
+
+function getTableDoctype(doc: FrappeDoc, table: string): string {
+  return getDocType(doc.schemaName).meta.fields.find(
+    (field) => field.fieldname === table
+  )!.options!;
 }
 
 function getLinkFilters(fieldname: string, doc: FrappeDoc): string | undefined {
@@ -103,30 +115,15 @@ function getContext(fieldname: string, doc: FrappeDoc): Context {
   };
 }
 
-/** The first case of the rule that holds, its values worked out. */
-export function resolveRule(rule: LinkQueryRule, context: Context): LinkQuery {
-  const cases = Array.isArray(rule) ? rule : [rule];
-  const found = cases.find(({ when }) => !when || resolve(when, context));
-  if (!found) {
-    return {};
-  }
-
-  return {
-    query: found.query,
-    filters: found.filters && resolveFilters(found.filters, context),
-  };
-}
-
-/** Values worked out; a dict leaves out empty ones, as Desk's `set_nulls` does. */
-function resolveFilters(filters: DeskFilters, context: Context): DeskFilters {
+/** A dict leaves out empty values, as Desk's `set_nulls` does. */
+function withoutEmpty(filters: DeskFilters): DeskFilters {
   if (Array.isArray(filters)) {
-    return filters.map((filter) => resolve(filter, context) as unknown[]);
+    return filters;
   }
 
-  const resolved = Object.entries(filters)
-    .map(([fieldname, value]) => [fieldname, resolve(value, context)])
-    .filter(([, value]) => !isEmpty(value));
-  return Object.fromEntries(resolved);
+  return Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => !isEmpty(value))
+  );
 }
 
 /** A value with its `eval:` strings worked out, in arrays too. */

@@ -1,6 +1,6 @@
 name: ERPNext drift
 
-# Books copies some of ERPNext's Desk JS (link queries, report filters) and
+# Books copies some of ERPNext's Desk JS (report filters) and
 # calls ERPNext by name; this compares them with ERPNext develop every night.
 on:
   schedule:

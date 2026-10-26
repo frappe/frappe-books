@@ -1,6 +1,6 @@
 /**
  * Runs ERPNext's Desk JS in a Node sandbox with stubbed Frappe globals, for
- * the drift check: a form's `set_query` registrations and a report's filters.
+ * the drift check: a report's filters.
  * Only what those need is real; every other global, call or property is a
  * harmless stub, and a promise of the server never settles unless `responses`
  * answers its method.
@@ -8,8 +8,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-
-const TABLE_TYPES = ['Table', 'Table MultiSelect'];
 
 /** A stub that is every value: callable, constructible, any property is itself. */
 const ANY = new Proxy(function () {}, {
@@ -245,115 +243,5 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
     if (context.erpnext) Object.assign(context.erpnext.utils, utils);
   }
 
-  /**
-   * A form of `doctype` loaded as Desk loads one: its form script, its
-   * controller, then setup, onload, refresh and a change of every field,
-   * each after the server calls of the one before. Returns its `set_query`
-   * rules by `fieldname` or `table.fieldname`.
-   */
-  async function openForm(doctype, file, doc) {
-    const queries = new Map();
-    const frm = makeForm(doctype, doc, queries);
-    context.cur_frm = frm;
-    locals[doctype] = { [doc.name]: doc };
-    attempt(file, () => run(file));
-    const Controller = controllers[doctype];
-    if (Controller && !(frm.cscript instanceof Controller)) {
-      attempt('controller', () => {
-        frm.cscript = context.extend_cscript(
-          frm.cscript,
-          new Controller({ frm })
-        );
-      });
-    }
-
-    const fieldnames = metas.get(doctype).fields.map((df) => df.fieldname);
-    for (const event of [
-      'setup',
-      'onload',
-      'refresh',
-      'onload_post_render',
-      ...fieldnames,
-    ]) {
-      trigger(frm, event);
-      await new Promise((resolve) => setImmediate(resolve));
-    }
-    return { frm, queries, errors };
-  }
-
-  function trigger(frm, event) {
-    for (const fn of handlers[frm.doctype]?.[event] ?? []) {
-      attempt(event, () => fn(frm, frm.doctype, frm.docname));
-    }
-    if (typeof frm.cscript[event] === 'function') {
-      attempt(event, () =>
-        frm.cscript[event](frm.doc, frm.doctype, frm.docname)
-      );
-    }
-  }
-
-  function makeForm(doctype, doc, queries) {
-    const meta = metas.get(doctype);
-    const fieldsDict = Object.fromEntries(
-      meta.fields.map((df) => [
-        df.fieldname,
-        makeField(df, df.fieldname, queries),
-      ])
-    );
-    return lenient(
-      {
-        doctype,
-        docname: doc.name,
-        doc,
-        meta,
-        fields_dict: fieldsDict,
-        fields: Object.values(fieldsDict),
-        cscript: {},
-        events: {},
-        is_new: () => true,
-        get_field: (fieldname) => fieldsDict[fieldname],
-        get_docfield: (fieldname, child) =>
-          child
-            ? getField(getField(doctype, fieldname)?.options, child)
-            : getField(doctype, fieldname),
-        trigger: (event) => trigger(context.cur_frm, event),
-        set_query(fieldname, table, fn) {
-          if (fn) {
-            if (fieldsDict[table]) queries.set(`${table}.${fieldname}`, fn);
-          } else if (fieldsDict[fieldname]) {
-            queries.set(fieldname, table);
-          }
-        },
-      },
-      ['doc', 'fields_dict', 'cscript', 'events']
-    );
-  }
-
-  /** A form field; `get_query` set on it, or on a field of its grid, is a rule. */
-  function makeField(df, key, queries) {
-    // A grid gives any fieldname a field, as Desk's does for get_query.
-    const grid = TABLE_TYPES.includes(df.fieldtype)
-      ? lenient({
-          get_field: (fieldname) =>
-            makeField(
-              getField(df.options, fieldname) ?? { fieldname },
-              `${key}.${fieldname}`,
-              queries
-            ),
-        })
-      : ANY;
-    return new Proxy(
-      { df, grid },
-      {
-        get: (target, prop) => (prop in target ? target[prop] : ANY),
-        set: (target, prop, value) => {
-          if (prop === 'get_query') queries.set(key, value);
-          else target[prop] = value;
-          return true;
-        },
-      }
-    );
-  }
-
-  return { run, openForm, locals, errors, thrown, context };
+  return { run, locals, errors, thrown, context };
 }

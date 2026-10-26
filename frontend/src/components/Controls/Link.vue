@@ -1,8 +1,7 @@
 <script>
 import { t } from 'fyo';
 import { getLinkDisplayValue, searchLink } from 'src/frappe/link';
-import { getERPNextLinkSearch, toFilterList } from 'src/frappe/linkSearch';
-import { isAccessoryMode } from 'src/frappe/mode';
+import { getLinkSearch, toFilterList } from 'src/frappe/linkSearch';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -176,7 +175,7 @@ export default {
     },
     /**
      * How the link searches, in this order: the field's presentation filters;
-     * in accessory mode ERPNext's set_query rule and the DocField's
+     * a form script's set_query and, in accessory mode, the DocField's
      * link_filters; else the model's filters.
      */
     async getSearch() {
@@ -189,11 +188,10 @@ export default {
       }
 
       const ownsField = this.doc?.schemaName === this.df.schemaName;
-      const erpnextSearch =
-        isAccessoryMode() && ownsField
-          ? getERPNextLinkSearch(this.df.fieldname, this.doc)
-          : undefined;
-      return erpnextSearch ?? { filters: await this.getModelFilters() };
+      const search = ownsField
+        ? await getLinkSearch(this.df.fieldname, this.doc)
+        : undefined;
+      return search ?? { filters: await this.getModelFilters() };
     },
     async getModelFilters() {
       const { schemaName, fieldname } = this.df;

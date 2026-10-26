@@ -27,7 +27,6 @@ test('a new item takes its accounts from the server and saves', async ({
   ).toHaveValue('Service');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/Item/${encodeURIComponent(name)}$`)
   );
@@ -43,7 +42,6 @@ test('an item named with URL characters stays open and reopens', async ({
     .getByRole('textbox', { name: 'Item Code (required)', exact: true })
     .fill(name);
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   const route = new RegExp(`/books/edit/Item/${encodeURIComponent(name)}$`);
   await expect(page).toHaveURL(route);
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();

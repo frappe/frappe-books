@@ -41,6 +41,10 @@ const FIXED_FIELDS = [
   'parentfield',
 ];
 const TOKEN = /^([PR])\.(\w+)$/;
+// A field of a table's rows: `T:<table>.<fieldname>`
+const COLUMN = /^T:(\w+)\.(\w+)$/;
+const COLUMN_RULE =
+  /^\((doc|parent)\.(\w+) \|\| \[\]\)\.map\(\(row\) => row\.(\w+)\)$/;
 const MAX_PAIRS = 400;
 
 const SAMPLE_COMPANY = {
@@ -152,6 +156,7 @@ export class Generator {
         this.getField(doctype, fieldname)
           ? 'parent'
           : 'doc',
+      table: (fieldname) => this.getColumnTable(doctype, fieldname, base.reads),
     };
     for (const rule of getCandidates(base.value, !!child, guards, checks)) {
       if (samples.every((sample) => this.agrees(rule, key, sample)))
@@ -307,7 +312,7 @@ export class Generator {
         doc[df.fieldname] =
           empty || !this.metas.has(df.options)
             ? []
-            : [this.makeSample(df.options, 'T')];
+            : [this.makeSample(df.options, `T:${df.fieldname}`)];
       } else if (NUMBER_TYPES.includes(df.fieldtype)) {
         doc[df.fieldname] = empty ? 0 : 1;
       } else if (!empty && !NO_VALUE_TYPES.includes(df.fieldtype)) {
@@ -339,6 +344,22 @@ export class Generator {
     );
   }
 
+  /**
+   * The table a rule takes `fieldname` of every row of: the one it read, of
+   * those whose rows have the field if any do.
+   */
+  getColumnTable(doctype, fieldname, reads) {
+    const tables = (this.metas.get(doctype)?.fields ?? []).filter(
+      (df) =>
+        TABLE_TYPES.includes(df.fieldtype) && reads.parent.has(df.fieldname)
+    );
+    const withField = tables.filter((df) =>
+      this.getField(df.options, fieldname)
+    );
+    const [table, other] = withField.length ? withField : tables;
+    return table && !other ? table.fieldname : undefined;
+  }
+
   getChild(doctype, key) {
     const [table, fieldname] = key.split('.');
     return fieldname ? this.getField(doctype, table)?.options : undefined;
@@ -353,9 +374,9 @@ export class Generator {
 
 /**
  * Rules that may stand for Desk's `value` on the all-set sample: its tokens as
- * the fields they name, then with a Check's 1 as the Check (of the side
- * `checks` gives), each with and without `guards`. None when it holds a value
- * /books cannot work out.
+ * the fields they name, then with a Check's 1 as the Check (of the side and
+ * table `checks` give), each with and without `guards`. None when it holds a
+ * value /books cannot work out.
  */
 function getCandidates(value, isRow, guards, checks) {
   const rules = [
@@ -374,15 +395,29 @@ function toRule({ query, filters, ...rest }, isRow, checks) {
   if (Object.keys(rest).some((key) => rest[key] !== undefined)) return;
   if (query !== undefined && typeof query !== 'string') return;
   const side = { P: isRow ? 'parent' : 'doc', R: 'doc' };
+  const column = (table, fieldname) =>
+    `eval:(${side.P}.${table} || []).map((row) => row.${fieldname})`;
   let convertible = true;
   const convert = (value, key) => {
     if (typeof value === 'string') {
       const match = value.match(TOKEN);
       if (match) return `eval:${side[match[1]]}.${match[2]}`;
-      if (/(^|\W)[PRT]\.\w+|^@/.test(value)) convertible = false;
+      if (/(^|\W)([PR]\.\w+|T:\w+\.\w+)|^@/.test(value)) convertible = false;
       return value;
     }
     if (checks && value === 1 && key) return `eval:${checks.side(key)}.${key}`;
+    // The one row of a table as the list of a field of every row
+    if (Array.isArray(value) && value.length === 1) {
+      const match = typeof value[0] === 'string' && value[0].match(COLUMN);
+      if (match) return column(match[1], match[2]);
+      // A Check's 1, or a field the rows lack
+      const table =
+        checks &&
+        [1, undefined, null].includes(value[0]) &&
+        key &&
+        checks.table(key);
+      if (table) return column(table, key);
+    }
     if (Array.isArray(value)) return value.map((item) => convert(item));
     if (value && typeof value === 'object') {
       // An object of the sandbox's realm, so its prototype is not this one's
@@ -409,6 +444,11 @@ function predict(rule, parent, row) {
   const context = { doc: row ?? parent, parent: row ? parent : null };
   const resolve = (value) => {
     if (typeof value === 'string' && value.startsWith('eval:')) {
+      const column = value.slice(5).match(COLUMN_RULE);
+      if (column) {
+        const [, side, table, fieldname] = column;
+        return (context[side]?.[table] ?? []).map((row) => row[fieldname]);
+      }
       const [side, fieldname] = value.slice(5).split('.');
       return context[side]?.[fieldname];
     }

@@ -7,7 +7,7 @@ from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 import frappe
 from frappe import _
 
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.settings import require_feature
 
 
@@ -63,18 +63,30 @@ def price_list(invoice):
 
 
 def standard_rates(invoice):
-	"""Map (item, unit) to the rate a row gets when nobody edits it; unit None is the item rate."""
+	"""Map (item, unit) to the rate, in the invoice currency, a row gets when nobody edits it;
+	unit None is the item rate."""
 	items = list({row.item_code for row in invoice.items})
 	rates = {
-		(item.name, None): item.standard_rate
+		(item.name, None): _from_company_currency(invoice, item.standard_rate)
 		for item in frappe.get_all(
 			"Books Item", filters={"name": ["in", items]}, fields=["name", "standard_rate"]
 		)
 	}
 	if price_list(invoice) and frappe.db.get_single_value("Books Accounting Settings", "enable_price_list"):
-		for price in _item_prices(price_list(invoice), items, invoice.document_date):
-			rates[price.item_code, price.uom] = price.price_list_rate
+		rates.update(_price_list_rates(invoice, items))
 	return rates
+
+
+def _price_list_rates(invoice, items):
+	"""The list's rates in the invoice currency; a list in the invoice currency gives them as entered."""
+	name = price_list(invoice)
+	is_literal = frappe.db.get_value("Books Price List", name, "currency") == invoice.currency
+	return {
+		(price.item_code, price.uom): as_decimal(price.price_list_rate)
+		if is_literal
+		else _from_company_currency(invoice, price.price_list_rate)
+		for price in _item_prices(name, items, invoice.document_date)
+	}
 
 
 def _item_prices(price_list, items, date):
@@ -95,7 +107,8 @@ def _item_prices(price_list, items, date):
 
 
 def validate_price_list(invoice):
-	"""Sales and quotes take enabled sales price lists, purchases enabled purchase price lists.
+	"""Sales and quotes take enabled sales price lists, purchases enabled purchase price lists,
+	in the company or the document currency.
 
 	A return keeps its original's price list, as its rates come from the original.
 	"""
@@ -103,7 +116,7 @@ def validate_price_list(invoice):
 	if not name or invoice.get("return_against"):
 		return
 	side = "buying" if invoice.is_purchase else "selling"
-	values = frappe.db.get_value("Books Price List", name, ["enabled", side], as_dict=True)
+	values = frappe.db.get_value("Books Price List", name, ["enabled", side, "currency"], as_dict=True)
 	if not values.enabled:
 		frappe.throw(_("Price List {0} is disabled.").format(name))
 	if not values[side]:
@@ -112,17 +125,27 @@ def validate_price_list(invoice):
 				name, _("Purchases" if invoice.is_purchase else "Sales")
 			)
 		)
+	if values.currency not in (company_currency(), invoice.currency):
+		frappe.throw(
+			_("Price List {0} is in {1}, but this document is in {2}.").format(
+				name, values.currency, invoice.currency
+			)
+		)
 
 
 def standard_rate(invoice, row, rates):
 	"""Return the row's standard rate per its unit from `standard_rates` in the invoice currency, or None."""
 	rate = _unit_rate(row, rates)
-	return in_invoice_currency(invoice, rate) if rate else None
+	return rounded(rate, invoice.get("currency")) if rate else None
 
 
 def in_invoice_currency(invoice, amount):
 	"""Convert a company-currency amount, such as a rate or a rule value, to the invoice currency."""
-	return rounded(as_decimal(amount) / as_decimal(invoice.conversion_rate or 1), invoice.get("currency"))
+	return rounded(_from_company_currency(invoice, amount), invoice.get("currency"))
+
+
+def _from_company_currency(invoice, amount):
+	return as_decimal(amount) / as_decimal(invoice.conversion_rate or 1)
 
 
 def _unit_rate(row, rates):

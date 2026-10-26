@@ -210,6 +210,7 @@ import {
   getFieldsGroupedByTabAndSection,
   getFormRoute,
   getGroupedActionsForDoc,
+  getPrintRoute,
   getTabOptions,
   isPrintable,
   routeTo,
@@ -588,7 +589,7 @@ export default defineComponent({
       await this.doc.set('conversion_rate', exchangeRate);
     },
     async openPrintView() {
-      await routeTo(`/print/${this.doc.schemaName}/${this.doc.name}`);
+      await routeTo(getPrintRoute(this.doc.schemaName, this.doc.name!));
     },
     async toggleWidth() {
       const value = !this.useFullWidth;

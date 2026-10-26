@@ -59,6 +59,24 @@ after_app_install = [
 	"frappe_books.link_queries.generate_link_queries",
 ]
 after_app_uninstall = ["frappe_books.link_queries.generate_link_queries"]
+# ERPNext's link queries that branch on values, which /books cannot generate from Desk JS
+books_doctype_js = {
+	doctype: [
+		"link_queries/scripts/queries.js",
+		f"link_queries/scripts/{doctype.lower().replace(' ', '_')}.js",
+	]
+	for doctype in (
+		"Company",
+		"Delivery Note",
+		"Journal Entry",
+		"Payment Entry",
+		"Purchase Invoice",
+		"Purchase Receipt",
+		"Quotation",
+		"Sales Invoice",
+		"Stock Entry",
+	)
+}
 after_migrate = [
 	"frappe_books.accessory.printing.sync_pos_receipt",
 	"frappe_books.link_queries.generate_link_queries",

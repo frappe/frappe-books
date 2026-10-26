@@ -1,13 +1,13 @@
 /**
- * Runs ERPNext's Desk JS in a Node sandbox with stubbed Frappe globals, for
- * the drift check: a report's filters.
- * Only what those need is real; every other global, call or property is a
- * harmless stub, and a promise of the server never settles unless `responses`
- * answers its method.
+ * Runs apps' Desk JS in a Node sandbox with stubbed Frappe globals: a form's
+ * `set_query` registrations, for the link queries /books generates, and a
+ * report's filters, for the drift check. Only what those need is real; every
+ * other global, call or property is a harmless stub, and a promise of the
+ * server never settles unless `responses` answers its method.
  */
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import vm from 'node:vm';
+
+const TABLE_TYPES = ['Table', 'Table MultiSelect'];
 
 /** A stub that is every value: callable, constructible, any property is itself. */
 const ANY = new Proxy(function () {}, {
@@ -91,13 +91,20 @@ function makeJQuery() {
 }
 
 /**
- * A fresh Desk page: ERPNext's bundle loaded as `erpnext.bundle.js` lists it.
- * `metas` maps doctype → DocType JSON; `boot` is `frappe.boot`; `responses`
- * maps a whitelisted method to a function of its args that returns its
- * `message`; `stubs` go on `frappe` (e.g. `datetime`), and `utils` on
- * `erpnext.utils` after each bundle file (e.g. a stubbed get_fiscal_year).
+ * A fresh Desk page with the apps' `bundles` loaded, as `app_include_js` loads
+ * them. `metas` maps doctype → DocType JSON; `boot` is `frappe.boot`;
+ * `responses` maps a whitelisted method to a function of its args that
+ * returns its `message`; `stubs` go on `frappe` (e.g. `datetime`), and
+ * `utils` on `erpnext.utils` (e.g. a stubbed get_fiscal_year).
  */
-export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
+export function createDesk({
+  bundles = [],
+  metas,
+  boot,
+  responses = {},
+  stubs = {},
+  utils = {},
+}) {
   const handlers = {};
   const controllers = {};
   const locals = {};
@@ -136,7 +143,8 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
         (metas.get(doctype)?.fields ?? []).filter((df) =>
           Object.entries(filters).every(([key, value]) => df[key] === value)
         ),
-      get_docfield: (doctype, fieldname) => getField(doctype, fieldname),
+      // A field the meta lacks is a blank one, as Desk scripts set its properties.
+      get_docfield: (doctype, fieldname) => getField(doctype, fieldname) ?? {},
       has_field: (doctype, fieldname) => !!getField(doctype, fieldname),
     },
     ui: {
@@ -186,6 +194,8 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
     })
   );
 
+  context.window = vm.runInContext('this', sandbox);
+
   function getField(doctype, fieldname) {
     return metas.get(doctype)?.fields.find((df) => df.fieldname === fieldname);
   }
@@ -197,7 +207,15 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
         object[part] = object === context ? lenient({}) : {};
       object = object[part];
     }
+    if (namespace === 'erpnext.utils') stubUtils(object);
     return object;
+  }
+
+  /** `utils` on `erpnext.utils` for good: the bundle's own assignments to them do nothing. */
+  function stubUtils(object) {
+    for (const [key, value] of Object.entries(utils)) {
+      Object.defineProperty(object, key, { get: () => value, set() {}, configurable: true });
+    }
   }
 
   function onForm(doctype, fieldname, handler) {
@@ -211,12 +229,9 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
     else for (const [event, fn] of Object.entries(fieldname)) add(event, fn);
   }
 
-  /** Runs a file of the ERPNext checkout in its own scope, as Desk and the bundle do. */
-  function run(file) {
-    const source = readFileSync(path.join(erpnext, file), 'utf8');
-    vm.runInContext(`(function () {\n${source}\n})();`, sandbox, {
-      filename: file,
-    });
+  /** Runs `code` in its own scope, as Desk evaluates a form's or report's JS. */
+  function evaluate(code, filename) {
+    vm.runInContext(`(function () {\n${code}\n})();`, sandbox, { filename });
   }
 
   /** Calls `fn`, recording what it throws instead of stopping. */
@@ -230,18 +245,126 @@ export function createDesk({ erpnext, metas, boot, responses, stubs, utils }) {
     }
   }
 
-  const bundleDir = 'erpnext/public/js';
-  const bundle = readFileSync(
-    path.join(erpnext, bundleDir, 'erpnext.bundle.js'),
-    'utf8'
-  );
-  for (const [, file] of bundle.matchAll(/^import "\.\/(.+?)";/gm)) {
-    if (file.endsWith('.html')) continue;
-    attempt(file, () =>
-      run(path.join(bundleDir, file.endsWith('.js') ? file : `${file}.js`))
+  for (const [index, code] of bundles.entries()) {
+    attempt(`bundle ${index}`, () =>
+      vm.runInContext(code, sandbox, { filename: `bundle${index}.js` })
     );
-    if (context.erpnext) Object.assign(context.erpnext.utils, utils);
   }
 
-  return { run, locals, errors, thrown, context };
+  /**
+   * A form of `doctype` loaded as Desk loads one: its JS (`code`, Desk's
+   * `__js`), its controller, then setup, onload, refresh and a change of every
+   * field, each after the server calls of the one before. Returns its
+   * `set_query` rules by `fieldname` or `table.fieldname`.
+   */
+  async function openForm(doctype, code, doc) {
+    const queries = new Map();
+    const frm = makeForm(doctype, doc, queries);
+    context.cur_frm = frm;
+    locals[doctype] = { [doc.name]: doc };
+    for (const df of metas.get(doctype).fields) {
+      for (const row of TABLE_TYPES.includes(df.fieldtype) ? (doc[df.fieldname] ?? []) : []) {
+        (locals[row.doctype] ??= {})[row.name] = row;
+      }
+    }
+    attempt(doctype, () => evaluate(code, `${doctype}.js`));
+    const Controller = controllers[doctype];
+    if (Controller && !(frm.cscript instanceof Controller)) {
+      attempt('controller', () => {
+        frm.cscript = context.extend_cscript(
+          frm.cscript,
+          new Controller({ frm })
+        );
+      });
+    }
+
+    const fieldnames = metas.get(doctype).fields.map((df) => df.fieldname);
+    for (const event of [
+      'setup',
+      'onload',
+      'refresh',
+      'onload_post_render',
+      ...fieldnames,
+    ]) {
+      trigger(frm, event);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
+    return { frm, queries, errors };
+  }
+
+  function trigger(frm, event) {
+    for (const fn of handlers[frm.doctype]?.[event] ?? []) {
+      attempt(event, () => fn(frm, frm.doctype, frm.docname));
+    }
+    if (typeof frm.cscript[event] === 'function') {
+      attempt(event, () =>
+        frm.cscript[event](frm.doc, frm.doctype, frm.docname)
+      );
+    }
+  }
+
+  function makeForm(doctype, doc, queries) {
+    const meta = metas.get(doctype);
+    const fieldsDict = Object.fromEntries(
+      meta.fields.map((df) => [
+        df.fieldname,
+        makeField(df, df.fieldname, queries),
+      ])
+    );
+    return lenient(
+      {
+        doctype,
+        docname: doc.name,
+        doc,
+        meta,
+        fields_dict: fieldsDict,
+        fields: Object.values(fieldsDict),
+        cscript: {},
+        events: {},
+        is_new: () => true,
+        get_field: (fieldname) => fieldsDict[fieldname],
+        get_docfield: (fieldname, child) =>
+          child
+            ? getField(getField(doctype, fieldname)?.options, child)
+            : getField(doctype, fieldname),
+        trigger: (event) => trigger(context.cur_frm, event),
+        set_query(fieldname, table, fn) {
+          if (fn) {
+            if (fieldsDict[table]) queries.set(`${table}.${fieldname}`, fn);
+          } else if (fieldsDict[fieldname]) {
+            queries.set(fieldname, table);
+          }
+        },
+      },
+      ['doc', 'fields_dict', 'cscript', 'events']
+    );
+  }
+
+  /** A form field; `get_query` set on it, or on a field of its grid, is a rule. */
+  function makeField(df, key, queries) {
+    // A grid gives any fieldname a field, as Desk's does for get_query.
+    const grid = TABLE_TYPES.includes(df.fieldtype)
+      ? lenient({
+          get_field: (fieldname) =>
+            makeField(
+              getField(df.options, fieldname) ?? { fieldname },
+              `${key}.${fieldname}`,
+              queries
+            ),
+        })
+      : ANY;
+    return new Proxy(
+      { df, grid },
+      {
+        get: (target, prop) => (prop in target ? target[prop] : ANY),
+        set: (target, prop, value) => {
+          if (prop === 'get_query') queries.set(key, value);
+          else target[prop] = value;
+          return true;
+        },
+      }
+    );
+  }
+
+  return { evaluate, openForm, locals, errors, thrown, context };
 }

@@ -4,7 +4,7 @@
  *   node scripts/erpnext-drift.mjs <erpnext checkout> <frappe checkout>
  *
  * 1. Report filters: each `reports/erpnext` definition's filters must match its
- *    ERPNext report JS (loaded as Desk loads it, scripts/erpnext-desk.mjs);
+ *    ERPNext report JS (loaded as Desk loads it, frappe_books/link_queries/desk.mjs);
  *    tokens stand for the values ERPNext works out on load.
  * 2. Methods: every ERPNext method Books calls exists, whitelisted if the
  *    client calls it.
@@ -16,7 +16,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
-import { createDesk } from './erpnext-desk.mjs';
+import { createDesk } from '../../frappe_books/link_queries/desk.mjs';
 
 const [erpnextRoot, frappeRoot] = process.argv
   .slice(2)
@@ -113,7 +113,7 @@ const TOKEN_VALUES = {
   '@include_dimensions': boot.sysdefaults.disable_include_dimensions ? 0 : 1,
 };
 const deskOptions = {
-  erpnext: erpnextRoot,
+  bundles: [await bundleERPNext()],
   boot,
   // What ERPNext's form scripts ask the server for on a fresh site.
   responses: {
@@ -183,6 +183,28 @@ await checkReports();
 checkMethods();
 checkNames();
 report();
+
+/** ERPNext's Desk bundle, built as `bench build` builds it; its imports of other packages are stubs. */
+async function bundleERPNext() {
+  const { outputFiles } = await build({
+    entryPoints: [path.join(erpnextRoot, 'erpnext/public/js/erpnext.bundle.js')],
+    bundle: true,
+    write: false,
+    format: 'iife',
+    logLevel: 'error',
+    loader: { '.html': 'text', '.vue': 'empty', '.css': 'empty', '.svg': 'text' },
+    plugins: [
+      {
+        name: 'packages',
+        setup(builder) {
+          builder.onResolve({ filter: /^[^./]/ }, ({ path }) => ({ path, namespace: 'package' }));
+          builder.onLoad({ filter: /.*/, namespace: 'package' }, () => ({ contents: 'export default {};' }));
+        },
+      },
+    ],
+  });
+  return outputFiles[0].text;
+}
 
 /** Books' rules and report definitions, bundled from the TypeScript sources. */
 async function loadBooks() {
@@ -285,7 +307,8 @@ async function checkReports() {
     if (!entry) continue; // checkNames reports it
     // The report's own JS, as Desk loads it, after the server calls it makes on load
     const desk = createDesk(deskOptions);
-    desk.run(path.relative(erpnextRoot, entry.file.replace(/\.json$/, '.js')));
+    const file = entry.file.replace(/\.json$/, '.js');
+    desk.evaluate(readFileSync(file, 'utf8'), path.relative(erpnextRoot, file));
     await new Promise((resolve) => setImmediate(resolve));
     const theirs = desk.context.frappe.query_reports[label]?.filters ?? [];
     for (const filter of definition.filters) {

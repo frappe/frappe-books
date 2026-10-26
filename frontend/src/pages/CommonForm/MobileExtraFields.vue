@@ -16,17 +16,36 @@
     "
     @editrow="(row) => $emit('editrow', row)"
   />
+  <MobileFormSection
+    v-for="([tab, fields], index) of endTabs"
+    :key="tab"
+    :title="getEndTabLabel(tab)"
+    :fields="fields"
+    :doc="doc"
+    :errors="errors"
+    collapsible
+    :summary="getCount(fields)"
+    :required-count="getRequiredCount(fields)"
+    :open="index === 0 || getRequiredCount(fields) > 0"
+    @value-change="(field, value) => $emit('value-change', field, value)"
+    @row-change="
+      (field, value, parentfield) =>
+        $emit('row-change', field, value, parentfield)
+    "
+    @editrow="(row) => $emit('editrow', row)"
+  />
 </template>
 <script setup lang="ts">
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { Field } from 'schemas/types';
+import { getEndTabLabel } from 'src/frappe/accessoryLayout';
 import type { FrappeDoc } from 'src/frappe/document';
 import { isMissing } from 'src/frappe/extraFields';
 import { useExtraFields } from './extraFieldsView';
 import MobileFormSection from './MobileFormSection.vue';
 
-/** Accessory mode on phones: More details and each end tab as a collapsible section. */
+/** Accessory mode in a row's phone sheet: More details and each end tab as a collapsible section. */
 const props = defineProps<{
   doc: FrappeDoc;
   errors: Record<string, string>;
@@ -38,7 +57,7 @@ defineEmits<{
   editrow: [row: FrappeDoc];
 }>();
 
-const { moreFields } = useExtraFields(() => props.doc);
+const { moreFields, endTabs } = useExtraFields(() => props.doc);
 
 function getCount(fields: Field[]): string {
   return fields.length === 1 ? t`1 field` : t`${fields.length} fields`;

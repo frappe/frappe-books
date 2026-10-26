@@ -325,11 +325,16 @@ function getPartyAccountFilter(accountType: string): FilterFunction {
   ];
 }
 
+/** Enabled lists for the side, in the company or the document currency, as the server allows. */
 function getPriceListFilter(side: 'selling' | 'buying'): FilterFunction {
-  return () => [
-    ['enabled', '=', 1],
-    [side, '=', 1],
-  ];
+  return (doc) => {
+    const { companyCurrency, currency } = doc as Invoice;
+    return [
+      ['enabled', '=', 1],
+      [side, '=', 1],
+      ['currency', 'in', [companyCurrency, currency ?? companyCurrency]],
+    ];
+  };
 }
 
 export const SALES_FILTERS: FiltersMap = {

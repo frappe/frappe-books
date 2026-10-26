@@ -466,11 +466,30 @@ class IntegrationTestPricing(IntegrationTestCase):
 				invoice.save()
 				self.assertEqual(invoice.items[0].price_list_rate, rate)
 
-	def test_invoice_takes_only_an_enabled_price_list_for_its_side(self):
+	def test_price_list_in_invoice_currency_gives_rates_as_entered(self):
+		frappe.db.set_single_value("Books Accounting Settings", "enable_price_list", 1)
+		item = make_item(self.income.name, self.expense.name, standard_rate=100)
+		price_list = make_price_list((item.name, "Unit", 40), currency=foreign_currency())
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			make_customer(self.receivable.name, default_currency=foreign_currency()).name,
+			self.receivable.name,
+			item.name,
+			self.income.name,
+			selling_price_list=price_list.name,
+			conversion_rate=2,
+		)
+		invoice.items[0].price_list_rate = None
+		invoice.save()
+		self.assertEqual(invoice.items[0].price_list_rate, 40)
+
+	def test_invoice_takes_only_an_enabled_price_list_for_its_side_and_currency(self):
 		payable = make_account("Commerce Payable", root_type="Liability", account_type="Payable")
 		supplier = make_supplier(payable.name)
+		foreign = foreign_currency()
 		for values, doctype, party, account, message in (
 			({"enabled": 0}, "Books Sales Invoice", self.party, self.receivable, "is disabled"),
+			({"currency": foreign}, "Books Sales Invoice", self.party, self.receivable, f"is in {foreign}"),
 			(
 				{"selling": 0, "buying": 1},
 				"Books Quotation",

@@ -5,13 +5,16 @@
  * - a rule Desk sets that branches on values, so it cannot be generated, and
  *   that no hand-written form script (`books_doctype_js`) has;
  * - a hand-written rule that gives other results than Desk's on a sample;
- * - a hand-written rule for a field Desk sets no rule on any more.
+ * - a hand-written rule for a field Desk sets no rule on any more;
+ * - a form with under 80% of the rules `rule_counts.json` records for it, as
+ *   when Desk JS calls what the sandbox lacks and stops before its set_query
+ *   calls. Update the counts when the apps drop rules on purpose.
  *
  * A form where Desk sets no rule leaves the hand-written one free.
  *
  * Run as `node check.mjs < input.json`: the generator's input, plus `scripts`
- * (each doctype's `books_doctype_js`) and `shown` (the keys /books shows, by
- * doctype). Prints the problems and exits 1 when there is any.
+ * (each doctype's `books_doctype_js`), `shown` (the keys /books shows, by
+ * doctype) and `rule_counts`. Prints the problems and exits 1 when there is any.
  */
 import { readFileSync } from 'node:fs';
 import { Generator, normalize } from './generate.mjs';
@@ -21,6 +24,9 @@ export async function check(input) {
   const problems = [];
   for (const [doctype, code] of Object.entries(input.forms)) {
     const forms = await generator.openForms(doctype, code);
+    problems.push(
+      ...checkCount(generator, doctype, forms, input.rule_counts[doctype])
+    );
     const books = loadScript(input.scripts[doctype], doctype, generator);
     for (const key of input.shown[doctype] ?? []) {
       const set = forms.some((form) => form.queries.has(key));
@@ -48,6 +54,19 @@ export async function check(input) {
     }
   }
   return problems;
+}
+
+/** A form with under 80% of its recorded rules, Desk JS having stopped before it set them. */
+function checkCount(generator, doctype, forms, recorded = 0) {
+  const keys = new Set(forms.flatMap((form) => [...form.queries.keys()]));
+  const count = [...keys].filter((key) =>
+    generator.isLinkField(doctype, key)
+  ).length;
+  if (count >= Math.ceil(0.8 * recorded)) return [];
+  const errors = [...new Set(forms.flatMap((form) => form.errors))].slice(0, 3);
+  return [
+    `${doctype}: Desk sets ${count} link rules, rule_counts.json records ${recorded}. Its errors: ${errors.join('; ') || 'none'}`,
+  ];
 }
 
 /** Where the hand-written rule gives other results than Desk's, on the samples of both. */

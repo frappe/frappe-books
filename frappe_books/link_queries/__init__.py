@@ -19,6 +19,7 @@ from frappe_books.accessory import erpnext_installed
 
 GENERATOR = os.path.join(os.path.dirname(__file__), "generate.mjs")
 CHECKER = os.path.join(os.path.dirname(__file__), "check.mjs")
+RULE_COUNTS = os.path.join(os.path.dirname(__file__), "rule_counts.json")
 FILE = "books_link_queries.json"
 TIMEOUT = 600
 # Read-only methods ERPNext's forms call as they load, with their args
@@ -58,6 +59,7 @@ def check_link_queries():
 	data = get_generator_input(doctypes) | {
 		"scripts": get_form_scripts(doctypes),
 		"shown": get_shown_keys(doctypes),
+		"rule_counts": frappe.parse_json(frappe.read_file(RULE_COUNTS)),
 	}
 	result = subprocess.run(
 		[shutil.which("node"), CHECKER],

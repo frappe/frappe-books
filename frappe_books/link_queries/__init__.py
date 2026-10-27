@@ -105,10 +105,10 @@ def _generate():
 
 
 def get_form_doctypes() -> list[str]:
-	"""The ERPNext doctypes accessory mode shows: those Books doctypes stand for, by name."""
+	"""The ERPNext doctypes accessory mode shows: those Books forms stand for, by name."""
 	twins = [
 		name.removeprefix("Books ")
-		for name in frappe.get_all("DocType", {"name": ["like", "Books %"]}, pluck="name")
+		for name in frappe.get_all("DocType", {"name": ["like", "Books %"], "istable": 0}, pluck="name")
 	]
 	return frappe.get_all(
 		"DocType", {"name": ["in", twins], "istable": 0, "issingle": 0}, pluck="name", order_by="name"

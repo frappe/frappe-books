@@ -187,7 +187,8 @@ export default {
         return { filters: null };
       }
 
-      const ownsField = this.doc?.schemaName === this.df.schemaName;
+      // A report filter has neither a document nor a schema.
+      const ownsField = this.doc && this.doc.schemaName === this.df.schemaName;
       const search = ownsField
         ? await getLinkSearch(this.df.fieldname, this.doc)
         : undefined;

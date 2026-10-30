@@ -228,6 +228,21 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
 		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
 
+	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
+		# A cashier cannot pick the Debit To account, so a POS sale takes this one, as set up.
+		frappe.db.set_single_value("Books POS Settings", "default_account", self.receivable.name)
+		with self.set_user(ensure_user("pos-only-cashier@example.com", "Books Cashier")):
+			invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 180}])
+			invoice.submit()
+			self.assertRaises(frappe.PermissionError, invoice.cancel)
+			self.assertRaises(frappe.PermissionError, make_payment, invoice.name)
+			refund = map_return(invoice.doctype, invoice.name)
+			refund.append("payments", {"mode_of_payment": "Cash", "amount": 180})
+			refund.insert().submit()
+
+		self.assertEqual(len(counter_payments(invoice)), 1)
+		self.assertEqual(len(counter_payments(refund)), 1)
+
 	def test_closing_shift_reconciles_counter_payments(self):
 		shift = frappe.get_doc("Books POS Opening Entry", open_shift_name())
 		self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 200}]).submit()

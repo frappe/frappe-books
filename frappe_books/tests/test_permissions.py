@@ -34,28 +34,33 @@ READ = {"read"}
 NONE = set()
 CREATE = {"read", "write", "create"}
 SUBMIT = CREATE | {"submit", "cancel", "amend"}
-ROLES = ("System Manager", "Books Manager", "Books User")
+# A cashier submits but never cancels; a return undoes a sale.
+SELL = CREATE | {"submit"}
+ROLES = ("System Manager", "Books Manager", "Books User", "Books Cashier")
 # Rights of each role, in ROLES order
 ROLE_MATRIX = {
-	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Purchase Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Quotation": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Payment Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Stock Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, NONE),
-	"Books Customer": (FULL, FULL, FULL),
-	"Books Supplier": (FULL, FULL, FULL),
-	"Books Item": (FULL, FULL, FULL),
-	"Address": (FULL, FULL, FULL),
-	"Contact": (FULL, FULL, FULL),
-	"Books Account": (FULL, FULL, NONE),
-	"Books Item Tax Template": (FULL, FULL, READ),
-	"Books Defaults": (FULL, FULL, READ),
-	"Print Format": (FULL, FULL, READ),
-	"Books Custom Form": (FULL, READ, READ),
-	"Books GL Entry": (READ, READ, NONE),
-	"Books Stock Ledger Entry": (READ, READ, READ),
-	"Books Loyalty Point Entry": (READ, READ, READ),
+	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books Purchase Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Quotation": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Payment Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, READ),
+	"Books Stock Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, NONE, NONE),
+	"Books Customer": (FULL, FULL, FULL, CREATE),
+	"Books Supplier": (FULL, FULL, FULL, NONE),
+	"Books Item": (FULL, FULL, FULL, READ),
+	"Address": (FULL, FULL, FULL, CREATE),
+	"Contact": (FULL, FULL, FULL, CREATE),
+	"Books Account": (FULL, FULL, NONE, NONE),
+	"Books Item Tax Template": (FULL, FULL, READ, READ),
+	"Books Defaults": (FULL, FULL, READ, READ),
+	"Print Format": (FULL, FULL, READ, READ),
+	"Books Custom Form": (FULL, READ, READ, READ),
+	"Books GL Entry": (READ, READ, NONE, NONE),
+	"Books Stock Ledger Entry": (READ, READ, READ, READ),
+	"Books Loyalty Point Entry": (READ, READ, READ, READ),
+	"Books POS Opening Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books POS Closing Entry": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books Item Enquiry": (FULL, FULL, FULL, CREATE),
 }
 FINANCIAL_REPORTS = (
 	"Books General Ledger",
@@ -69,6 +74,7 @@ FINANCIAL_REPORTS = (
 STOCK_REPORTS = ("Books Stock Ledger", "Books Stock Balance")
 BOOKS_USER = "books-user-permissions@example.com"
 MANAGER = "books-manager-permissions@example.com"
+CASHIER = "books-cashier-permissions@example.com"
 SYSTEM_MANAGER = "books-system-manager-permissions@example.com"
 
 
@@ -79,6 +85,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		for email, role in (
 			(BOOKS_USER, "Books User"),
 			(MANAGER, "Books Manager"),
+			(CASHIER, "Books Cashier"),
 			(SYSTEM_MANAGER, "System Manager"),
 		):
 			if not frappe.db.exists("User", email):

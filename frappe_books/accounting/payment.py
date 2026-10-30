@@ -404,7 +404,7 @@ def payment_type_for(invoice_doctype, is_return):
 	return "Receive" if (invoice_doctype == "Books Sales Invoice") != is_return else "Pay"
 
 
-def map_invoice_payment(invoice_doctype, invoice_name):
+def map_invoice_payment(invoice_doctype, invoice_name, ignore_permissions=False):
 	"""Return an unsaved payment that settles the invoice's outstanding amount."""
 	return get_mapped_doc(
 		invoice_doctype,
@@ -418,6 +418,7 @@ def map_invoice_payment(invoice_doctype, invoice_name):
 			},
 		},
 		postprocess=_settle_invoice,
+		ignore_permissions=ignore_permissions,
 	)
 
 

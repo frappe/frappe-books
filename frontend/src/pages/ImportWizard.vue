@@ -419,19 +419,19 @@ export default defineComponent({
 
       return '';
     },
-    /** What the selected file gave: rows to check and import, or none, as a template saved here has. */
+    /** The rows to check and import, and the file they came from, if any; or that the file has none. */
     fileStatus(): string {
+      const rows = this.hasImporter ? this.importer.valueMatrix.length : 0;
+      const added =
+        rows === 1 ? this.t`1 row added.` : this.t`${rows} rows added.`;
       if (!this.fileName) {
-        return '';
+        return rows ? added : '';
       }
 
-      const rows = this.hasImporter ? this.importer.valueMatrix.length : 0;
       if (!rows) {
         return this.t`${this.fileName} has no rows to import. Add rows, or select a file that has some.`;
       }
 
-      const added =
-        rows === 1 ? this.t`1 row added.` : this.t`${rows} rows added.`;
       return `${this.t`Selected ${this.fileName}, check values and click on Import data.`} ${added}`;
     },
     canImportData(): boolean {

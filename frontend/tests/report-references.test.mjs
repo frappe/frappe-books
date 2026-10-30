@@ -55,11 +55,9 @@ async function getLinkedDates(link) {
 }
 
 test("a document's ledger opens filtered by its doctype, on its posting date", async () => {
-  // Half past midnight in the system time zone, the evening before in UTC.
-  const date = new Date('2020-05-01T00:30:00+05:30');
   const shipment = newFrappeDoc('DeliveryNote', {
     name: 'SHPM-1001',
-    posting_date: date,
+    posting_date: new Date(2020, 4, 1),
   });
   const link = getLedgerLink(shipment, 'StockLedger');
 

@@ -4,6 +4,7 @@
 
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
+frappe_books.patches.grant_cashier_core_permissions
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

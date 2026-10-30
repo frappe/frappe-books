@@ -288,6 +288,7 @@ function getCompleteSidebar(): SidebarConfig {
           route: `/list/Payment/${t`Purchase Payments`}`,
           schemaName: 'Payment',
           filters: routeFilters.PurchasePayments,
+          hidden: () => !fyo.can('PurchaseInvoice', 'read'),
         },
         {
           label: t`Suppliers`,

@@ -21,6 +21,7 @@ DEFAULT_UOMS = {"Unit": 1, "Kg": 0, "Gram": 0, "Meter": 0, "Hour": 0, "Day": 0}
 CORE_PERMISSIONS = {
 	"Currency": {
 		"Books User": ("read", "report", "print", "export", "email"),
+		"Books Cashier": ("read", "report", "print", "export", "email"),
 		"Books Manager": ("read", "write", "create", "delete", "report", "print", "export", "email", "share"),
 	},
 	"Data Import": {
@@ -28,6 +29,7 @@ CORE_PERMISSIONS = {
 	},
 	"Print Format": {
 		"Books User": ("read", "print"),
+		"Books Cashier": ("read", "print"),
 		"Books Manager": ("read", "write", "create", "delete", "print"),
 	},
 }
@@ -54,10 +56,12 @@ def before_tests():
 		complete_frappe_setup("India", "INR", "Asia/Kolkata")
 
 
-def grant_core_permissions():
-	"""Grant Books roles rights on core doctypes, as the Role Permission Manager does."""
+def grant_core_permissions(only_role=None):
+	"""Grant Books roles, or only `only_role`, rights on core doctypes, as the Role Permission Manager does."""
 	for doctype, roles in CORE_PERMISSIONS.items():
 		for role, rights in roles.items():
+			if only_role and role != only_role:
+				continue
 			if not frappe.db.exists("Custom DocPerm", {"parent": doctype, "role": role, "permlevel": 0}):
 				add_permission(doctype, role)
 			for right in rights:

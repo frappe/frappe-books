@@ -194,7 +194,9 @@ class BooksSalesInvoice(PostingInvoiceController):
 		return names
 
 	def make_counter_payment(self, row, amount):
-		payment = map_invoice_payment(self.doctype, self.name)
+		# The sale takes its money, so it needs no right to make payments.
+		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
+		payment.flags.ignore_permissions = True
 		payment.update(
 			{
 				"payment_method": row.payment_method,
@@ -241,7 +243,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	"""Pay a submitted POS invoice at the counter and return the payment names."""
 	doc = frappe.get_doc("Books Sales Invoice", invoice, for_update=True)
-	doc.check_permission("read")
+	doc.check_permission("submit")
 	if not (doc.is_pos and doc.docstatus == 1):
 		frappe.throw(_("Only submitted POS invoices can be paid at the counter."))
 	return doc.pay_at_counter([frappe._dict(row) for row in payments])

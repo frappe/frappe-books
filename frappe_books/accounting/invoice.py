@@ -177,7 +177,9 @@ class PostingInvoiceController(InvoiceController):
 			self.pay_outstanding_amount()
 
 	def pay_outstanding_amount(self):
-		payment = map_invoice_payment(self.doctype, self.name)
+		# The submit makes the payment, so it needs no right to make payments.
+		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
+		payment.flags.ignore_permissions = True
 		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
 		payment.reference_id = self.name
 		payment.insert()

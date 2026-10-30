@@ -167,6 +167,31 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", self.counter))
 		self.assertEqual(transacted_amounts(invoice.date, now_datetime()), {"Cash": 0})
 
+	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
+		with self.set_user(self.make_cashier()):
+			invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
+			invoice.submit()
+			self.assertRaises(frappe.PermissionError, invoice.cancel)
+			self.assertRaises(frappe.PermissionError, make_payment, invoice.name)
+			refund = map_return(invoice.doctype, invoice.name)
+			refund.append("payments", {"payment_method": "Cash", "amount": 180})
+			refund.insert().submit()
+
+		self.assertEqual(len(counter_payments(invoice)), 1)
+		self.assertEqual(len(counter_payments(refund)), 1)
+
+	def test_a_cashier_reads_only_the_payments_of_their_own_sales(self):
+		cashier = self.make_cashier()
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
+		invoice.submit()
+		with self.set_user(cashier):
+			own = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
+			own.submit()
+
+		readable = frappe.get_list("Books Payment", user=cashier, pluck="name")
+		self.assertIn(counter_payments(own)[0], readable)
+		self.assertNotIn(counter_payments(invoice)[0], readable)
+
 	def test_closing_shift_reconciles_counter_payments(self):
 		shift = frappe.get_doc("Books Pos Opening Shift", open_shift_name())
 		self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 200}]).submit()
@@ -194,6 +219,11 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		self.assertEqual(getdate(held.reload().date), getdate(now_datetime()))
 		self.assertEqual(getdate(invoice.reload().date), getdate(yesterday))
+
+	def make_cashier(self):
+		# A cashier cannot pick the account, so a POS sale takes this one, as set up.
+		frappe.db.set_single_value("Books Pos Settings", "default_account", self.receivable.name)
+		return ensure_user("pos-only-cashier@example.com", "Books Cashier")
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

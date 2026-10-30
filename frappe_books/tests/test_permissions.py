@@ -33,25 +33,30 @@ READ = {"read"}
 NONE = set()
 CREATE = {"read", "write", "create"}
 SUBMIT = CREATE | {"submit", "cancel", "amend"}
-ROLES = ("System Manager", "Books Manager", "Books User")
+# A cashier submits but never cancels; a return undoes a sale.
+SELL = CREATE | {"submit"}
+ROLES = ("System Manager", "Books Manager", "Books User", "Books Cashier")
 # Rights of each role, in ROLES order
 ROLE_MATRIX = {
-	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Purchase Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Sales Quote": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Payment": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Stock Movement": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT),
-	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, NONE),
-	"Books Party": (FULL, FULL, FULL),
-	"Books Item": (FULL, FULL, FULL),
-	"Books Account": (FULL, FULL, NONE),
-	"Books Tax": (FULL, FULL, READ),
-	"Books Defaults": (FULL, FULL, READ),
-	"Print Format": (FULL, FULL, READ),
-	"Books Custom Form": (FULL, READ, READ),
-	"Books Ledger Entry": (READ, READ, NONE),
-	"Books Stock Ledger Entry": (READ, READ, READ),
-	"Books Loyalty Point Entry": (READ, READ, READ),
+	"Books Sales Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books Purchase Invoice": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Sales Quote": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Payment": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, READ),
+	"Books Stock Movement": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, NONE),
+	"Books Journal Entry": (FULL_SUBMIT, FULL_SUBMIT, NONE, NONE),
+	"Books Party": (FULL, FULL, FULL, CREATE),
+	"Books Item": (FULL, FULL, FULL, READ),
+	"Books Account": (FULL, FULL, NONE, NONE),
+	"Books Tax": (FULL, FULL, READ, READ),
+	"Books Defaults": (FULL, FULL, READ, READ),
+	"Print Format": (FULL, FULL, READ, READ),
+	"Books Custom Form": (FULL, READ, READ, READ),
+	"Books Ledger Entry": (READ, READ, NONE, NONE),
+	"Books Stock Ledger Entry": (READ, READ, READ, READ),
+	"Books Loyalty Point Entry": (READ, READ, READ, READ),
+	"Books Pos Opening Shift": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books Pos Closing Shift": (FULL_SUBMIT, FULL_SUBMIT, SUBMIT, SELL),
+	"Books Item Enquiry": (FULL, FULL, FULL, CREATE),
 }
 FINANCIAL_REPORTS = (
 	"Books General Ledger",

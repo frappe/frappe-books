@@ -85,7 +85,7 @@ def _make_address(party):
 	return address
 
 
-def make_lead_address(lead, method=None):
+def make_lead_address(lead):
 	"""Link an Address made from a new lead's quick-entry values to it, titled by its organization, else its name."""
 	make_address(lead, lead.get("company_name") or lead.lead_name)
 

@@ -5,7 +5,6 @@ import frappe
 from frappe import _
 from frappe.utils import nowdate, nowtime
 
-from frappe_books.accessory import forbid_in_accessory_mode
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
@@ -255,7 +254,6 @@ class BooksSalesInvoice(PostingInvoiceController):
 @frappe.whitelist(methods=["POST"])
 def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	"""Pay a submitted POS invoice at the counter and return the payment names."""
-	forbid_in_accessory_mode()
 	doc = frappe.get_doc("Books Sales Invoice", invoice, for_update=True)
 	doc.check_permission("submit")
 	if not (doc.is_pos and doc.docstatus == 1):

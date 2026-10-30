@@ -259,9 +259,9 @@ export function getLedgerLink(doc: FrappeDoc, reportClassName: LedgerReport) {
   };
 }
 
-/** Local midnight of the day, in the system time zone, the server posts the document on. */
+/** Local midnight of the document's posting date. */
 function getPostingDate(doc: FrappeDoc): Date {
-  const field = doc.fieldMap.date ?? doc.fieldMap.posting_date;
+  const field = doc.fieldMap.posting_date;
   const value = doc.get(field.fieldname) as DocValue;
   const day = String(toFrappeValue(value, field, doc.fyo)).slice(0, 10);
   return DateTime.fromISO(day).toJSDate();

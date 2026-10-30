@@ -27,14 +27,14 @@ test('sidebar items are links that open their page', async ({ page }) => {
 test('a page without a sidebar entry highlights none', async ({ page }) => {
   const current = sidebar(page).locator('[aria-current="page"]');
   await expect(current).toHaveText('Dashboard');
-  await page.goto('/books/list/SerialNo');
-  await expect(headers(page)).toContainText('Serial No');
+  await page.goto('/books/list/GLEntry');
+  await expect(headers(page)).toContainText('GL Entry');
   await expect(current).toHaveCount(0);
 
   await sidebar(page).getByRole('link', { name: 'Dashboard' }).click();
   await expect(current).toHaveText('Dashboard');
   await page.goBack();
-  await expect(headers(page)).toContainText('Serial No');
+  await expect(headers(page)).toContainText('GL Entry');
   await expect(current).toHaveCount(0);
 });
 

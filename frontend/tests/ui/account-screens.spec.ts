@@ -69,7 +69,7 @@ test('the account list makes no accounts and opens one by name', async ({
   await page.goto('/books/edit/Account/Cash');
   await waitForBooks(page);
   const accountName = page.getByRole('textbox', {
-    name: 'Account Name (required)',
+    name: 'Account Name',
     exact: true,
   });
   await expect(accountName).toHaveValue('Cash');

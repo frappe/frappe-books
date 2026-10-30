@@ -48,8 +48,8 @@ class BooksPOSSettings(Document):
 
 	def validate_cash_account(self):
 		"""Standalone POS sales go to the counter's cash account; accessory mode keeps only screen preferences here."""
-		if not self.cash_account and not accessory_company():
-			label = _(self.meta.get_label("cash_account"))
-			frappe.throw(
-				_("Value missing for {0}: {1}").format(_(self.doctype), label), frappe.MandatoryError
-			)
+		if self.flags.ignore_mandatory or self.cash_account or accessory_company():
+			return
+
+		label = _(self.meta.get_label("cash_account"))
+		frappe.throw(_("Value missing for {0}: {1}").format(_(self.doctype), label), frappe.MandatoryError)

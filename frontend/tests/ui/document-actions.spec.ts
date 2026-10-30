@@ -41,7 +41,7 @@ for (const action of ['Save', 'Submit']) {
     await runAction(page, 'Save');
     if (action === 'Submit') await runAction(page, 'Submit');
     await expect(page.getByRole('dialog')).toHaveCount(0);
-    expect(await readState(page)).toMatchObject({
+    await expect.poll(() => readState(page)).toMatchObject({
       result: true,
       dirty: false,
       inserted: true,

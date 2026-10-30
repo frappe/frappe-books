@@ -35,7 +35,6 @@ test('a new sales invoice takes its account, rows and totals from the server', a
   );
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/SalesInvoice\/SINV-\d+$/);
   await expect(page.getByText(/SINV-\d+ saved/)).toBeVisible();
 });

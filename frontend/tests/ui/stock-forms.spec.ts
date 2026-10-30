@@ -47,7 +47,6 @@ test('a stock movement takes its series, rate and warehouses from the server', a
 
   await choose(page, 'Purpose', 'Material Receipt');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(/\/books\/edit\/StockEntry\/SMOV-/);
   await page.getByRole('button', { name: 'Submit', exact: true }).click();
   await page.getByRole('button', { name: 'Yes', exact: true }).click();

@@ -26,11 +26,10 @@ test('a new customer saves its contact and address as its primary ones', async (
     .fill('7 Hill Road');
   await page.getByRole('textbox', { name: 'City', exact: true }).fill('Pune');
   await page
-    .getByRole('combobox', { name: 'Country', exact: true })
+    .getByRole('combobox', { name: 'Country (required)', exact: true })
     .fill('India');
   await page.getByRole('option', { name: 'India', exact: true }).click();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/Customer/${encodeURIComponent(name)}$`)
   );
@@ -78,7 +77,6 @@ test('a primary contact changes only to one linked to the customer', async ({
   await page.getByRole('option', { name: 'Mira' }).click();
   await expect(page.getByText('Not Saved', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page.getByText(`${name} saved`)).toBeVisible();
   await expect(contact).toContainText('Mira');
   expect(
@@ -117,7 +115,6 @@ test('a lead makes its customer through the server mapper', async ({
     new RegExp(`/books/edit/Customer/${encodeURIComponent(lead)}$`)
   );
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page.getByText('Saved', { exact: true })).toBeVisible();
   expect(await getValue(page, 'Books Lead', lead, 'status')).toBe('Converted');
 });

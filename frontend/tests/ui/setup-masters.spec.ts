@@ -18,7 +18,6 @@ test('a new tax template saves its detail rows', async ({ page }) => {
   await page.keyboard.press('Tab');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/ItemTaxTemplate/${encodeURIComponent(name)}$`)
   );
@@ -42,7 +41,6 @@ test('a new mode of payment saves with its account', async ({ page }) => {
     .getByRole('combobox', { name: 'Type (required)', exact: true })
     .click();
   await page.getByRole('option', { name: 'Bank', exact: true }).click();
-  await page.getByText('Add row', { exact: true }).click();
   const account = page.getByRole('combobox', {
     name: 'Default Account',
     exact: true,
@@ -51,7 +49,6 @@ test('a new mode of payment saves with its account', async ({ page }) => {
   await page.getByRole('option', { name: 'UI Test Bank', exact: true }).click();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/ModeOfPayment/${encodeURIComponent(name)}$`)
   );
@@ -80,11 +77,13 @@ test('a new currency saves under the name typed', async ({ page }) => {
   await expect(page.getByText(name, { exact: true }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/Currency/${encodeURIComponent(name)}$`)
   );
-  await expect(currencyName).toBeDisabled();
+  // A saved currency's name is locked, so no longer marked required.
+  await expect(
+    page.getByRole('textbox', { name: 'Currency Name', exact: true })
+  ).toBeDisabled();
 });
 
 test('a new number series saves with a labelled reference type', async ({
@@ -104,7 +103,6 @@ test('a new number series saves with a labelled reference type', async ({
     .click();
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
-  await page.getByRole('button', { name: 'Yes', exact: true }).click();
   await expect(page).toHaveURL(
     new RegExp(`/books/edit/NumberSeries/${encodeURIComponent(name)}$`)
   );

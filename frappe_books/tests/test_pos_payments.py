@@ -26,6 +26,7 @@ from frappe_books.tests.accounting import (
 	make_item,
 	make_mode_of_payment,
 	set_company_value,
+	set_mode_of_payment_account,
 )
 
 
@@ -39,6 +40,8 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		set_company_value("default_discount_account", expense.name)
 		self.item = make_item(self.income.name, expense.name)
 		self.party = make_customer(self.receivable.name)
+		# Test sites skip the setup wizard that gives the Bank mode its account.
+		set_mode_of_payment_account("Bank", make_account("POS Bank", account_type="Bank").name)
 
 	def test_payment_for_a_pos_invoice_defaults_to_the_counter(self):
 		invoice = self.make_pos_invoice()
@@ -179,6 +182,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		invoice = self.make_pos_invoice()
 		invoice.submit()
 
+		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 1)
 		names = pay_pos_invoice(
 			invoice.name,
 			[

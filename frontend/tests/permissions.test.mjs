@@ -178,6 +178,28 @@ test('the sidebar shows only the lists, reports and groups the user can open', (
   ]);
 });
 
+test('purchase payments show only to users who can read suppliers', () => {
+  const purchaseItems = (canRead) => {
+    fyo.store.permissions = {
+      doctypes: {
+        PaymentEntry: 'Books Payment Entry',
+        Supplier: 'Books Supplier',
+      },
+      user: { can_read: canRead },
+    };
+    const purchases = getSidebarConfig().find(
+      ({ label }) => label === 'Purchases'
+    );
+    return purchases?.items.map((item) => item.label);
+  };
+
+  assert.equal(purchaseItems(['Books Payment Entry']), undefined);
+  assert.deepEqual(purchaseItems(['Books Payment Entry', 'Books Supplier']), [
+    'Purchase Payment',
+    'Supplier',
+  ]);
+});
+
 test('Setup lists Number Series for a user who can read them', () => {
   const setupItems = (canRead) => {
     fyo.store.permissions = {

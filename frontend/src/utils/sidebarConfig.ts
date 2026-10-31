@@ -1,11 +1,8 @@
 import { t } from 'fyo';
 import { kebabCase } from 'lodash';
 import { getReports, type ReportName } from 'reports';
-import { erpnextReports } from 'reports/erpnext';
 import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';
-import { canPickFields } from 'src/frappe/fieldPicks';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { routeFilters } from 'src/utils/filters';
 import { fyo } from '../initFyo';
 import { SidebarConfig, SidebarItem, SidebarRoot } from './types';
@@ -66,18 +63,8 @@ function canEditSettings(): boolean {
   return fyo.can('SystemSettings', 'write');
 }
 
-/** Standalone customizes forms with Books Custom Forms; accessory mode picks the ERPNext fields they show. */
+/** Books Custom Forms customize forms. */
 function getCustomizeFormItem(): SidebarItem {
-  if (isAccessoryMode()) {
-    return {
-      label: t`Customize Form`,
-      name: 'customize-form',
-      icon: 'lucide-layout-template',
-      route: '/customize-form',
-      hidden: () => !canPickFields(),
-    };
-  }
-
   return {
     label: t`Customize Form`,
     name: 'customize-form',
@@ -209,11 +196,11 @@ function getReportSidebar() {
     name: 'reports',
     icon: 'lucide-chart-no-axes-combined',
     route: '/report/GeneralLedger',
-    items: isAccessoryMode() ? getERPNextReportItems() : getBooksReportItems(),
+    items: getBooksReportItems(),
   };
 }
 
-// Each report's icon, by route name, in both modes
+// Each report's icon, by route name
 const REPORT_ICONS: Record<string, string> = {
   GeneralLedger: 'lucide-chart-column',
   TrialBalance: 'lucide-scale',
@@ -221,20 +208,7 @@ const REPORT_ICONS: Record<string, string> = {
   BalanceSheet: 'lucide-chart-pie',
   StockBalance: 'lucide-boxes',
   StockLedger: 'lucide-list',
-  AccountsReceivable: 'lucide-arrow-down-left',
-  AccountsPayable: 'lucide-arrow-up-right',
 };
-
-/** Accessory mode lists ERPNext's reports, stock ones only with inventory on. */
-function getERPNextReportItems(): SidebarItem[] {
-  return Object.entries(erpnextReports).map(([name, report]) => ({
-    label: report.title,
-    name: kebabCase(name),
-    icon: REPORT_ICONS[name],
-    route: `/report/${name}`,
-    hidden: () => report.isInventory && isInventoryOff(),
-  }));
-}
 
 function isInventoryOff(): boolean {
   return !fyo.isFeatureOn('enable_inventory');
@@ -478,8 +452,7 @@ function getCompleteSidebar(): SidebarConfig {
       name: 'setup',
       icon: 'lucide-sliders-horizontal',
       route: '/chart-of-accounts',
-      // Accessory mode shows each Setup page the user's ERPNext roles open.
-      hidden: () => !isAccessoryMode() && !canEditSettings(),
+      hidden: () => !canEditSettings(),
       items: [
         {
           label: t`Chart of Accounts`,
@@ -534,8 +507,6 @@ function getCompleteSidebar(): SidebarConfig {
           name: 'print-template',
           icon: 'lucide-printer',
           route: `/list/PrintFormat/${t`Print Template`}`,
-          // The template builder makes Books templates; ERPNext has its print formats.
-          hidden: isAccessoryMode,
         },
         getCustomizeFormItem(),
         {

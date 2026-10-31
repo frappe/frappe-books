@@ -14,7 +14,6 @@ import {
   TargetField,
 } from 'schemas/types';
 import { getDocType } from 'src/frappe/doctypes';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { getFileFields, getSchema } from 'src/frappe/registry';
 import { getNamingField } from 'src/frappe/schema';
 import { toDocValue, toFrappeValue } from 'src/frappe/values';
@@ -24,13 +23,10 @@ import { getValueMapFromList } from 'utils/index';
 
 export type TemplateField = Field & TemplateFieldProps;
 
-/** The schemas the Import Wizard offers that the user may import; accessory mode imports in Desk's Data Import. */
+/** The schemas the Import Wizard offers that the user may import. */
 export function getImportableSchemaNames(fyo: Fyo): ModelNameEnum[] {
   // Frappe's Data Import imports, so the user must be able to make one.
-  if (
-    isAccessoryMode() ||
-    !hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')
-  ) {
+  if (!hasDocTypePermission(fyo.store.permissions, 'Data Import', 'create')) {
     return [];
   }
 

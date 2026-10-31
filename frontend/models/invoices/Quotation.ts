@@ -1,4 +1,3 @@
-import { toActiveDoctype } from 'src/frappe/mode';
 import { Fyo } from 'fyo';
 import { Action, FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn, getQuoteActions } from 'models/helpers';
@@ -17,8 +16,8 @@ export class Quotation extends Invoice {
       ...INVOICE_FIELDS,
       quotation_to: {
         options: [
-          { value: toActiveDoctype('Books Customer'), label: 'Customer' },
-          { value: toActiveDoctype('Books Lead'), label: 'Lead' },
+          { value: 'Books Customer', label: 'Customer' },
+          { value: 'Books Lead', label: 'Lead' },
         ],
       },
     },

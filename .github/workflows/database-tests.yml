@@ -45,7 +45,7 @@ jobs:
       matrix:
         database: [sqlite, mariadb, postgres]
         erpnext: [false]
-        # Accessory mode: Books over ERPNext's doctypes. Its tests skip without ERPNext.
+        # Books on a site that has ERPNext too.
         include:
           - database: postgres
             erpnext: true

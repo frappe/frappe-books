@@ -8,18 +8,8 @@
         @click="isOpen = !isOpen"
       >
         <span class="min-w-0 flex-1 truncate">{{ title }}</span>
-        <FrappeBadge
-          v-if="requiredCount"
-          theme="red"
-          :label="t`${requiredCount} required`"
-        />
         <span
-          v-else-if="summary"
-          class="text-base font-normal text-ink-gray-5"
-          >{{ summary }}</span
-        >
-        <span
-          v-if="hasError && !requiredCount"
+          v-if="hasError"
           class="size-1.5 rounded-full bg-surface-red-7"
           :aria-label="t`Has errors`"
         />
@@ -110,10 +100,7 @@
   </section>
 </template>
 <script setup lang="ts">
-import {
-  Badge as FrappeBadge,
-  ErrorMessage as FrappeErrorMessage,
-} from 'frappe-ui';
+import { ErrorMessage as FrappeErrorMessage } from 'frappe-ui';
 import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from 'src/frappe/document';
@@ -134,12 +121,6 @@ const props = defineProps<{
   fields: Field[];
   doc: FrappeDoc;
   errors: Record<string, string>;
-  /** Always a collapsible section, like accessory mode's More details and end tabs. */
-  collapsible?: boolean;
-  /** What a collapsible header says beside its title, e.g. its field count. */
-  summary?: string;
-  /** Empty mandatory fields, which a collapsible header counts in red instead. */
-  requiredCount?: number;
   /** Whether a collapsible section starts open; by default, when it holds a value. */
   open?: boolean;
 }>();
@@ -155,10 +136,6 @@ const dateTypes: string[] = [FieldTypeEnum.Date, FieldTypeEnum.Datetime];
 // Line tables (items) show as rows; read-only summary tables (taxes) as totals.
 const tableField = computed(() => props.fields.find(isLineTable));
 const kind = computed(() => {
-  if (props.collapsible) {
-    return 'collapsible';
-  }
-
   if (tableField.value) {
     return 'table';
   }
@@ -187,7 +164,7 @@ interface FieldBlock {
   table?: Field;
 }
 
-/** Fields keep their schema order around the tables, e.g. two of an ERPNext section. */
+/** Fields keep their schema order around the tables. */
 const blocks = computed<FieldBlock[]>(() => {
   const blocks: FieldBlock[] = [];
   let fields: Field[] = [];
@@ -232,9 +209,7 @@ function groupFields(fields: Field[]): Field[][] {
 
 function isPaired(first: Field, second: Field): boolean {
   const pairs = props.doc.schema.mobileFieldPairs ?? [];
-  if (
-    pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)
-  ) {
+  if (pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)) {
     return true;
   }
 
@@ -258,7 +233,7 @@ function getListClass(block: FieldBlock) {
 
 // A Table MultiSelect is a field, not a table of rows.
 function isTable(field: Field) {
-  return field.fieldtype === FieldTypeEnum.Table && !field.control;
+  return field.fieldtype === FieldTypeEnum.Table;
 }
 
 function isLineTable(field: Field) {
@@ -270,21 +245,14 @@ function isTotal(field: Field) {
     return !!field.readOnly;
   }
 
-  // A Percent reads as a value under its label, not as an amount.
-  return (
-    isNumeric(field) &&
-    !field.control &&
-    props.doc.getFieldState(field).readOnly
-  );
+  return isNumeric(field) && props.doc.getFieldState(field).readOnly;
 }
 
 function getTotalLines(field: Field) {
   const emphasis =
     kind.value === 'totals' &&
     field ===
-      props.fields
-        .filter((f) => f.fieldtype === FieldTypeEnum.Currency)
-        .at(-1);
+      props.fields.filter((f) => f.fieldtype === FieldTypeEnum.Currency).at(-1);
 
   if (field.fieldtype !== FieldTypeEnum.Table) {
     const value = isCalculating(props.doc, field)

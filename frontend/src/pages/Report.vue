@@ -21,7 +21,6 @@
       >
         {{ group.group }}
       </DropdownWithActions>
-      <OpenInERPNextButton :get-url="getDeskUrl" />
       <FrappeButton
         ref="printButton"
         icon="lucide-printer"
@@ -34,7 +33,7 @@
     <template v-if="isMobile">
       <MobileReport
         v-if="report"
-        :report="(report as Report)"
+        :report="report as Report"
         :defaults="filterDefaults"
         :loading="loading || (report.loading && !report.reportData.length)"
         @open-filters="filtersOpen = true"
@@ -45,7 +44,7 @@
       <MobileReportFilters
         v-if="report"
         v-model:open="filtersOpen"
-        :report="(report as Report)"
+        :report="report as Report"
         :defaults="filterDefaults"
         @apply="reload"
       />
@@ -53,7 +52,7 @@
 
     <ReportFilters
       v-else-if="report && report.filters.length"
-      :report="(report as Report)"
+      :report="report as Report"
       :loading="loading"
     />
 
@@ -67,9 +66,7 @@ import { t } from 'fyo';
 import { DocValue } from 'fyo/core/types';
 import { getReports, type ReportName } from 'reports';
 import { Report } from 'reports/Report';
-import { ERPNextReport } from 'reports/erpnext/ERPNextReport';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
-import OpenInERPNextButton from 'src/components/OpenInERPNextButton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
 import ReportFilters from 'src/components/Report/ReportFilters.vue';
@@ -91,7 +88,6 @@ import { PropType, computed, defineComponent, inject } from 'vue';
 
 export default defineComponent({
   components: {
-    OpenInERPNextButton,
     PageHeader,
     ListReport,
     ReportFilters,
@@ -134,21 +130,24 @@ export default defineComponent({
     },
     groupedActions() {
       const actions = this.report?.getActions() ?? [];
-      const actionsMap = actions.reduce((acc, ac) => {
-        if (!ac.group) {
-          ac.group = 'none';
-        }
+      const actionsMap = actions.reduce(
+        (acc, ac) => {
+          if (!ac.group) {
+            ac.group = 'none';
+          }
 
-        acc[ac.group] ??= {
-          group: ac.group,
-          label: ac.label ?? '',
-          type: ac.type ?? 'secondary',
-          actions: [],
-        };
+          acc[ac.group] ??= {
+            group: ac.group,
+            label: ac.label ?? '',
+            type: ac.type ?? 'secondary',
+            actions: [],
+          };
 
-        acc[ac.group].actions.push(ac);
-        return acc;
-      }, {} as Record<string, ActionGroup>);
+          acc[ac.group].actions.push(ac);
+          return acc;
+        },
+        {} as Record<string, ActionGroup>
+      );
 
       return Object.values(actionsMap);
     },
@@ -168,12 +167,6 @@ export default defineComponent({
   },
   methods: {
     routeTo,
-    /** Accessory mode shows ERPNext's reports only. */
-    getDeskUrl(): string {
-      return this.report instanceof ERPNextReport
-        ? this.report.getDeskUrl()
-        : '/desk';
-    },
     async setReportData() {
       const isNew = !this.report;
       this.report = await showReport(

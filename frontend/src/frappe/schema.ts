@@ -12,14 +12,6 @@ import type {
 } from 'schemas/types';
 import type { Filter } from './api';
 import type { DocField, DocTypeMeta } from './meta';
-import { getAccessoryCompany, isAccessoryMode } from './mode';
-import {
-  DEFAULT_SECTION,
-  getPositionedFields,
-  layOutAccessoryFields,
-  type AccessoryLayout,
-  type AccessoryPlacement,
-} from './accessoryLayout';
 
 /** What a Frappe-backed model shows that its DocType has no property for. */
 export interface Presentation {
@@ -42,8 +34,6 @@ export interface Presentation {
    * like a tree's nested set, or fields of a Frappe doctype Books does not use.
    */
   omitFields?: string[];
-  /** The only DocType fields /books shows and saves, where it uses a few, like accessory mode's POS screen preferences. */
-  onlyFields?: string[];
   /** Values of omitted fields that each document /books creates gets, e.g. an enabled Currency. */
   insertValues?: Record<string, unknown>;
   /**
@@ -58,8 +48,6 @@ export interface Presentation {
    * payment's positive Write Off in its signed deductions.
    */
   clientFields?: ClientField[];
-  /** Accessory mode: ERPNext fields the Books twin lacks, placed before twin fields, like a POS Opening Entry's POS Profile. */
-  accessoryPlacements?: AccessoryPlacement[];
   /** The field a link to the doctype shows instead of the name. */
   linkDisplayField?: string;
   /**
@@ -129,13 +117,12 @@ export interface SchemaContext {
   /** The user's roles, which decide the permission levels they can read and write. */
   roles: string[];
   placements: Placements;
-  /** Accessory mode: the Books twin's layout of an ERPNext DocType. */
-  layout?: AccessoryLayout;
 }
 
 // Fields every Books document has that the server sets, e.g. the one company it belongs to.
-// An ERPNext document keeps its company, hidden, as the one accessory mode works on.
 const SERVER_FIELDS = ['company'];
+const DEFAULT_SECTION = 'Default';
+const LAYOUT_FIELDTYPES = ['Section Break', 'Column Break', 'Tab Break'];
 
 // Standard columns, labelled as the list filters show them.
 const STANDARD_FIELDS = [
@@ -155,8 +142,7 @@ export function toSchema(
   presentation: Presentation,
   context: SchemaContext
 ): Schema {
-  // An insert field takes the place of the DocType's field of its name, like
-  // an ERPNext Lead's city, which the insert then saves too.
+  // An insert field takes the place of the DocType's field of its name, which the insert then saves too.
   const insertFields = getInsertFields(presentation);
   const docFields = withClientFields(
     getDocFields(meta, context, presentation).filter(
@@ -192,7 +178,7 @@ export function toSchema(
     formColumns: presentation.formColumns,
     mobileFieldPairs: presentation.mobileFieldPairs,
     mobileBlock: presentation.mobileBlock,
-    tableFields: presentation.tableFields ?? getListViewFields(meta, context),
+    tableFields: presentation.tableFields ?? getListViewFields(meta),
     isChild: !!meta.istable,
     isSingle: !!meta.issingle,
     isSubmittable: !!meta.is_submittable,
@@ -200,14 +186,10 @@ export function toSchema(
   };
 }
 
-/** The in_list_view columns; accessory mode takes the Books twin's that ERPNext has. */
-function getListViewFields(
-  meta: DocTypeMeta,
-  context: SchemaContext
-): string[] {
-  const fieldnames = new Set(meta.fields.map(({ fieldname }) => fieldname));
-  return (context.layout?.meta ?? meta).fields
-    .filter((field) => field.in_list_view && fieldnames.has(field.fieldname))
+/** The in_list_view columns. */
+function getListViewFields(meta: DocTypeMeta): string[] {
+  return meta.fields
+    .filter((field) => field.in_list_view)
     .map((field) => field.fieldname);
 }
 
@@ -219,7 +201,7 @@ export function getNamingField(meta: DocTypeMeta): string | undefined {
 
 /**
  * Fields in DocType order; custom fields placed by a Books Custom Form come
- * last, as Books adds them. Accessory mode lays them out by the Books twin.
+ * last, as Books adds them.
  */
 function getDocFields(
   meta: DocTypeMeta,
@@ -233,35 +215,15 @@ function getDocFields(
     fields: presentation.fields ?? {},
     states: getStates(meta),
   };
-  const omitted = [
-    ...(isAccessoryMode() ? [] : SERVER_FIELDS),
-    ...(presentation.omitFields ?? []),
-  ];
-  const { onlyFields } = presentation;
+  const omitted = [...SERVER_FIELDS, ...(presentation.omitFields ?? [])];
   const shown = {
     ...meta,
-    fields: meta.fields.filter(
-      ({ fieldname, fieldtype }) =>
-        !omitted.includes(fieldname) &&
-        (!onlyFields ||
-          onlyFields.includes(fieldname) ||
-          ['Section Break', 'Tab Break'].includes(fieldtype))
-    ),
+    fields: meta.fields.filter(({ fieldname }) => !omitted.includes(fieldname)),
   };
-  const convert = (docfield: DocField) => toField(docfield, fieldContext);
-  if (context.layout) {
-    return layOutAccessoryFields(
-      shown,
-      context.layout,
-      convert,
-      presentation.accessoryPlacements
-    );
-  }
-
   const fields: Field[] = [];
   const placed: Field[] = [];
   for (const { docfield, section, tab } of getPositionedFields(shown)) {
-    const field = convert(docfield);
+    const field = toField(docfield, fieldContext);
     const placement = context.placements[docfield.fieldname];
     if (placement) {
       placed.push({
@@ -280,6 +242,27 @@ function getDocFields(
     (a, b) => order.indexOf(a.fieldname) - order.indexOf(b.fieldname)
   );
   return [...fields, ...placed];
+}
+
+type Positioned = { docfield: DocField; section: string; tab?: string };
+
+/** The data fields of a DocType with the tab and section their breaks put them in. */
+function getPositionedFields(meta: DocTypeMeta): Positioned[] {
+  const positioned: Positioned[] = [];
+  let tab: string | undefined;
+  let section = DEFAULT_SECTION;
+  for (const docfield of meta.fields) {
+    if (docfield.fieldtype === 'Tab Break') {
+      tab = docfield.label;
+      section = DEFAULT_SECTION;
+    } else if (docfield.fieldtype === 'Section Break') {
+      section = docfield.label || DEFAULT_SECTION;
+    } else if (!LAYOUT_FIELDTYPES.includes(docfield.fieldtype)) {
+      positioned.push({ docfield, section, tab });
+    }
+  }
+
+  return positioned;
 }
 
 /**
@@ -313,12 +296,6 @@ function toField(docfield: DocField, context: FieldContext): Field {
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
     create: isLink(docfield) || undefined,
     linkFilters: getLinkFilters(docfield),
-    ...(SERVER_FIELDS.includes(fieldname) && {
-      hidden: true,
-      readOnly: true,
-      default: getAccessoryCompany(),
-    }),
-    // A presentation may show a server field, like a tax template's company.
     ...shown,
   } as Field & { target?: string; create?: boolean; allowCustom?: boolean };
 
@@ -326,7 +303,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     field.target = getTableSchemaName(docfield.options!);
   } else if (properties.target) {
     field.target = schemaNames[properties.target] ?? properties.target;
-    // Books has no form to create a record of a doctype it does not show, like an ERPNext Cost Center.
+    // Books has no form to create a record of a doctype it does not show.
     field.create &&= !!schemaNames[properties.target];
   }
 

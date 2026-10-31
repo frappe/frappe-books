@@ -48,7 +48,8 @@
         variant="solid"
         :disabled="!selectedInvoiceName"
         @click="returnSelectedInvoice"
-        >{{ t`Create return` }}</FrappeButton>
+        >{{ t`Create return` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -64,13 +65,15 @@ import {
   getPOSInvoiceCount,
   getPOSInvoiceFields,
   getPOSInvoices,
-  getProfileFilters,
   getReturnableFilters,
 } from 'src/utils/pos';
 import Paginator from 'src/components/Paginator.vue';
-import { TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import {
+  TextInput as FrappeTextInput,
+  Button as FrappeButton,
+  Icon as FrappeIcon,
+} from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
-
 
 export default defineComponent({
   name: 'ReturnSalesInvoice',
@@ -156,10 +159,7 @@ export default defineComponent({
     async setInvoices() {
       const search = this.invoiceSearchTerm;
       const length = this.pageEnd - this.pageStart;
-      const filters = [
-        ...getReturnableFilters(),
-        ...getProfileFilters(this.sinvDoc),
-      ];
+      const filters = getReturnableFilters();
       const loading = Promise.all([
         getPOSInvoices(filters, search, this.pageStart, length),
         getPOSInvoiceCount(filters, search),

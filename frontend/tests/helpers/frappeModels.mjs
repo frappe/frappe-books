@@ -25,7 +25,7 @@ export async function loadFrappeModels(models, respond = () => ({ data: [] })) {
   return requests;
 }
 
-/** The models standalone loads: accessory-only ones have no Books doctype. */
+/** The models with a Books doctype. */
 export function getStandaloneModelNames() {
   return Object.keys(frappeModels).filter(
     (schemaName) => frappeModels[schemaName].doctype

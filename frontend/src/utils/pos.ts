@@ -9,7 +9,6 @@ import { Money } from 'pesa';
 import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
 import type { Field } from 'schemas/types';
-import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import {
   getAllDocuments,
   getCount,
@@ -19,7 +18,6 @@ import {
 } from 'src/frappe/api';
 import { getField, getSchema } from 'src/frappe/registry';
 import { getFrappeDoc } from 'src/frappe/documents';
-import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
 import { toDocValues } from 'src/frappe/values';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
@@ -44,16 +42,6 @@ const TRACKED_ITEMS: Partial<Record<ItemVisibility, number>> = {
   'Inventory Items': 1,
   'Non-Inventory Items': 0,
 };
-
-const GET_SELLING_RATES = 'frappe_books.accessory.pos.get_selling_rates';
-
-// The ERPNext items its POS sells
-const SOLD_ITEMS: Filter[] = [
-  ['disabled', '=', 0],
-  ['has_variants', '=', 0],
-  ['is_sales_item', '=', 1],
-  ['is_fixed_asset', '=', 0],
-];
 
 /** Whether a key press types into a field, which POS shortcuts must leave alone. */
 export function isTypingInField(event: KeyboardEvent): boolean {
@@ -93,7 +81,7 @@ export async function validateSinv(sinvDoc: SalesInvoice) {
   }
 
   if (!isReturn) {
-    await validatePOSStock(rows, sinvDoc);
+    await validatePOSStock(rows);
   }
 }
 
@@ -164,7 +152,7 @@ export function getPaymentShortcuts(due: Money, isCashSale: boolean): Money[] {
   return [due, ...notes.map((note) => fyo.pesa(note))];
 }
 
-/** The items the POS lists: those its visibility setting tracks, of the group when given; ERPNext's also of its subgroups. */
+/** The items the POS lists: those its visibility setting tracks, of the group when given. */
 export function getPOSItemFilters(
   visibility: ItemVisibility | undefined,
   itemGroup?: string
@@ -176,81 +164,28 @@ export function getPOSItemFilters(
   }
 
   if (itemGroup) {
-    const operator = isAccessoryMode() ? 'descendants of (inclusive)' : '=';
-    filters.push(['item_group', operator, itemGroup]);
+    filters.push(['item_group', '=', itemGroup]);
   }
 
   return filters;
 }
 
-/**
- * The items the POS lists, with the fields `toPOSItem` reads. In accessory
- * mode, the ERPNext items ERPNext's POS sells, of the profile's item groups
- * when it names some, at the rates of the profile's price list.
- */
+/** The items the POS lists, with the fields `toPOSItem` reads. */
 export async function getPOSItemRecords(
-  filters: Filter[],
-  profile?: POSProfile | null
+  filters: Filter[]
 ): Promise<DocValues[]> {
-  if (!isAccessoryMode()) {
-    return await getAllDocuments('Books Item', {
-      fields: POS_ITEM_FIELDS,
-      filters,
-    });
-  }
-
-  const [items, rates] = await Promise.all([
-    getList('Item', {
-      fields: POS_ITEM_FIELDS,
-      filters: [...filters, ...SOLD_ITEMS],
-      orFilters: getProfileGroups(profile).map(
-        (group) => ['item_group', 'descendants of (inclusive)', group] as Filter
-      ),
-      orderBy: 'creation desc',
-      limit: 0,
-    }),
-    getSellingRates(profile),
-  ]);
-  return items.map((item) => ({
-    ...item,
-    standard_rate: rates[item.name as string] ?? 0,
-  }));
+  return await getAllDocuments('Books Item', {
+    fields: POS_ITEM_FIELDS,
+    filters,
+  });
 }
 
-/** The item groups the POS filters by: an ERPNext POS Profile's, else every group that holds items. */
-export async function getPOSItemGroups(
-  profile?: POSProfile | null
-): Promise<string[]> {
-  const profileGroups = getProfileGroups(profile);
-  if (profileGroups.length) {
-    return profileGroups;
-  }
-
-  const groups = await getAllDocuments(toActiveDoctype('Books Item Group'), {
+/** The item groups the POS filters by: every group that holds items. */
+export async function getPOSItemGroups(): Promise<string[]> {
+  const groups = await getAllDocuments('Books Item Group', {
     fields: ['name'],
-    filters: isAccessoryMode() ? [['is_group', '=', 0]] : [],
   });
   return groups.map(({ name }) => name as string);
-}
-
-function getProfileGroups(profile?: POSProfile | null): string[] {
-  const rows = (profile?.item_groups ?? []) as { item_group?: string }[];
-  return rows
-    .map(({ item_group }) => item_group)
-    .filter((g): g is string => !!g);
-}
-
-/** Each item's selling rate in the POS Profile's price list today, as the POS lists it; ERPNext prices the cart's rows. */
-async function getSellingRates(
-  profile?: POSProfile | null
-): Promise<Record<string, number>> {
-  if (!profile?.name) {
-    return {};
-  }
-
-  return await call<Record<string, number>>(GET_SELLING_RATES, {
-    pos_profile: profile.name,
-  });
 }
 
 /** An item as the POS lists it, from its `POS_ITEM_FIELDS`. */
@@ -322,7 +257,7 @@ export async function getPOSInvoices(
   limit = 0
 ): Promise<DocValueMap[]> {
   const schema = getSchema(ModelNameEnum.SalesInvoice)!;
-  const rows = await getList(toActiveDoctype('Books Sales Invoice'), {
+  const rows = await getList('Books Sales Invoice', {
     fields: ['name', 'customer', 'posting_date', 'grand_total', 'docstatus'],
     filters: getPOSInvoiceFilters(filters, search),
     orderBy: 'creation desc',
@@ -340,31 +275,11 @@ export async function getPOSInvoiceCount(
   search = ''
 ): Promise<number> {
   const filtersWithSearch = getPOSInvoiceFilters(filters, search);
-  return await getCount(
-    toActiveDoctype('Books Sales Invoice'),
-    filtersWithSearch,
-    []
-  );
+  return await getCount('Books Sales Invoice', filtersWithSearch, []);
 }
 
-/** The POS invoices of the sale's ERPNext POS Profile, which its shift closes; all in standalone. */
-export function getProfileFilters(sale: SalesInvoice): Filter[] {
-  if (!isAccessoryMode() || !sale.pos_profile) {
-    return [];
-  }
-
-  return [['pos_profile', '=', sale.pos_profile]];
-}
-
-/** Submitted sales that are not returns and have something left to return; ERPNext checks what is left itself. */
+/** Submitted sales that are not returns and have something left to return. */
 export function getReturnableFilters(): Filter[] {
-  if (isAccessoryMode()) {
-    return [
-      ['docstatus', '=', 1],
-      ['is_return', '=', 0],
-    ];
-  }
-
   return [
     ['docstatus', '=', 1],
     ['return_against', 'is', 'not set'],
@@ -494,7 +409,7 @@ export async function loadPricingRuleTitles(rows: SalesInvoiceItem[]) {
 
   // A rule that is gone keeps the fallback instead of being asked for again.
   names.forEach((name) => (pricingRuleTitles[name] = ''));
-  const rules = await getList(toActiveDoctype('Books Pricing Rule'), {
+  const rules = await getList('Books Pricing Rule', {
     fields: ['name', 'title'],
     filters: [['name', 'in', names]],
     limit: names.length,

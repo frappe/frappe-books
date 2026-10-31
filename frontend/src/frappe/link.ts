@@ -20,17 +20,6 @@ export type LinkOption = {
 /** Desk's link filters: a dict, or a list of filters. */
 export type DeskFilters = Record<string, unknown> | unknown[][];
 
-/**
- * A link query generated from the apps' Desk JS: its `eval:` values read the
- * document, or the row (`doc`) and its `parent`, and it applies only when
- * each `when` value is set.
- */
-export interface LinkRule {
-  query?: string;
-  filters?: DeskFilters;
-  when?: string[];
-}
-
 /** How a Link searches: with Desk's filters, a list or a dict, and maybe a whitelisted query method. */
 export interface LinkSearch {
   query?: string;
@@ -105,10 +94,9 @@ export function getLinkLabel(schemaName: string, label: string): string {
 }
 
 /**
- * The doctype a link searches: its schema's, or, for an ERPNext doctype
- * Books has no screen for, like a Cost Center in accessory mode, the target
- * itself. Books has no meta of those, which may be translated, like a Stock
- * Entry Type, so their search takes the text as typed, as Desk's does.
+ * The doctype a link searches: its schema's, or, for a doctype Books has no
+ * screen for, the target itself. Books has no meta of those, which may be
+ * translated, so their search takes the text as typed, as Desk's does.
  */
 function getLinkDoctype(schemaName: string) {
   if (!isFrappeBacked(schemaName)) {

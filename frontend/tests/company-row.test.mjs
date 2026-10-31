@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import {
-  getCompanyRow,
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from './helpers/frappe.mjs';
+import { getCompanyRowValue, setCompanyRowValue } from './helpers/frappe.mjs';
 
 const books = globalThis.window.frappe.boot.books;
 afterEach(() => {
@@ -31,7 +27,7 @@ function makeParty(rows) {
   return party;
 }
 
-test('standalone rows are the one company’s: a value makes the row, clearing it removes the row', () => {
+test('rows are the one company’s: a value makes the row, clearing it removes the row', () => {
   globalThis.window.frappe.boot.books = { company: 'Lane Co' };
   const party = makeParty([]);
   setCompanyRowValue(party, 'accounts', 'account', 'Debtors');
@@ -46,36 +42,8 @@ test('standalone rows are the one company’s: a value makes the row, clearing i
   assert.deepEqual(party.accounts, []);
 });
 
-test('accessory mode reads and writes only the current company’s row', () => {
-  globalThis.window.frappe.boot.books = {
-    accessory_mode: true,
-    company: 'Acme',
-  };
-  const party = makeParty([{ company: 'Beta', account: 'Debtors - B' }]);
-  assert.equal(getCompanyRow(party, 'accounts'), undefined);
-  assert.equal(getCompanyRowValue(party, 'accounts', 'account'), null);
-
-  setCompanyRowValue(party, 'accounts', 'account', 'Debtors - A');
-  assert.deepEqual(
-    party.accounts.map(({ company, account }) => [company, account]),
-    [
-      ['Beta', 'Debtors - B'],
-      ['Acme', 'Debtors - A'],
-    ]
-  );
-
-  setCompanyRowValue(party, 'accounts', 'account', '');
-  assert.deepEqual(
-    party.accounts.map(({ company }) => company),
-    ['Beta']
-  );
-});
-
 test('a cleared field keeps a row that still holds other values', () => {
-  globalThis.window.frappe.boot.books = {
-    accessory_mode: true,
-    company: 'Acme',
-  };
+  globalThis.window.frappe.boot.books = { company: 'Acme' };
   const party = makeParty([
     {
       company: 'Acme',

@@ -14,12 +14,7 @@ import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import type { Field } from 'schemas/types';
-import {
-  getCompanyRowDescription,
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import type { ClientField, Presentation } from 'src/frappe/schema';
 import { ItemBarcode } from './ItemBarcode';
@@ -154,18 +149,6 @@ export class Item extends FrappeDoc {
 
   set default_warehouse(value: DocValue) {
     setCompanyRowValue(this, 'item_defaults', 'default_warehouse', value);
-  }
-
-  /** The Item Defaults fields name their company, when ERPNext has others. */
-  override getFormFields(fields: Field[]): Field[] {
-    const description = getCompanyRowDescription(this);
-    if (!description) {
-      return fields;
-    }
-
-    return fields.map((field) =>
-      field.companyTable ? { ...field, sub_label: description } : field
-    );
   }
 
   // Fields of features turned off in the settings. The DocType's depends_on hides the rest.

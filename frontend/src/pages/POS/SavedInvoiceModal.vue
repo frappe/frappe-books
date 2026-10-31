@@ -52,7 +52,8 @@
         variant="solid"
         :disabled="!selectedInvoiceName"
         @click="openSelectedInvoice"
-        >{{ t`Open invoice` }}</FrappeButton>
+        >{{ t`Open invoice` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -65,11 +66,7 @@ import { defineComponent, inject } from 'vue';
 import { Field } from 'schemas/types';
 import type { Filter } from 'src/frappe/api';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
-import {
-  getPOSInvoiceFields,
-  getPOSInvoices,
-  getProfileFilters,
-} from 'src/utils/pos';
+import { getPOSInvoiceFields, getPOSInvoices } from 'src/utils/pos';
 import {
   Badge as FrappeBadge,
   Button as FrappeButton,
@@ -129,7 +126,9 @@ export default defineComponent({
       return getPOSInvoiceFields();
     },
     filteredInvoices() {
-      return this.savedInvoiceList ? this.savedInvoices : this.submittedInvoices;
+      return this.savedInvoiceList
+        ? this.savedInvoices
+        : this.submittedInvoices;
     },
   },
   watch: {
@@ -153,10 +152,9 @@ export default defineComponent({
     /** Both tabs' invoices whose name has the search term; a later search replaces them. */
     async setInvoices() {
       const search = this.invoiceSearchTerm;
-      const profileFilters = getProfileFilters(this.sinvDoc);
       const loading = Promise.all([
-        getPOSInvoices([...SAVED_FILTERS, ...profileFilters], search),
-        getPOSInvoices([...SUBMITTED_FILTERS, ...profileFilters], search),
+        getPOSInvoices(SAVED_FILTERS, search),
+        getPOSInvoices(SUBMITTED_FILTERS, search),
       ]).then(([saved, submitted]) => {
         if (this.loading === loading) {
           this.savedInvoices = saved;
@@ -172,7 +170,7 @@ export default defineComponent({
     },
     openSelectedInvoice() {
       const selectedInvoice = this.filteredInvoices.find(
-        (invoice) => invoice.name === this.selectedInvoiceName,
+        (invoice) => invoice.name === this.selectedInvoiceName
       );
       if (!selectedInvoice) {
         return;

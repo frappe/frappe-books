@@ -24,9 +24,7 @@ import {
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { ModalName } from 'src/components/POS/types';
 import { getCount, type Filter } from 'src/frappe/api';
-import { toActiveDoctype } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
-import { getProfileFilters } from 'src/utils/pos';
 import {
   isCouponOffered,
   isLoyaltyOffered,
@@ -59,13 +57,8 @@ watch(open, async (isOpen) => {
     const filters = [
       ['is_pos', '=', 1],
       ['docstatus', '=', 0],
-      ...getProfileFilters(sinvDoc.value),
     ] as Filter[];
-    savedCount.value = await getCount(
-      toActiveDoctype('Books Sales Invoice'),
-      filters,
-      []
-    );
+    savedCount.value = await getCount('Books Sales Invoice', filters, []);
   }
 });
 

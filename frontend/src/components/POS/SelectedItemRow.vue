@@ -382,7 +382,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.permissions = await getPOSPermissions(this.row.parentdoc);
+    this.permissions = await getPOSPermissions();
   },
   methods: {
     toggleExpand() {

@@ -35,8 +35,11 @@
       >
         {{ t`Export` }}
       </FrappeButton>
-      <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
-      <OpenInERPNextButton :get-url="() => getDeskListUrl(doctype)" />
+      <FilterDropdown
+        ref="filterDropdown"
+        :schema-name="schemaName"
+        @change="applyFilter"
+      />
       <FrappeButton
         v-if="canCreate"
         variant="solid"
@@ -144,12 +147,14 @@ import {
 } from 'frappe-ui';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
-import OpenInERPNextButton from 'src/components/OpenInERPNextButton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { getDeskListUrl } from 'src/frappe/desk';
-import { getDocType } from 'src/frappe/doctypes';
 
-import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
+import {
+  getField,
+  getModel,
+  getSchema,
+  getSearchFields,
+} from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { shortcutsKey } from 'src/utils/injectionKeys';
@@ -174,7 +179,6 @@ import { ModelNameEnum } from 'models/types';
 export default defineComponent({
   name: 'ListView',
   components: {
-    OpenInERPNextButton,
     PageHeader,
     List,
     FilterDropdown,
@@ -230,9 +234,6 @@ export default defineComponent({
     };
   },
   computed: {
-    doctype(): string {
-      return getDocType(this.schemaName).doctype;
-    },
     context(): string {
       return 'ListView-' + this.schemaName;
     },
@@ -249,7 +250,8 @@ export default defineComponent({
     /** The row title and the schema's search fields, as stored columns. */
     searchFields(): string[] {
       const columns = getListColumns(this.schemaName, this.listConfig);
-      const title = getMobileRowLayout(this.schemaName, columns).title.fieldname;
+      const title = getMobileRowLayout(this.schemaName, columns).title
+        .fieldname;
       const keywords = getSearchFields(this.schemaName);
       return [...new Set(['name', title, ...keywords])].filter((fieldname) => {
         const field = getField(this.schemaName, fieldname);
@@ -267,14 +269,20 @@ export default defineComponent({
     },
     /** Documents that can be made from the selected items. */
     createOptions(): { value: string; label: string }[] {
-      if (this.schemaName !== ModelNameEnum.Item || !this.selectedItems.length) {
+      if (
+        this.schemaName !== ModelNameEnum.Item ||
+        !this.selectedItems.length
+      ) {
         return [];
       }
 
       return [
         { value: ModelNameEnum.Quotation, label: this.t`Quotation` },
         { value: ModelNameEnum.SalesInvoice, label: this.t`Sales Invoice` },
-        { value: ModelNameEnum.PurchaseInvoice, label: this.t`Purchase Invoice` },
+        {
+          value: ModelNameEnum.PurchaseInvoice,
+          label: this.t`Purchase Invoice`,
+        },
       ].filter((option) => fyo.can(option.value, 'create'));
     },
     actionOptions(): DropdownOptions {
@@ -286,7 +294,8 @@ export default defineComponent({
   },
   activated() {
     this.listConfig = getListConfig(this.schemaName);
-    docsPathRef.value = docsPathMap[this.schemaName] ?? docsPathMap.Entries ?? '';
+    docsPathRef.value =
+      docsPathMap[this.schemaName] ?? docsPathMap.Entries ?? '';
 
     this.setShortcuts();
   },
@@ -295,14 +304,15 @@ export default defineComponent({
     this.shortcuts?.delete(this.context);
   },
   methods: {
-    getDeskListUrl,
     setShortcuts() {
       if (!this.shortcuts) {
         return;
       }
 
       this.shortcuts.pmod.set(this.context, ['KeyN'], () => this.makeNewDoc());
-      this.shortcuts.pmod.set(this.context, ['KeyE'], () => this.exportButton?.$el.click());
+      this.shortcuts.pmod.set(this.context, ['KeyE'], () =>
+        this.exportButton?.$el.click()
+      );
     },
     updatedData(listFilters: Filter[]) {
       this.listFilters = listFilters;

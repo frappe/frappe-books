@@ -10,7 +10,7 @@
     <FrappeSettingsSidebar>
       <FrappeSettingsNavGroup :label="t`Settings`">
         <FrappeSettingsNavItem
-          v-for="tab in navTabs"
+          v-for="tab in tabs"
           :key="tab.value"
           :value="tab.value"
         >
@@ -21,17 +21,6 @@
             />
           </template>
           {{ tab.label }}
-        </FrappeSettingsNavItem>
-        <FrappeSettingsNavItem v-if="erpnextTab" :value="erpnextTab.value">
-          <template #prefix>
-            <img
-              v-if="erpnextTab.icon"
-              :src="erpnextTab.icon"
-              class="size-4 shrink-0"
-              alt=""
-            />
-          </template>
-          {{ erpnextTab.label }}
         </FrappeSettingsNavItem>
       </FrappeSettingsNavGroup>
     </FrappeSettingsSidebar>
@@ -89,56 +78,6 @@
         </FrappeSettingsBody>
       </FrappeSettingsPanel>
 
-      <FrappeSettingsPanel v-if="posScreenTab" :value="posScreenTab.value">
-        <FrappeSettingsHeader :title="posScreenTab.label" class="pb-6">
-          <template #actions>
-            <FrappeButton
-              variant="solid"
-              :label="t`Save`"
-              :disabled="!canSave"
-              @click="sync"
-            />
-          </template>
-        </FrappeSettingsHeader>
-        <FrappeSettingsBody>
-          <div>
-            <!-- A lone field's own label names it, so it needs no heading and less room. -->
-            <section
-              v-for="(group, index) in posScreenGroups"
-              :key="group.title"
-              :class="index > 0 && (group.fields.length > 1 ? 'mt-11' : 'mt-6')"
-            >
-              <h2
-                v-if="group.fields.length > 1"
-                class="mb-2 text-lg-semibold text-ink-gray-8"
-              >
-                {{ group.title }}
-              </h2>
-              <div class="divide-y divide-outline-gray-1">
-                <SettingsField
-                  v-for="field in group.fields"
-                  :key="field.fieldname"
-                  :field="field"
-                  :doc="group.doc"
-                  :error="errors[field.fieldname]"
-                  @change="
-                    (value: DocValue) => onValueChange(group.doc, field, value)
-                  "
-                />
-              </div>
-            </section>
-          </div>
-        </FrappeSettingsBody>
-      </FrappeSettingsPanel>
-
-      <!-- Company and mode save as they change. -->
-      <FrappeSettingsPanel v-if="erpnextTab" :value="erpnextTab.value">
-        <FrappeSettingsHeader :title="erpnextTab.label" class="pb-6" />
-        <FrappeSettingsBody>
-          <ERPNextSettings />
-        </FrappeSettingsBody>
-      </FrappeSettingsPanel>
-
       <!-- Records created from a settings field -->
       <Transition name="quickedit">
         <QuickEditForm
@@ -171,18 +110,11 @@ import { Field } from 'schemas/types';
 import QuickEditForm from 'src/pages/QuickEditForm.vue';
 import { settingsDialog } from 'src/utils/refs';
 import { computed, defineComponent } from 'vue';
-import ERPNextSettings from './ERPNextSettings.vue';
 import SettingsField from './SettingsField.vue';
-import {
-  getERPNextTab,
-  getPOSScreenTab,
-  useSettings,
-  type SettingsTab,
-} from './useSettings';
+import { useSettings } from './useSettings';
 
 export default defineComponent({
   components: {
-    ERPNextSettings,
     FrappeButton,
     FrappeSettingsBody,
     FrappeSettingsContent,
@@ -197,29 +129,20 @@ export default defineComponent({
     SettingsField,
   },
   provide() {
-    // The POS tab's controls edit the POS screen preferences, whose table is of Defaults.
-    const posScreen = () => this.fyo.singles.POSScreenDefaults ?? null;
-    return { doc: computed(() => this.doc ?? posScreen()) };
+    return { doc: computed(() => this.doc) };
   },
   setup() {
     return {
       ...useSettings(),
       settingsDialog,
-      erpnextTab: getERPNextTab(),
-      posScreenTab: getPOSScreenTab(),
     };
   },
   computed: {
-    /** The tabs with Books icons; the ERPNext tab shows ERPNext's logo. */
-    navTabs(): SettingsTab[] {
-      return this.posScreenTab ? [...this.tabs, this.posScreenTab] : this.tabs;
-    },
     /** A tab that is not shown, e.g. Inventory with inventory off, opens the first. */
     activeTab: {
       get(): string {
         const { tab } = settingsDialog;
-        const tabs = [...this.navTabs, this.erpnextTab];
-        return tabs.some((shown) => shown?.value === tab)
+        return this.tabs.some((shown) => shown.value === tab)
           ? tab
           : this.tabs[0].value;
       },

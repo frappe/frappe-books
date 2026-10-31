@@ -8,13 +8,11 @@ from frappe.search.sqlite_search import (
 )
 from frappe.utils.caching import site_cache
 
-from frappe_books.accessory import accessory_company
-
 MODULE = "Frappe Books"
 
 
 class BooksSearch(SQLiteSearch):
-	"""The /books search palette's index of Books documents, or of their ERPNext twins in accessory mode.
+	"""The /books search palette's index of Books documents.
 
 	A document's title is its doctype's label and its name, and its content its DocType's search
 	fields and its tables' search fields. So "Karen invoice" finds Karen's invoices, and Frappe's
@@ -88,35 +86,20 @@ class BooksSearch(SQLiteSearch):
 		return [str(value) for value in values if value]
 
 
-def get_search_doctypes() -> dict[str, dict]:
-	"""The doctypes the palette finds in the current mode, with their search fields and their tables'."""
-	return _get_search_doctypes(bool(accessory_company()))
-
-
 @site_cache()
-def _get_search_doctypes(accessory: bool) -> dict[str, dict]:
-	"""Books doctypes, or in accessory mode their ERPNext twins, the palette finds.
+def get_search_doctypes() -> dict[str, dict]:
+	"""The Books doctypes the palette finds, with their search fields and their tables'.
 
 	A doctype is found when its DocType names search fields or shows its name in search.
 	"""
 	doctypes = {}
-	for doctype in _get_mode_doctypes(accessory):
+	for doctype in frappe.get_all(
+		"DocType", filters={"module": MODULE, "istable": 0, "issingle": 0}, pluck="name"
+	):
 		meta = frappe.get_meta(doctype)
 		if meta.search_fields or meta.show_name_in_global_search:
 			doctypes[doctype] = {"fields": get_search_fields(meta), "tables": get_table_search_fields(meta)}
 	return doctypes
-
-
-def _get_mode_doctypes(accessory: bool) -> list[str]:
-	"""Books doctypes, or the ERPNext doctypes of the same name without `Books `, as /books shows them."""
-	doctypes = frappe.get_all(
-		"DocType", filters={"module": MODULE, "istable": 0, "issingle": 0}, pluck="name"
-	)
-	if not accessory:
-		return doctypes
-
-	twins = [doctype.removeprefix("Books ") for doctype in doctypes]
-	return frappe.get_all("DocType", filters={"name": ("in", twins), "module": ("!=", MODULE)}, pluck="name")
 
 
 def get_search_fields(meta) -> list[str]:

@@ -13,11 +13,7 @@ import { ModelNameEnum } from 'models/types';
 import { getReports } from 'reports';
 import type { Field } from 'schemas/types';
 import type { DocValue } from 'fyo/core/types';
-import {
-  getCompanyRowDescription,
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 import { getModel } from 'src/frappe/registry';
@@ -116,14 +112,8 @@ export abstract class Party extends FrappeDoc {
     return `${(this.constructor as typeof Party).partyKey}_primary_address`;
   }
 
-  /** A saved party's contact and address sections hold its primary ones; the Account names its company. */
+  /** A saved party's contact and address sections hold its primary ones. */
   override getFormFields(fields: Field[]): Field[] {
-    const description = getCompanyRowDescription(this);
-    fields = fields.map((field) =>
-      field.fieldname === 'account' && description
-        ? { ...field, sub_label: description }
-        : field
-    );
     if (this.notInserted) {
       return fields;
     }
@@ -193,9 +183,6 @@ export function getPartyPresentation(
       ...fields,
       // The Account field edits the current company's row.
       accounts: { hidden: true },
-      // ERPNext's Read Only fields, which a new party fills as Desk's quick entry does.
-      email_id: { control: undefined },
-      mobile_no: { control: undefined },
       [`${partyKey}_primary_contact`]: {
         ...card,
         placeholder: 'No primary contact',
@@ -211,7 +198,7 @@ export function getPartyPresentation(
 
 /**
  * The primary Contact and Address are picked from those linked to the party;
- * the Account from the ledgers of its type (ERPNext's rule for the row in accessory mode).
+ * the Account from the ledgers of its type.
  */
 export function getPartyFilters(partyKey: PartyKey): FiltersMap {
   const linkedToParty = (doc: FrappeDoc) => [

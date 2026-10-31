@@ -1,9 +1,6 @@
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t`Chart of Accounts`">
-      <template v-if="company" #left>
-        <FrappeBadge theme="gray" variant="subtle">{{ company }}</FrappeBadge>
-      </template>
       <template #mobile-prefix>
         <FrappePageHeaderBackButton
           class="rtl-rotate-180"
@@ -14,11 +11,12 @@
       <FrappeButton v-if="canEditTree" @click="addRootGroup">{{
         t`Add root group`
       }}</FrappeButton>
-      <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
+      <FrappeButton v-if="!isAllExpanded" @click="expand">{{
+        t`Expand`
+      }}</FrappeButton>
       <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
       }}</FrappeButton>
-      <OpenInERPNextButton :get-url="() => getDeskTreeUrl('Account')" />
     </PageHeader>
     <div v-if="error" class="px-4 pt-4 sm:px-5">
       <FrappeAlert theme="red" :title="error" />
@@ -29,42 +27,6 @@
       :title="t`No accounts`"
       icon="lucide-folder-tree"
     />
-    <!-- Phones (accessory mode only): 44px rows for touch; a tap expands or collapses a group. -->
-    <ul
-      v-else-if="root && isMobile"
-      class="pb-6 pt-1"
-      :aria-label="t`Chart of Accounts`"
-    >
-      <li v-for="{ account, depth } in visibleRows" :key="account.name">
-        <button
-          type="button"
-          class="flex h-11 w-full items-center gap-1.5 pe-4 text-start active:bg-surface-gray-2"
-          :style="{ paddingInlineStart: `${16 + depth * 16}px` }"
-          :aria-expanded="
-            account.children.length ? isExpanded(account) : undefined
-          "
-          @click="onClick(account)"
-        >
-          <span
-            class="size-4 shrink-0 text-ink-gray-5 transition-transform rtl-rotate-180"
-            :class="[
-              account.children.length ? 'lucide-chevron-right' : '',
-              isExpanded(account) ? 'rotate-90' : '',
-            ]"
-            aria-hidden="true"
-          />
-          <span class="min-w-0 flex-1 truncate text-base text-ink-gray-8">
-            {{ accountLabel(account.name) }}
-          </span>
-          <span
-            v-if="showsBalance(account)"
-            class="shrink-0 text-sm tabular-nums text-ink-gray-5"
-          >
-            {{ getBalanceString(account) }}
-          </span>
-        </button>
-      </li>
-    </ul>
     <FrappeScrollArea
       v-else-if="root"
       class="min-h-0 flex-1"
@@ -173,7 +135,6 @@
 import { t } from 'fyo';
 import {
   Alert as FrappeAlert,
-  Badge as FrappeBadge,
   Dialog as FrappeDialog,
   Dropdown as FrappeDropdown,
   ScrollArea as FrappeScrollArea,
@@ -188,12 +149,9 @@ import {
 import Skeleton from 'src/components/Skeleton.vue';
 import { ModelNameEnum } from 'models/types';
 import EmptyState from 'src/components/EmptyState.vue';
-import OpenInERPNextButton from 'src/components/OpenInERPNextButton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { getDeskTreeUrl } from 'src/frappe/desk';
 import { getDocType } from 'src/frappe/doctypes';
 import { getLinkLabel } from 'src/frappe/link';
-import { getAccessoryCompany, isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -208,7 +166,6 @@ import { TreeViewSettings } from 'fyo/model/types';
 import type { FrappeDoc } from 'src/frappe/document';
 import { showDialog } from 'src/utils/interactive';
 import { serverHtmlToText } from 'src/utils/serverHtml';
-import { isMobile } from 'src/utils/viewport';
 
 type AccountItem = {
   [key: string]: unknown;
@@ -233,7 +190,7 @@ const ACCOUNT_FIELDS = [
   'account_type',
 ];
 
-// A root account's icon, by its root type, as both charts name their roots differently.
+// A root account's icon, by its root type.
 const rootAccountIcons: Record<string, string> = {
   Asset: 'lucide-landmark',
   Expense: 'lucide-receipt-indian-rupee',
@@ -241,27 +198,10 @@ const rootAccountIcons: Record<string, string> = {
   Liability: 'lucide-hand-coins',
 };
 
-// ERPNext's order of the root types, as its balance sheet lists them.
-const ROOT_TYPES = ['Asset', 'Liability', 'Equity', 'Income', 'Expense'];
-
-function sortRoots(roots: AccountItem[]): AccountItem[] {
-  const rank = (root: AccountItem) => ROOT_TYPES.indexOf(root.root_type);
-  return roots.sort((a, b) => rank(a) - rank(b));
-}
-
-/** The first root and its first group, which accessory mode opens at first. */
-function getFirstBranch(roots: AccountItem[]): string[] {
-  const root = roots[0];
-  const group = root?.children.find((child) => child.children.length);
-  return [root?.name, group?.name].filter((name): name is string => !!name);
-}
-
 export default defineComponent({
   components: {
-    OpenInERPNextButton,
     EmptyState,
     FrappeAlert,
-    FrappeBadge,
     FrappeButton,
     FrappePageHeaderBackButton,
     PageHeader,
@@ -287,36 +227,13 @@ export default defineComponent({
       error: '',
     };
   },
-  setup() {
-    // Accessory mode shows the ERPNext tree of its company, read only.
-    const isAccessory = isAccessoryMode();
-    return {
-      isMobile,
-      isAccessory,
-      company: isAccessory ? getAccessoryCompany() : undefined,
-    };
-  },
   computed: {
     /** Balances total the ledger. */
     canReadLedger(): boolean {
       return fyo.can(ModelNameEnum.GLEntry, 'read');
     },
     canEditTree(): boolean {
-      return !this.isAccessory && fyo.can(ModelNameEnum.Account, 'create');
-    },
-    /** Accounts a phone lists: each open group's children under it, indented by depth. */
-    visibleRows(): { account: AccountItem; depth: number }[] {
-      const rows: { account: AccountItem; depth: number }[] = [];
-      const add = (nodes: AccountItem[], depth: number) => {
-        for (const account of nodes) {
-          rows.push({ account, depth });
-          if (this.isExpanded(account)) {
-            add(account.children, depth + 1);
-          }
-        }
-      };
-      add(this.accounts, 0);
-      return rows;
+      return fyo.can(ModelNameEnum.Account, 'create');
     },
     isAllExpanded(): boolean {
       return this.getGroups(this.accounts).every((account) =>
@@ -365,16 +282,11 @@ export default defineComponent({
     docsPathRef.value = '';
   },
   methods: {
-    getDeskTreeUrl,
     accountLabel(name: string) {
       return getLinkLabel(ModelNameEnum.Account, name);
     },
     getAccountActions(account: AccountItem): DropdownOptions {
       const actions: DropdownOptions = [];
-      if (this.isAccessory) {
-        return actions;
-      }
-
       if (account.is_group && fyo.can(ModelNameEnum.Account, 'create')) {
         actions.push(
           {
@@ -388,11 +300,12 @@ export default defineComponent({
         );
       }
 
-      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
-        label: account.is_group ? t`Delete group` : t`Delete account`,
-        theme: 'red',
-        onClick: () => this.deleteAccount(account),
-      });
+      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete'))
+        actions.push({
+          label: account.is_group ? t`Delete group` : t`Delete account`,
+          theme: 'red',
+          onClick: () => this.deleteAccount(account),
+        });
       return actions;
     },
     expand() {
@@ -410,20 +323,11 @@ export default defineComponent({
       );
       this.expandedAccounts = expanded ? [...others, account.name] : others;
     },
-    /** Accessory mode also totals each group's accounts. */
     showsBalance(account: AccountItem): boolean {
-      return this.canReadLedger && (!account.is_group || this.isAccessory);
+      return this.canReadLedger && !account.is_group;
     },
     getBalance(account: AccountItem): number {
-      const own = this.balances[account.name] ?? 0;
-      if (!this.isAccessory) {
-        return own;
-      }
-
-      return account.children.reduce(
-        (total, child) => total + this.getBalance(child),
-        own
-      );
+      return this.balances[account.name] ?? 0;
     },
     /** A balance on the other side than its root type keeps shows as a positive amount of that side. */
     getBalanceString(account: AccountItem) {
@@ -458,11 +362,7 @@ export default defineComponent({
         (parent?.children ?? roots).push(node);
       }
 
-      const isFirstLoad = !this.root;
-      this.accounts = this.isAccessory ? sortRoots(roots) : roots;
-      if (this.isAccessory && isFirstLoad) {
-        this.expandedAccounts = getFirstBranch(this.accounts);
-      }
+      this.accounts = roots;
 
       // Set last: the tree shows once its accounts are in.
       this.root = {
@@ -590,7 +490,9 @@ export default defineComponent({
           (child) => {
             const existing = previous.get(child.name);
             return existing
-              ? Object.assign(existing, { label: this.accountLabel(child.name) })
+              ? Object.assign(existing, {
+                  label: this.accountLabel(child.name),
+                })
               : child;
           }
         );
@@ -608,15 +510,13 @@ export default defineComponent({
         addingGroupAccount: false,
       }));
     },
-    /** Every account the filters match, by name (accessory mode: the company's, in tree order), labelled in the user's language. */
+    /** Every account the filters match, by name, labelled in the user's language. */
     async getAccounts(filters: string[][] = []): Promise<AccountItem[]> {
       const accounts = await call<AccountItem[]>('frappe.client.get_list', {
         doctype: getDocType(ModelNameEnum.Account).doctype,
         fields: ACCOUNT_FIELDS,
-        filters: this.isAccessory
-          ? [...filters, ['company', '=', this.company ?? '']]
-          : filters,
-        order_by: this.isAccessory ? 'lft asc' : 'name asc',
+        filters,
+        order_by: 'name asc',
         limit_page_length: 0,
       });
       return accounts.map((account) => ({
@@ -694,4 +594,3 @@ export default defineComponent({
   },
 });
 </script>
-

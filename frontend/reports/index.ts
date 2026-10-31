@@ -6,8 +6,6 @@ import { ProfitAndLoss } from './ProfitAndLoss/ProfitAndLoss';
 import { TrialBalance } from './TrialBalance/TrialBalance';
 import { StockBalance } from './inventory/StockBalance';
 import { StockLedger } from './inventory/StockLedger';
-import { isAccessoryMode } from 'src/frappe/mode';
-import { erpnextReports } from './erpnext';
 
 export const reports = {
   GeneralLedger,
@@ -20,12 +18,10 @@ export const reports = {
   StockBalance,
 } as const;
 
-type BooksReport = (typeof reports)[keyof typeof reports];
-type ERPNextReportClass = (typeof erpnextReports)[keyof typeof erpnextReports];
-export type ReportClass = BooksReport | ERPNextReportClass;
-export type ReportName = keyof typeof reports | keyof typeof erpnextReports;
+export type ReportClass = (typeof reports)[keyof typeof reports];
+export type ReportName = keyof typeof reports;
 
-/** The reports the mode shows, by route name: Books' own, or ERPNext's in accessory mode. */
+/** The reports Books shows, by route name. */
 export function getReports(): Partial<Record<ReportName, ReportClass>> {
-  return isAccessoryMode() ? erpnextReports : reports;
+  return reports;
 }

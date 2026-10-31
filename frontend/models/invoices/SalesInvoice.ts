@@ -11,7 +11,6 @@ import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { SubmitWarning } from 'src/frappe/document';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { getLoyaltyPoints } from './loyalty';
 import { INVOICE_FIELDS, Invoice, SALES_FILTERS } from './Invoice';
 import { SalesInvoiceItem } from './InvoiceItem';
@@ -74,8 +73,6 @@ export class SalesInvoice extends Invoice {
   customer?: string;
   coupon_code?: string;
   payments?: SalesInvoicePayment[];
-  /** An ERPNext POS sale's POS Profile, whose shift it belongs to. */
-  pos_profile?: string;
   stock_not_transferred?: number;
   loyalty_amount?: Money;
   /** The customer's program, as the server's preview fills it. */
@@ -93,18 +90,9 @@ export class SalesInvoice extends Invoice {
       !this.redeem_loyalty_points && this.availableLoyaltyPoints <= 0,
   };
 
-  /** Books counts the stock no transfer moved; an ERPNext invoice that moved no stock itself counts what its rows delivered. */
+  /** Books counts the stock no transfer moved. */
   override get hasStockToTransfer(): boolean {
-    if (!isAccessoryMode()) {
-      return (this.stock_not_transferred ?? 0) > 0;
-    }
-
-    return (
-      !this.update_stock &&
-      (this.items ?? []).some(
-        (row) => Number(row.delivered_qty ?? 0) < Number(row.qty ?? 0)
-      )
-    );
+    return (this.stock_not_transferred ?? 0) > 0;
   }
 
   override applyPreview(previewed: DocValueMap) {
@@ -126,15 +114,9 @@ export class SalesInvoice extends Invoice {
         : 0;
   }
 
-  /**
-   * The server ships no short stock, so a Yes submits without the shipment;
-   * an ERPNext invoice then updates no stock.
-   */
+  /** The server ships no short stock, so a Yes submits without the shipment. */
   override async getSubmitWarning(): Promise<SubmitWarning | undefined> {
-    const shipField = isAccessoryMode()
-      ? 'update_stock'
-      : 'make_auto_stock_transfer';
-    if (!this[shipField]) {
+    if (!this.make_auto_stock_transfer) {
       return undefined;
     }
 
@@ -153,7 +135,7 @@ export class SalesInvoice extends Invoice {
           .t`The following items have insufficient quantity for Delivery Note: ${list}`,
         this.fyo.t`Continue submitting Sales Invoice?`,
       ],
-      accept: () => this.set(shipField, false),
+      accept: () => this.set('make_auto_stock_transfer', false),
     };
   }
 

@@ -13,11 +13,7 @@ export function usePOSBatchQuantity(
   watch(
     [() => getRow()?.item_code, () => getRow()?.batch_no],
     async ([item, batch]) => {
-      quantity.value = await getPOSBatchQuantity(
-        item,
-        batch,
-        getRow()?.parentdoc
-      );
+      quantity.value = await getPOSBatchQuantity(item, batch);
     },
     { immediate: true }
   );

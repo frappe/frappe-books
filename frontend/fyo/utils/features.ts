@@ -1,5 +1,4 @@
 import type { SinglesMap } from 'fyo/model/types';
-import { isAccessoryMode } from 'src/frappe/mode';
 
 const INVENTORY_FEATURES = [
   'enable_batches',
@@ -23,24 +22,11 @@ type AccountingFeature =
   | 'enable_coupon_code'
   | 'enable_item_group';
 
-/** Features ERPNext does not have, which accessory mode turns off. */
-const STANDALONE_FEATURES: Feature[] = [
-  'enable_item_enquiry',
-  'enable_form_customization',
-];
-
 /** A Books feature switch, by its settings fieldname. */
 export type Feature = (typeof INVENTORY_FEATURES)[number] | AccountingFeature;
 
-/**
- * Whether a feature is on: as the Books settings switch it, or in accessory
- * mode, where those settings are hidden, as ERPNext has it.
- */
+/** Whether a feature is on, as the Books settings switch it. */
 export function isFeatureOn(singles: SinglesMap, feature: Feature): boolean {
-  if (isAccessoryMode()) {
-    return !STANDALONE_FEATURES.includes(feature);
-  }
-
   const settings = (INVENTORY_FEATURES as readonly string[]).includes(feature)
     ? singles.InventorySettings
     : singles.AccountingSettings;

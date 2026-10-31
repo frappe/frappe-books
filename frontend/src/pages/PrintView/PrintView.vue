@@ -19,20 +19,12 @@
         :value="picker.value ?? ''"
         @change="(value: string | null) => picker.select(value ?? '')"
       />
-      <DropdownWithActions
-        v-if="!isAccessory"
-        :actions="actions"
-        :label="t`More`"
-      />
+      <DropdownWithActions :actions="actions" :label="t`More`" />
       <template v-if="doc?.can('print')">
-        <FrappeButton :disabled="isAccessory && !canPrint" @click="savePDF()">
+        <FrappeButton @click="savePDF()">
           {{ t`Save as PDF` }}
         </FrappeButton>
-        <FrappeButton
-          variant="solid"
-          :disabled="isAccessory && !canPrint"
-          @click="openPrintDialog()"
-        >
+        <FrappeButton variant="solid" @click="openPrintDialog()">
           {{ t`Print` }}
         </FrappeButton>
       </template>
@@ -59,13 +51,6 @@
       icon="lucide-printer"
       :title="helperMessage"
     />
-    <EmptyState
-      v-else-if="printError"
-      class="flex-1"
-      icon="lucide-printer"
-      :title="t`Preview could not be loaded`"
-      :description="printError"
-    />
     <!-- Template Display Area -->
     <FrappeScrollArea
       v-else
@@ -74,23 +59,15 @@
       viewport-class="p-4 pb-10"
     >
       <!-- Template Container -->
-      <div :class="isMobile ? 'relative w-max min-w-full' : 'relative'">
-        <!-- While loading: the previous preview faded, else an empty sheet -->
+      <div :class="isMobile ? 'relative w-max min-w-full' : ''">
         <PrintSheet
-          v-if="printDocument || isLoading"
+          v-if="printDocument"
           class="mx-auto shadow-sm border"
-          :class="{ 'opacity-[.45]': isLoading }"
-          :document="printDocument ?? undefined"
+          :document="printDocument"
           :scale="Math.max(scale * zoom, 0.1)"
           :width="pageSize.width"
           :height="pageSize.height"
         />
-        <div
-          v-if="isLoading"
-          class="absolute inset-x-0 top-[120px] mx-auto flex h-8 w-max items-center gap-2 rounded-lg bg-surface-base px-3 text-base text-ink-gray-7 shadow-md"
-        >
-          <FrappeLoadingText :text="t`Loading preview…`" />
-        </div>
         <!-- Takes the touches the preview frame would swallow. -->
         <div
           v-if="isMobile"
@@ -147,7 +124,6 @@
 import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
-  LoadingText as FrappeLoadingText,
 } from 'frappe-ui';
 import type { FrappeDoc } from 'src/frappe/document';
 import { t } from 'fyo';
@@ -163,17 +139,14 @@ import PrintSheet from 'src/components/PrintSheet.vue';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getAllDocuments, getValue } from 'src/frappe/api';
-import { getServerMessages } from 'src/web/api';
 import { getSchema } from 'src/frappe/registry';
 import { getFrappeDoc, newFrappeDoc } from 'src/frappe/documents';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { showToast } from 'src/utils/interactive';
 import {
   canSharePDF,
   downloadPDF,
   getPDF,
   getPrintHTML,
-  getPrintOptions,
   openPrintView,
 } from 'src/utils/printFormatApi';
 import {
@@ -215,7 +188,6 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeScrollArea,
-    FrappeLoadingText,
     SelectControl,
     PrintSheet,
     DropdownWithActions,
@@ -230,7 +202,6 @@ export default defineComponent({
   setup() {
     return {
       isMobile,
-      isAccessory: isAccessoryMode(),
       canShare: canSharePDF(),
       ...usePinchZoom(),
       ...usePDFShare(t`PDF ready. Tap Share again.`),
@@ -245,10 +216,6 @@ export default defineComponent({
       templateName: null,
       templateList: [],
       templateRequest: 0,
-      letterHead: undefined,
-      letterHeads: [],
-      isLoading: false,
-      printError: '',
     } as {
       doc: null | FrappeDoc;
       scale: number;
@@ -257,11 +224,6 @@ export default defineComponent({
       templateName: null | string;
       templateList: string[];
       templateRequest: number;
-      /** Accessory mode's pick, '' for none; standalone leaves it to Print Settings. */
-      letterHead: string | undefined;
-      letterHeads: string[];
-      isLoading: boolean;
-      printError: string;
     };
   },
   computed: {
@@ -283,13 +245,9 @@ export default defineComponent({
       return '';
     },
     canPrint(): boolean {
-      return !!this.printDocument && !this.isLoading;
+      return !!this.printDocument;
     },
     pickers(): PrintPicker[] {
-      if (this.isAccessory) {
-        return this.accessoryPickers;
-      }
-
       if (!this.templateList.length) {
         return [];
       }
@@ -302,29 +260,6 @@ export default defineComponent({
           options: toOptions(this.templateList),
           value: this.templateName,
           select: this.onTemplateNameChange,
-        },
-      ];
-    },
-    accessoryPickers(): PrintPicker[] {
-      return [
-        {
-          name: this.t`Print format`,
-          label: this.t`Format`,
-          title: this.t`Print format`,
-          options: toOptions(this.templateList),
-          value: this.templateName,
-          select: this.setPrintFormat,
-        },
-        {
-          name: this.t`Letter head`,
-          label: this.t`Letter head`,
-          title: this.t`Letter head`,
-          options: [
-            { label: this.t`No letter head`, value: '' },
-            ...toOptions(this.letterHeads),
-          ],
-          value: this.letterHead ?? '',
-          select: this.setLetterHead,
         },
       ];
     },
@@ -416,11 +351,6 @@ export default defineComponent({
       return actions;
     },
     async initialize() {
-      if (this.isAccessory) {
-        await this.initializeAccessory();
-        return;
-      }
-
       // The hints wait for the doc, so they don't flash while the list loads.
       await this.setTemplateList();
       this.doc = await getFrappeDoc(this.schemaName, this.name);
@@ -428,74 +358,6 @@ export default defineComponent({
       if (!this.templateDoc && this.templateList.length) {
         await this.onTemplateNameChange(this.templateList[0]);
       }
-    },
-    /** ERPNext's print formats and letter heads, each preselected with its default. */
-    async initializeAccessory() {
-      const request = this.templateRequest;
-      this.isLoading = true;
-      this.setScale();
-      try {
-        const [options, doc] = await Promise.all([
-          getPrintOptions(this.doctype, this.name),
-          getFrappeDoc(this.schemaName, this.name),
-        ]);
-        if (request !== this.templateRequest) {
-          return;
-        }
-
-        this.doc = doc;
-        this.templateList = options.print_formats;
-        this.letterHeads = options.letter_heads;
-        this.templateName = options.print_formats[0];
-        this.letterHead = options.default_letter_head ?? '';
-        await this.loadPreview();
-      } catch (error) {
-        if (request === this.templateRequest) {
-          this.showPreviewError(error);
-        }
-      }
-    },
-    async setPrintFormat(value: string) {
-      if (value !== this.templateName) {
-        this.templateName = value;
-        await this.loadPreview();
-      }
-    },
-    async setLetterHead(value: string) {
-      if (value !== this.letterHead) {
-        this.letterHead = value;
-        await this.loadPreview();
-      }
-    },
-    /** ERPNext's preview of the picked format and letter head; the latest pick wins. */
-    async loadPreview() {
-      const request = ++this.templateRequest;
-      this.isLoading = true;
-      this.printError = '';
-      try {
-        const print = await getPrintHTML(
-          this.doctype,
-          this.name,
-          this.templateName!,
-          this.letterHead
-        );
-        if (request === this.templateRequest) {
-          this.print = print;
-          this.isLoading = false;
-          this.setScale();
-        }
-      } catch (error) {
-        if (request === this.templateRequest) {
-          this.showPreviewError(error);
-        }
-      }
-    },
-    showPreviewError(error: unknown) {
-      this.print = null;
-      this.isLoading = false;
-      this.printError = getServerMessages(error)
-        .map(({ message }) => message)
-        .join('\n');
     },
     setScale() {
       this.scale = 1;
@@ -513,10 +375,6 @@ export default defineComponent({
       this.print = null;
       this.templateList = [];
       this.templateDoc = null;
-      this.letterHead = undefined;
-      this.letterHeads = [];
-      this.isLoading = false;
-      this.printError = '';
       this.scale = 1;
       this.zoom = 1;
       this.clearKeptPDF();
@@ -570,27 +428,22 @@ export default defineComponent({
       }
 
       try {
-        await downloadPDF(
-          this.doctype,
-          this.name,
-          this.templateName,
-          this.letterHead
-        );
+        await downloadPDF(this.doctype, this.name, this.templateName);
       } catch (error) {
         await handleErrorWithDialog(error);
       }
     },
     /** Hands the PDF to the system share sheet, as messaging apps expect a file. */
     async sharePDF() {
-      const { templateName, letterHead } = this;
+      const { templateName } = this;
       if (!templateName) {
         return;
       }
 
       await this.share(
-        [this.doctype, this.name, templateName, letterHead].join('/'),
+        [this.doctype, this.name, templateName].join('/'),
         this.name,
-        () => getPDF(this.doctype, this.name, templateName, letterHead)
+        () => getPDF(this.doctype, this.name, templateName)
       );
     },
     openPrintDialog() {
@@ -598,12 +451,7 @@ export default defineComponent({
         return;
       }
 
-      const opened = openPrintView(
-        this.doctype,
-        this.name,
-        this.templateName,
-        this.letterHead
-      );
+      const opened = openPrintView(this.doctype, this.name, this.templateName);
       showToast(
         opened
           ? { message: this.t`Print dialog opened`, type: 'success' }

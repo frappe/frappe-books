@@ -16,7 +16,9 @@
           :show-label="true"
           :border="true"
           :required="false"
-          :read-only="isPOSRowFieldReadOnly(row, 'price_list_rate', permissions)"
+          :read-only="
+            isPOSRowFieldReadOnly(row, 'price_list_rate', permissions)
+          "
           @change="(value: Money) => setValue('price_list_rate', value)"
         />
         <FormControl
@@ -115,7 +117,7 @@ const permissions = ref<POSPermissions>({
 });
 
 onMounted(async () => {
-  permissions.value = await getPOSPermissions(props.row?.parentdoc);
+  permissions.value = await getPOSPermissions();
 });
 
 async function setValue(field: POSRowField, value: number | Money) {

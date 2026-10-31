@@ -1,9 +1,6 @@
 import { t } from 'fyo';
 import { ValidationError } from 'fyo/utils/errors';
 import { ItemQtyMap } from 'src/components/POS/types';
-import type { FrappeDoc } from 'src/frappe/document';
-import { isAccessoryMode } from 'src/frappe/mode';
-import { getPOSProfile } from 'src/utils/posSetup';
 import { safeParseFloat } from 'utils/index';
 import {
   getBatchQuantity,
@@ -12,20 +9,14 @@ import {
 } from './availability';
 import { getSaleShortfalls, type ItemQuantity } from './insufficientStock';
 
-/** The location a POS sale ships from: its POS Profile's warehouse in accessory mode, else as the server picks it. */
-export async function getPOSInventory(
-  sale?: FrappeDoc
-): Promise<string | undefined> {
-  if (isAccessoryMode()) {
-    return (await getPOSProfile(sale))?.warehouse;
-  }
-
+/** The location a POS sale ships from, as the server picks it. */
+export async function getPOSInventory(): Promise<string | undefined> {
   return await getStockLocation('Books Sales Invoice', true);
 }
 
 /** Stock of each item, and of each of its batches, at the POS location. */
-export async function getItemQtyMap(sale?: FrappeDoc): Promise<ItemQtyMap> {
-  const rows = await getStockQuantities(await getPOSInventory(sale));
+export async function getItemQtyMap(): Promise<ItemQtyMap> {
+  const rows = await getStockQuantities(await getPOSInventory());
   const itemQtyMap: ItemQtyMap = {};
   for (const { item_code, batch_no, actual_qty } of rows) {
     itemQtyMap[item_code] ??= { availableQty: 0 };
@@ -40,14 +31,13 @@ export async function getItemQtyMap(sale?: FrappeDoc): Promise<ItemQtyMap> {
 
 export async function getPOSBatchQuantity(
   item?: string,
-  batch?: string,
-  sale?: FrappeDoc
+  batch?: string
 ): Promise<number> {
   if (!item || !batch) {
     return 0;
   }
 
-  const inventory = await getPOSInventory(sale);
+  const inventory = await getPOSInventory();
   return inventory ? await getBatchQuantity(item, batch, inventory) : 0;
 }
 
@@ -56,16 +46,14 @@ export async function getPOSBatchQuantity(
  * each tracked item, or batch. An item it has none of is out of stock, as
  * when it is added; the server says so first too.
  */
-export async function validatePOSStock(rows: ItemQuantity[], sale?: FrappeDoc) {
-  // ERPNext rows without a warehouse yet ship from the POS Profile's.
-  const warehouse = isAccessoryMode() ? await getPOSInventory(sale) : undefined;
-  const shortfalls = (
-    await getSaleShortfalls(rows, true, undefined, warehouse)
-  ).map(({ item_code, batch_no, stock_qty }) => {
-    const required = getRequiredQuantity(rows, item_code!, batch_no);
-    const available = safeParseFloat(required - (stock_qty ?? 0));
-    return { item: item_code!, batch: batch_no, required, available };
-  });
+export async function validatePOSStock(rows: ItemQuantity[]) {
+  const shortfalls = (await getSaleShortfalls(rows, true)).map(
+    ({ item_code, batch_no, stock_qty }) => {
+      const required = getRequiredQuantity(rows, item_code!, batch_no);
+      const available = safeParseFloat(required - (stock_qty ?? 0));
+      return { item: item_code!, batch: batch_no, required, available };
+    }
+  );
   const shortfall =
     shortfalls.find(({ batch, available }) => !batch && available <= 0) ??
     shortfalls[0];
@@ -78,7 +66,7 @@ export async function validatePOSStock(rows: ItemQuantity[], sale?: FrappeDoc) {
     throw new ValidationError(getOutOfStockMessage(item));
   }
 
-  const inventory = warehouse ?? (await getPOSInventory(sale));
+  const inventory = await getPOSInventory();
   const locationText = inventory ? ' ' + t`in ${inventory}` : '';
   const batchText = batch ? ' ' + t`for batch ${batch}` : '';
   throw new ValidationError(

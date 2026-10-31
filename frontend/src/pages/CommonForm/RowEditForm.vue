@@ -12,15 +12,7 @@
     @update:open="(open: boolean) => !open && $emit('close')"
   >
     <div class="px-4">
-      <TwoColumnForm :doc="row" :fields="fields" :field-errors="errors" />
-      <!-- Sections run edge to edge, as on the form. -->
-      <div v-if="isAccessory" class="-mx-4">
-        <MobileExtraFields
-          :doc="row"
-          :errors="extraErrors"
-          @value-change="setExtraValue"
-        />
-      </div>
+      <TwoColumnForm :doc="row" :fields="fields" />
       <MobileSheetFooter>
         <FrappeButton
           size="lg"
@@ -83,14 +75,7 @@
         class="w-full"
         :doc="row"
         :fields="fields"
-        :field-errors="errors"
         :column-ratio="[1.1, 2]"
-      />
-      <ExtraFields
-        v-if="isAccessory"
-        v-model:active-tab="endTab"
-        :doc="row"
-        :errors="errors"
       />
     </FrappeScrollArea>
   </div>
@@ -101,37 +86,25 @@ import {
   Button as FrappeButton,
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
-import { DocValue } from 'fyo/core/types';
 import { ValueError } from 'fyo/utils/errors';
 import { Field } from 'schemas/types';
 import TwoColumnForm from 'src/components/TwoColumnForm.vue';
 import { FrappeDoc } from 'src/frappe/document';
-import { noteRowMissingExtras } from 'src/frappe/extraFields';
-import { isAccessoryMode } from 'src/frappe/mode';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
-import { getErrorMessage } from 'src/utils';
 import { shortcutsKey } from 'src/utils/injectionKeys';
 import { getOwnRowTitle, getRowEditFieldnames } from 'src/utils/sheetFields';
 import { isMobile } from 'src/utils/viewport';
 import { computed, defineComponent, inject, PropType } from 'vue';
-import ExtraFields from './ExtraFields.vue';
-import { getRowBooksFields } from './extraFieldsView';
-import MobileExtraFields from './MobileExtraFields.vue';
 import RowDetailSheet from './RowDetailSheet.vue';
 
 const COMPONENT_NAME = 'RowEditForm';
 
-/**
- * A table row's editor: a side panel on desktop, a sheet on phones. Accessory
- * mode adds More details and the end tabs after the row's Books fields.
- */
+/** A table row's editor: a side panel on desktop, a sheet on phones. */
 export default defineComponent({
   components: {
-    ExtraFields,
     FrappeBottomSheet,
     FrappeButton,
     FrappeScrollArea,
-    MobileExtraFields,
     MobileSheetFooter,
     RowDetailSheet,
     TwoColumnForm,
@@ -145,22 +118,13 @@ export default defineComponent({
     doc: { type: Object as PropType<FrappeDoc>, required: true },
     index: { type: Number, required: true },
     fieldname: { type: String, required: true },
-    /** Messages by fieldname to open with, e.g. a mandatory field a save found empty. */
-    errors: {
-      type: Object as PropType<Record<string, string>>,
-      default: () => ({}),
-    },
   },
   emits: ['next', 'previous', 'close'],
   setup() {
     return {
       shortcuts: inject(shortcutsKey),
       isMobile,
-      isAccessory: isAccessoryMode(),
     };
-  },
-  data() {
-    return { endTab: '', extraErrors: {} as Record<string, string> };
   },
   computed: {
     isEditable(): boolean {
@@ -187,12 +151,7 @@ export default defineComponent({
       }]`;
       throw new ValueError(this.t`Invalid value found for ${label}`);
     },
-    /** Accessory mode leaves the row's ERPNext-only fields to More details and the end tabs. */
     fields(): Field[] {
-      if (this.isAccessory) {
-        return getRowBooksFields(this.row);
-      }
-
       const fieldnames = getRowEditFieldnames(this.row.schema);
       return fieldnames.map((f) => this.row.fieldMap[f]);
     },
@@ -212,22 +171,6 @@ export default defineComponent({
       return this.index + 1;
     },
   },
-  watch: {
-    row: {
-      immediate: true,
-      handler(row: FrappeDoc) {
-        if (this.isAccessory) {
-          noteRowMissingExtras(row);
-        }
-      },
-    },
-    errors: {
-      immediate: true,
-      handler(given: Record<string, string>) {
-        this.extraErrors = { ...given };
-      },
-    },
-  },
   mounted() {
     this.shortcuts?.set(COMPONENT_NAME, ['Escape'], () => this.$emit('close'));
   },
@@ -238,16 +181,6 @@ export default defineComponent({
     async remove() {
       await this.doc.remove(this.fieldname, this.index);
       this.$emit('close');
-    },
-    async setExtraValue(field: Field, value: DocValue) {
-      delete this.extraErrors[field.fieldname];
-      try {
-        await this.row.set(field.fieldname, value);
-      } catch (error) {
-        if (error instanceof Error) {
-          this.extraErrors[field.fieldname] = getErrorMessage(error, this.row);
-        }
-      }
     },
   },
 });

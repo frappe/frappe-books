@@ -144,9 +144,7 @@ function isLinkField(field: Field): boolean {
 
 function getWidthClass(field: Field): string {
   const isPill =
-    ['Select', 'Check'].includes(field.fieldtype) ||
-    isLinkField(field) ||
-    field.control === 'MultiSelectList';
+    ['Select', 'Check'].includes(field.fieldtype) || isLinkField(field);
   if (isPill) {
     return '';
   }

@@ -47,40 +47,7 @@ jinja = {
 
 # The search palette's index; a new site builds it now, not at Frappe's next three-hourly check.
 sqlite_search = ["frappe_books.search.BooksSearch"]
-after_install = [
-	"frappe_books.setup.bootstrap",
-	"frappe_books.search.build_search_index",
-	"frappe_books.accessory.printing.sync_pos_receipt",
-]
-# Books' POS receipt for ERPNext's Sales Invoice, on sites with ERPNext only, and the link
-# queries of the installed apps' Desk JS
-after_app_install = [
-	"frappe_books.accessory.printing.sync_pos_receipt_for",
-	"frappe_books.link_queries.generate_link_queries",
-]
-after_app_uninstall = ["frappe_books.link_queries.generate_link_queries"]
-# ERPNext's link queries that branch on values, which /books cannot generate from Desk JS
-books_doctype_js = {
-	doctype: [
-		"link_queries/scripts/queries.js",
-		f"link_queries/scripts/{doctype.lower().replace(' ', '_')}.js",
-	]
-	for doctype in (
-		"Company",
-		"Delivery Note",
-		"Journal Entry",
-		"Payment Entry",
-		"Purchase Invoice",
-		"Purchase Receipt",
-		"Quotation",
-		"Sales Invoice",
-		"Stock Entry",
-	)
-}
-after_migrate = [
-	"frappe_books.accessory.printing.sync_pos_receipt",
-	"frappe_books.link_queries.generate_link_queries",
-]
+after_install = ["frappe_books.setup.bootstrap", "frappe_books.search.build_search_index"]
 before_tests = [
 	"frappe_books.setup.before_tests",
 	"frappe_books.tests.accounting.enable_features",
@@ -89,8 +56,6 @@ before_tests = [
 
 # Each new document belongs to the one Books Company.
 doc_events = {doctype: {"before_insert": "frappe_books.company.set_company"} for doctype in COMPANY_DOCTYPES}
-# A new ERPNext Lead saved from /books in accessory mode makes its Address, as a Books Lead does.
-doc_events["Lead"] = {"after_insert": "frappe_books.accounting.party_contacts.make_lead_address"}
 # Keeps the palette's index in step with saves while Frappe's update stops at ERPNext's search; see search.py.
 doc_events["*"] = {
 	"on_update": "frappe_books.search.update_doc_index",

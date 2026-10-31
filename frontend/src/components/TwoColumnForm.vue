@@ -3,13 +3,14 @@
   <div v-if="isMobile" class="flex flex-col gap-4 py-4">
     <template v-for="df in formFields" :key="df.fieldname">
       <Table
-        v-if="df.fieldtype === 'Table' && !df.control"
+        v-if="df.fieldtype === 'Table'"
         ref="controls"
         :df="df"
         :show-label="true"
         :value="(doc[df.fieldname] ?? []) as unknown[]"
         @change="
-          async (value: FrappeDoc[] | DocValueMap[]) => await onChange(df, value)
+          async (value: FrappeDoc[] | DocValueMap[]) =>
+            await onChange(df, value)
         "
       />
       <div v-else class="min-w-0">
@@ -33,14 +34,15 @@
     <template v-for="df in formFields">
       <!-- Table Field Form (Eg: PaymentEntryReference) -->
       <Table
-        v-if="df.fieldtype === 'Table' && !df.control"
+        v-if="df.fieldtype === 'Table'"
         :key="`${df.fieldname}-table`"
         ref="controls"
         size="small"
         :df="df"
         :value="(doc[df.fieldname] ?? []) as unknown[]"
         @change="
-          async (value: FrappeDoc[] | DocValueMap[]) => await onChange(df, value)
+          async (value: FrappeDoc[] | DocValueMap[]) =>
+            await onChange(df, value)
         "
       />
 
@@ -51,7 +53,9 @@
         class="grid min-h-14 items-start gap-x-3 border-b border-outline-gray-1 px-3 py-3"
         :style="style"
       >
-        <div class="flex min-h-8 min-w-0 items-center break-words text-ink-gray-6">
+        <div
+          class="flex min-h-8 min-w-0 items-center break-words text-ink-gray-6"
+        >
           {{ df.label }}
         </div>
 
@@ -142,7 +146,10 @@ export default defineComponent({
     this.setFormFields();
   },
   methods: {
-    async onChange(field: Field, value: DocValue | FrappeDoc[] | DocValueMap[]) {
+    async onChange(
+      field: Field,
+      value: DocValue | FrappeDoc[] | DocValueMap[]
+    ) {
       const { fieldname } = field;
       delete this.errors[fieldname];
 

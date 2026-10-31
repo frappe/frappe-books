@@ -1,11 +1,7 @@
 import { DocValue } from 'fyo/core/types';
 import { FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { Field } from 'schemas/types';
-import {
-  getCompanyRowDescription,
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import {
   getModeAccountFilters,
@@ -46,16 +42,6 @@ export class ModeOfPayment extends FrappeDoc {
 
   set default_account(value: DocValue) {
     setCompanyRowValue(this, 'accounts', 'default_account', value);
-  }
-
-  /** With other companies, the Default Account names the company it is for. */
-  override getFormFields(fields: Field[]): Field[] {
-    const description = getCompanyRowDescription(this);
-    return fields.map((field) =>
-      field.fieldname === 'default_account' && description
-        ? { ...field, sub_label: description }
-        : field
-    );
   }
 
   static getListViewSettings(): ListViewSettings {

@@ -2,8 +2,6 @@ import { uniqBy } from 'lodash';
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
-import { toActiveDoctype } from 'src/frappe/mode';
-import { call } from 'src/web/api';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
 import { getPOSPreference } from 'src/utils/posSetup';
@@ -32,18 +30,7 @@ type POSItemSearchMatch = {
 
 /** The item's name, then its barcode rows. */
 function getScannedFields(): string[][] {
-  return [['name'], [toActiveDoctype('Books Item Barcode'), 'barcode']];
-}
-
-/** The item ERPNext's scan_barcode finds by a barcode, batch, serial number or item code, one at a time. */
-export async function getERPNextScannedItem(
-  code: string
-): Promise<{ item: { name: string }; quantity: number } | undefined> {
-  const { item_code } = await call<{ item_code?: string }>(
-    'erpnext.stock.utils.scan_barcode',
-    { search_value: code.trim() }
-  );
-  return item_code ? { item: { name: item_code }, quantity: 1 } : undefined;
+  return [['name'], ['Books Item Barcode', 'barcode']];
 }
 
 /** The item a scanned or typed code names among all items, whatever a list shows. */
@@ -77,7 +64,7 @@ async function getScannableItems(
     .flatMap((value) =>
       getScannedFields().map((field) => [...field, 'like', value] as Filter)
     );
-  const items = await getList(toActiveDoctype('Books Item'), {
+  const items = await getList('Books Item', {
     fields: POS_ITEM_FIELDS,
     orFilters,
     orderBy: 'creation desc',

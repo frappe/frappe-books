@@ -15,10 +15,7 @@ ENTRY = "Books Loyalty Point Entry"
 
 @frappe.whitelist()
 def get_loyalty_program_details_with_points(customer: str, loyalty_program: str | None = None) -> dict:
-	"""The customer's loyalty program, or `loyalty_program`, with the points they can redeem now.
-
-	ERPNext's method of the same name answers in accessory mode.
-	"""
+	"""The customer's loyalty program, or `loyalty_program`, with the points they can redeem now."""
 	frappe.has_permission("Books Customer", "read", doc=customer, throw=True)
 	program = loyalty_program or frappe.db.get_value("Books Customer", customer, "loyalty_program")
 	if not program:

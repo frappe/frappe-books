@@ -94,10 +94,9 @@ export function getLinkLabel(schemaName: string, label: string): string {
 }
 
 /**
- * The doctype a link searches: its schema's, or, for an ERPNext doctype
- * Books has no screen for, like a Cost Center in accessory mode, the target
- * itself. Books has no meta of those, which may be translated, like a Stock
- * Entry Type, so their search takes the text as typed, as Desk's does.
+ * The doctype a link searches: its schema's, or, for a doctype Books has no
+ * screen for, the target itself. Books has no meta of those, which may be
+ * translated, so their search takes the text as typed, as Desk's does.
  */
 function getLinkDoctype(schemaName: string) {
   if (!isFrappeBacked(schemaName)) {

@@ -198,7 +198,7 @@ export function getPartyPresentation(
 
 /**
  * The primary Contact and Address are picked from those linked to the party;
- * the Account from the ledgers of its type (ERPNext's rule for the row in accessory mode).
+ * the Account from the ledgers of its type.
  */
 export function getPartyFilters(partyKey: PartyKey): FiltersMap {
   const linkedToParty = (doc: FrappeDoc) => [

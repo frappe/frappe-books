@@ -68,7 +68,7 @@ export default defineComponent({
       this.selectItem(elem.value);
       elem.value = '';
     },
-    /** Matches the code as POS does: scale barcode, barcode, then item; ERPNext's scan in accessory mode. */
+    /** Matches the code as POS does: scale barcode, barcode, then item. */
     async selectItem(code: string) {
       const barcode = code.trim();
       if (!barcode) {

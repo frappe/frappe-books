@@ -1,4 +1,4 @@
-/** Server messages as accessory forms show them: only text markup, lists, tables and links. */
+/** Server messages with only text markup, lists, tables and links. */
 
 const ALLOWED_TAGS = new Set([
   'A',

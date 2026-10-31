@@ -2,7 +2,7 @@
 
 import frappe
 
-# Books doctypes whose ERPNext twin has `company`
+# Books doctypes that belong to the one Books Company
 COMPANY_DOCTYPES = (
 	"Books Account",
 	"Books Delivery Note",

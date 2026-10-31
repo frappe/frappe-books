@@ -135,10 +135,7 @@ export function getMakeInvoiceAction(
     condition: (doc: FrappeDoc) => {
       // Quotes to leads are not invoiced.
       if (schemaName === ModelNameEnum.Quotation) {
-        return (
-          doc.isSubmitted &&
-          doc.quotation_to === 'Books Customer'
-        );
+        return doc.isSubmitted && doc.quotation_to === 'Books Customer';
       }
 
       // A transfer made from an invoice is fully billed.

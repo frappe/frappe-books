@@ -14,11 +14,7 @@ import { getItemPrices } from 'models/baseModels/ItemPrice/ItemPrice';
 import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import { ModelNameEnum } from 'models/types';
 import { Money } from 'pesa';
-import type { Field } from 'schemas/types';
-import {
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import type { ClientField, Presentation } from 'src/frappe/schema';
 import { ItemBarcode } from './ItemBarcode';

@@ -321,4 +321,3 @@ export class QuotationItem extends InvoiceItem {
 function getFileFields(lacking: string[]): string[] {
   return FILE_FIELDS.filter((fieldname) => !lacking.includes(fieldname));
 }
-

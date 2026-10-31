@@ -48,7 +48,6 @@ import type { EvalDoc } from './dependsOn';
 import { getDocType } from './doctypes';
 import { forgetFrappeDoc, newFrappeDoc } from './documents';
 import { triggerFieldChange } from './formScripts';
-import { forgetFilledExtras } from './extraFields';
 import {
   getFieldState,
   getMissingFields,
@@ -1230,7 +1229,6 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
    * like a return's sign, stays the user's.
    */
   applyPreview(previewed: DocValueMap) {
-    const filled = new Set<string>();
     for (const field of this.schema.fields) {
       const { fieldname } = field;
       if (field.meta || field.clientOnly || fieldname === 'name') {
@@ -1251,11 +1249,8 @@ export class FrappeDoc extends Observable<DocValue | FrappeDoc[]> {
       if (!areDocValuesEqual(value as DocValue, this[fieldname] as DocValue)) {
         this._rememberFilled(fieldname);
         this[fieldname] = value;
-        filled.add(fieldname);
       }
     }
-
-    forgetFilledExtras(this, filled);
   }
 
   /** A value the server filled: one it was sent empty. */

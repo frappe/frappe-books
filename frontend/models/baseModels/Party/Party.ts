@@ -13,10 +13,7 @@ import { ModelNameEnum } from 'models/types';
 import { getReports } from 'reports';
 import type { Field } from 'schemas/types';
 import type { DocValue } from 'fyo/core/types';
-import {
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 import { getModel } from 'src/frappe/registry';
@@ -186,9 +183,6 @@ export function getPartyPresentation(
       ...fields,
       // The Account field edits the current company's row.
       accounts: { hidden: true },
-      // ERPNext's Read Only fields, which a new party fills as Desk's quick entry does.
-      email_id: { control: undefined },
-      mobile_no: { control: undefined },
       [`${partyKey}_primary_contact`]: {
         ...card,
         placeholder: 'No primary contact',

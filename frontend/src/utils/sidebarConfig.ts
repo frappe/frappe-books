@@ -1,5 +1,4 @@
 import { t } from 'fyo';
-import { kebabCase } from 'lodash';
 import { getReports, type ReportName } from 'reports';
 import { canOpenReport } from 'reports/serverReport';
 import { getImportableSchemaNames } from 'src/importer';

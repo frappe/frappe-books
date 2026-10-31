@@ -2,7 +2,6 @@ import { uniqBy } from 'lodash';
 import { POSSettings } from 'models/inventory/Point of Sale/POSSettings';
 import { ItemQtyMap, POSItem } from 'src/components/POS/types';
 import { getList, type Filter } from 'src/frappe/api';
-import { call } from 'src/web/api';
 import { fuzzyMatch } from 'src/utils';
 import { POS_ITEM_FIELDS, toPOSItem } from 'src/utils/pos';
 import { getPOSPreference } from 'src/utils/posSetup';

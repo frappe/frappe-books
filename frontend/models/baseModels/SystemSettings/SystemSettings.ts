@@ -1,10 +1,5 @@
 import { DocValue } from 'fyo/core/types';
-import {
-  HiddenMap,
-  ListsMap,
-  ReadOnlyMap,
-  ValidationMap,
-} from 'fyo/model/types';
+import { ListsMap, ReadOnlyMap, ValidationMap } from 'fyo/model/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';

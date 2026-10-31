@@ -1,10 +1,7 @@
 import { DocValue } from 'fyo/core/types';
 import { FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { Field } from 'schemas/types';
-import {
-  getCompanyRowValue,
-  setCompanyRowValue,
-} from 'src/frappe/companyRow';
+import { getCompanyRowValue, setCompanyRowValue } from 'src/frappe/companyRow';
 import { FrappeDoc } from 'src/frappe/document';
 import {
   getModeAccountFilters,

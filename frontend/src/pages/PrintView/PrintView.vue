@@ -188,7 +188,6 @@ export default defineComponent({
     PageHeader,
     FrappeButton,
     FrappeScrollArea,
-    FrappeLoadingText,
     SelectControl,
     PrintSheet,
     DropdownWithActions,

@@ -90,7 +90,6 @@ export async function runDocMethod(
   return docs![0];
 }
 
-
 export async function getDocuments(
   doctype: string,
   query: ListQuery

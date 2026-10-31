@@ -60,8 +60,6 @@ export class POSProfile extends FrappeDoc {
   declare payments?: (FrappeDoc & { mode_of_payment?: string })[];
 
   static filters: FiltersMap = {
-    print_format: () => [
-      ['doc_type', '=', 'Books Sales Invoice'],
-    ],
+    print_format: () => [['doc_type', '=', 'Books Sales Invoice']],
   };
 }

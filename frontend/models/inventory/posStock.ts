@@ -49,9 +49,9 @@ export async function getPOSBatchQuantity(
 export async function validatePOSStock(rows: ItemQuantity[]) {
   const shortfalls = (await getSaleShortfalls(rows, true)).map(
     ({ item_code, batch_no, stock_qty }) => {
-    const required = getRequiredQuantity(rows, item_code!, batch_no);
-    const available = safeParseFloat(required - (stock_qty ?? 0));
-    return { item: item_code!, batch: batch_no, required, available };
+      const required = getRequiredQuantity(rows, item_code!, batch_no);
+      const available = safeParseFloat(required - (stock_qty ?? 0));
+      return { item: item_code!, batch: batch_no, required, available };
     }
   );
   const shortfall =

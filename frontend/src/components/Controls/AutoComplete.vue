@@ -172,7 +172,6 @@ import { getOptionList } from 'fyo/utils';
 import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
-import { isFrappeBacked } from 'src/frappe/doctypes';
 import { getModel, getSchema, toSchemaName } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { h } from 'vue';

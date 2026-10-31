@@ -9,7 +9,6 @@ import { Money } from 'pesa';
 import { ItemQtyMap, ItemVisibility, POSItem } from 'src/components/POS/types';
 import type { DocValueMap } from 'fyo/core/types';
 import type { Field } from 'schemas/types';
-import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import {
   getAllDocuments,
   getCount,
@@ -43,7 +42,6 @@ const TRACKED_ITEMS: Partial<Record<ItemVisibility, number>> = {
   'Inventory Items': 1,
   'Non-Inventory Items': 0,
 };
-
 
 /** Whether a key press types into a field, which POS shortcuts must leave alone. */
 export function isTypingInField(event: KeyboardEvent): boolean {
@@ -173,7 +171,9 @@ export function getPOSItemFilters(
 }
 
 /** The items the POS lists, with the fields `toPOSItem` reads. */
-export async function getPOSItemRecords(filters: Filter[]): Promise<DocValues[]> {
+export async function getPOSItemRecords(
+  filters: Filter[]
+): Promise<DocValues[]> {
   return await getAllDocuments('Books Item', {
     fields: POS_ITEM_FIELDS,
     filters,
@@ -275,11 +275,7 @@ export async function getPOSInvoiceCount(
   search = ''
 ): Promise<number> {
   const filtersWithSearch = getPOSInvoiceFilters(filters, search);
-  return await getCount(
-    'Books Sales Invoice',
-    filtersWithSearch,
-    []
-  );
+  return await getCount('Books Sales Invoice', filtersWithSearch, []);
 }
 
 /** Submitted sales that are not returns and have something left to return. */

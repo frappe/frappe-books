@@ -144,7 +144,6 @@ import {
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { getDocType } from 'src/frappe/doctypes';
 
 import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';

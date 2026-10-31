@@ -1,11 +1,9 @@
 import { t } from 'fyo';
-import { sortBy } from 'lodash';
 import { DateTime } from 'luxon';
 import {
   getPaymentMethodRequirements,
   PaymentMethodRequirements,
 } from 'models/baseModels/ModeOfPayment/requirements';
-import type { SalesInvoicePayment } from 'models/invoices/SalesInvoicePayment';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { Money } from 'pesa';
 import type { PaymentMethodOption } from 'src/components/POS/types';
@@ -25,7 +23,6 @@ import {
   getPaymentShortcuts,
   validatePOSCheckout,
 } from './pos';
-import { getPOSProfile } from './posSetup';
 
 const PAY_POS_INVOICE =
   'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';

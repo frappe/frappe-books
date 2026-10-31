@@ -235,7 +235,6 @@ import { showDialog, showToast } from 'src/utils/interactive';
 import { isMobile } from 'src/utils/viewport';
 import { getPrintRoute, routeTo, toggleSidebar } from 'src/utils/ui';
 import { shortcutsKey } from 'src/utils/injectionKeys';
-import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { computed, defineComponent, inject, nextTick, shallowRef } from 'vue';
 import {
@@ -256,10 +255,7 @@ import {
   getAmountToPay,
   loadPricingRuleTitles,
 } from 'src/utils/pos';
-import {
-  posCheckoutKey,
-  usePOSCheckout,
-} from 'src/utils/posCheckout';
+import { posCheckoutKey, usePOSCheckout } from 'src/utils/posCheckout';
 import {
   canApplyCoupon,
   canRedeemLoyalty,
@@ -278,7 +274,6 @@ import {
 } from 'src/utils/posSetup';
 import { usePOSShift } from 'src/utils/posShift';
 import { getFrappeDoc, getMappedDoc, newFrappeDoc } from 'src/frappe/documents';
-import type { DocValueMap } from 'fyo/core/types';
 import { getItemQtyMap } from 'models/inventory/posStock';
 import { POSItem, ItemQtyMap } from 'src/components/POS/types';
 import { ValidationError } from 'fyo/utils/errors';
@@ -289,7 +284,6 @@ const COMPONENT_NAME = 'POS';
 export default defineComponent({
   name: 'POS',
   components: {
-    EmptyState,
     FrappeBadge,
     FrappeButton,
     PageHeader,

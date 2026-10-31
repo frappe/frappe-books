@@ -58,11 +58,7 @@ watch(open, async (isOpen) => {
       ['is_pos', '=', 1],
       ['docstatus', '=', 0],
     ] as Filter[];
-    savedCount.value = await getCount(
-      'Books Sales Invoice',
-      filters,
-      []
-    );
+    savedCount.value = await getCount('Books Sales Invoice', filters, []);
   }
 });
 

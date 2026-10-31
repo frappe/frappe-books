@@ -1,6 +1,5 @@
 import { ListViewSettings } from 'fyo/model/types';
 import type { Money } from 'pesa';
-import type { Field } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
 
 /** A row of cash counted by denomination. */

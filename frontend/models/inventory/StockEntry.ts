@@ -34,8 +34,6 @@ export class StockEntry extends FrappeDoc {
       'items',
     ],
     fields: { items: { edit: true } },
-    // ERPNext's entry takes its purpose from its Stock Entry Type, which Desk asks for first.
-    accessoryPlacements: [{ fieldname: 'stock_entry_type', before: 'purpose' }],
     fileFields: [
       'name',
       'naming_series',

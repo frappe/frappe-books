@@ -7,10 +7,7 @@
     @closemodal="$emit('toggleModal', 'ShiftClose', false)"
   >
     <template v-if="isMobile && posClosingShiftDoc">
-      <MobileCashCount
-        :heading="t`Closing cash`"
-        :rows="closingCash"
-      />
+      <MobileCashCount :heading="t`Closing cash`" :rows="closingCash" />
       <FormControl
         v-for="row in otherClosingAmounts"
         :key="row.idx"
@@ -70,10 +67,7 @@
       </section>
     </template>
     <div v-else-if="posClosingShiftDoc" class="flex flex-col gap-6">
-      <CashCountTable
-        :heading="t`Count the drawer`"
-        :rows="closingCash"
-      />
+      <CashCountTable :heading="t`Count the drawer`" :rows="closingCash" />
 
       <section class="flex min-w-0 flex-col gap-2">
         <h3 class="text-base-medium text-ink-gray-8">
@@ -101,10 +95,7 @@
             <span class="truncate text-ink-gray-8">{{
               row.mode_of_payment
             }}</span>
-            <span
-              class="truncate text-end text-ink-gray-6"
-              dir="ltr"
-            >
+            <span class="truncate text-end text-ink-gray-6" dir="ltr">
               {{ format(row.opening_amount) }}
             </span>
             <span class="truncate text-end text-ink-gray-8" dir="ltr">

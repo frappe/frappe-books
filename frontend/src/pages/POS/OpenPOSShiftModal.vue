@@ -19,7 +19,7 @@
         :value="row.opening_amount"
         :show-label="true"
         :border="true"
-        @change="(amount: Money) => row.set('opening_amount', amount)"
+        @change="(amount: Money) => setOpeningAmount(row, amount)"
       />
       <MobileDetailList :details="openingAmountDetails" />
     </template>
@@ -70,7 +70,7 @@
                   label: row.mode_of_payment,
                 }"
                 :value="row.opening_amount"
-                @change="(amount: Money) => row.set('opening_amount', amount)"
+                @change="(amount: Money) => setOpeningAmount(row, amount)"
               />
             </li>
           </ul>
@@ -193,6 +193,9 @@ export default defineComponent({
     },
     isCounted(row: OpeningBalance): boolean {
       return this.isCashMethod(row.mode_of_payment);
+    },
+    async setOpeningAmount(row: OpeningBalance, amount: Money) {
+      await row.set('opening_amount', amount);
     },
     handleDismiss() {
       this.isDismissed = true;

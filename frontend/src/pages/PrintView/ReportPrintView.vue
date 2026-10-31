@@ -201,7 +201,6 @@ import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { getReport } from 'src/utils/misc';
 import { constructPDFDocument, printDocument } from 'src/utils/printDocument';
 import { canSharePDF, getReportPDF } from 'src/utils/printFormatApi';
@@ -249,12 +248,9 @@ export default defineComponent({
     };
   },
   computed: {
-    /** Print Settings' company name; ERPNext's company in accessory mode, whose reports these are. */
+    /** Print Settings' company name. */
     companyName(): string {
-      const company = isAccessoryMode()
-        ? this.fyo.singles.Company
-        : this.fyo.singles.PrintSettings;
-      return company?.company_name ?? '';
+      return this.fyo.singles.PrintSettings?.company_name ?? '';
     },
     title(): string {
       return getReports()[this.reportName]?.title ?? this.t`Report`;

@@ -1,6 +1,5 @@
 import { FiltersMap } from 'fyo/model/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { toActiveDoctype } from 'src/frappe/mode';
 import { FieldPresentation, withoutCreate } from 'src/frappe/schema';
 
 const BUTTON_COLOURS = [
@@ -62,7 +61,7 @@ export class POSProfile extends FrappeDoc {
 
   static filters: FiltersMap = {
     print_format: () => [
-      ['doc_type', '=', toActiveDoctype('Books Sales Invoice')],
+      ['doc_type', '=', 'Books Sales Invoice'],
     ],
   };
 }

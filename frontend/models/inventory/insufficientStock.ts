@@ -5,12 +5,11 @@ import { call } from 'src/web/api';
 const SALE_SHORTFALLS =
   'frappe_books.inventory.availability.get_sale_shortfalls';
 
-/** An invoice row's item, batch and quantity in the stock unit; an ERPNext row's warehouse. */
+/** An invoice row's item, batch and quantity in the stock unit. */
 export type ItemQuantity = {
   item_code?: string;
   batch_no?: string | null;
   stock_qty?: number;
-  warehouse?: string;
 };
 
 /** Tracked items short of stock at the invoice's posting time where the server ships them from. */
@@ -32,25 +31,21 @@ export async function getInsufficientItems(
 
 /**
  * How much of each tracked item, or of its batch, the rows lack where the
- * server ships a sale from, by the date when given, else in all. ERPNext
- * rows ship from their warehouse, else from `warehouse`.
+ * server ships a sale from, by the date when given, else in all.
  */
 export async function getSaleShortfalls(
   rows: ItemQuantity[],
   isPOS: boolean,
-  date?: unknown,
-  warehouse?: string
+  date?: unknown
 ): Promise<ItemQuantity[]> {
-  const items = rows.map(({ item_code, batch_no, stock_qty, warehouse }) => ({
+  const items = rows.map(({ item_code, batch_no, stock_qty }) => ({
     item_code,
     batch_no,
     stock_qty,
-    warehouse,
   }));
   return await call<ItemQuantity[]>(SALE_SHORTFALLS, {
     items,
     date,
     is_pos: isPOS,
-    warehouse,
   });
 }

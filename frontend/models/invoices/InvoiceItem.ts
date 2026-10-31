@@ -19,7 +19,6 @@ import { isHsnCodeHidden } from 'models/regionalModels/in/hsnCode';
 import type { Money } from 'pesa';
 import type { Field, Schema } from 'schemas/types';
 import { FrappeDoc, type FrappeValueOptions } from 'src/frappe/document';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { withoutCreate } from 'src/frappe/schema';
 import type { Invoice } from './Invoice';
 import { setCurrencies } from './Invoice';
@@ -36,7 +35,7 @@ const ITEM_DETAILS = [
   'expense_account',
 ];
 const QUANTITY_FIELDS = ['qty', 'stock_qty'];
-const QUICK_EDIT_FIELDS = withTypedRate([
+const QUICK_EDIT_FIELDS = [
   'item_code',
   'income_account',
   'expense_account',
@@ -54,7 +53,7 @@ const QUICK_EDIT_FIELDS = withTypedRate([
   'discount_percentage',
   'discount_amount',
   'amount',
-]);
+];
 const FILE_FIELDS = [
   'item_code',
   'description',
@@ -84,20 +83,20 @@ export class InvoiceItem extends FrappeDoc {
   static override presentation = {
     label: 'Invoice Item',
     quickEditFields: QUICK_EDIT_FIELDS,
-    tableFields: withTypedRate([
+    tableFields: [
       'item_code',
       'qty',
       'price_list_rate',
       'item_tax_template',
       'amount',
-    ]),
+    ],
     fields: withoutCreate([
       'uom',
       'stock_uom',
       'income_account',
       'expense_account',
     ]),
-    fileFields: withTypedRate(FILE_FIELDS),
+    fileFields: FILE_FIELDS,
   };
   // The server prices the row and derives the other quantity again.
   static override refills = {
@@ -229,12 +228,8 @@ export class InvoiceItem extends FrappeDoc {
     },
   };
 
-  /** Stock location a sale ships from, as the server picks it; an ERPNext row names its warehouse. */
+  /** Stock location a sale ships from, as the server picks it. */
   async getStockLocation(): Promise<string | undefined> {
-    if (isAccessoryMode()) {
-      return (this.warehouse as string | undefined) ?? undefined;
-    }
-
     const invoice = this.parentdoc;
     if (!invoice) {
       return undefined;
@@ -324,19 +319,6 @@ export class QuotationItem extends InvoiceItem {
 
 /** The row's file fields, less those its DocType lacks. */
 function getFileFields(lacking: string[]): string[] {
-  return withTypedRate(
-    FILE_FIELDS.filter((fieldname) => !lacking.includes(fieldname))
-  );
+  return FILE_FIELDS.filter((fieldname) => !lacking.includes(fieldname));
 }
 
-/**
- * Fields with the rate the user types: a Books row's price list rate, or an
- * ERPNext row's rate, as ERPNext reads the price list rate from the price list.
- */
-function withTypedRate(fieldnames: string[]): string[] {
-  return isAccessoryMode()
-    ? fieldnames.map((fieldname) =>
-        fieldname === 'price_list_rate' ? 'rate' : fieldname
-      )
-    : fieldnames;
-}

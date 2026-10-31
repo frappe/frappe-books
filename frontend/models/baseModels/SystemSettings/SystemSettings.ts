@@ -10,7 +10,6 @@ import { hasDocTypePermission } from 'fyo/utils/permissions';
 import { t } from 'fyo/utils/translation';
 import { SelectOption } from 'schemas/types';
 import { FrappeDoc } from 'src/frappe/document';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { call } from 'src/web/api';
 import { getCountryInfo } from 'utils/misc';
 
@@ -24,8 +23,6 @@ const SET_DISPLAY_PRECISION =
  */
 export class SystemSettings extends FrappeDoc {
   static override doctype = 'Books System Settings';
-  // UI settings, kept in accessory mode
-  static override erpnextDoctype = 'Books System Settings';
   static override presentation = {
     label: 'System Settings',
     fields: {
@@ -71,9 +68,6 @@ export class SystemSettings extends FrappeDoc {
       );
     },
   };
-
-  // Accessory mode has no Get Started page.
-  hidden: HiddenMap = { hide_get_started: isAccessoryMode };
 
   readOnly: ReadOnlyMap = {
     date_format: () => !this.canWriteSystemSettings,

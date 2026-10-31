@@ -14,7 +14,6 @@ import { getReports } from 'reports';
 import type { Field } from 'schemas/types';
 import type { DocValue } from 'fyo/core/types';
 import {
-  getCompanyRowDescription,
   getCompanyRowValue,
   setCompanyRowValue,
 } from 'src/frappe/companyRow';
@@ -116,14 +115,8 @@ export abstract class Party extends FrappeDoc {
     return `${(this.constructor as typeof Party).partyKey}_primary_address`;
   }
 
-  /** A saved party's contact and address sections hold its primary ones; the Account names its company. */
+  /** A saved party's contact and address sections hold its primary ones. */
   override getFormFields(fields: Field[]): Field[] {
-    const description = getCompanyRowDescription(this);
-    fields = fields.map((field) =>
-      field.fieldname === 'account' && description
-        ? { ...field, sub_label: description }
-        : field
-    );
     if (this.notInserted) {
       return fields;
     }

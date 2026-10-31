@@ -1,5 +1,4 @@
 import { call } from 'src/web/api';
-import type { LinkRule } from './link';
 import type { Placements } from './schema';
 
 /** The DocField properties /books reads. Custom fields and property setters are applied. */
@@ -66,16 +65,6 @@ export interface DocTypeMeta {
   translated_doctype?: number;
 }
 
-/** Where accessory mode forms put the ERPNext fields that have no Books position. */
-export interface AccessoryLayoutMeta {
-  /** The end tab of each custom field, by doctype and fieldname: `custom`, `other` or an app's title. */
-  tabs: Record<string, Record<string, string> | undefined>;
-  /** Installed apps' titles in install order, which orders the app tabs. */
-  app_titles: string[];
-  /** Fields More details shows, by form doctype, then table fieldname ('' for the document's own). */
-  picks: Record<string, Record<string, string[] | undefined> | undefined>;
-}
-
 /** What /books builds its forms from: the meta of each doctype and its tables, and custom field placements. */
 export interface BooksMeta {
   metas: DocTypeMeta[];
@@ -83,22 +72,11 @@ export interface BooksMeta {
   placements: Record<string, Placements | undefined>;
   /** The form scripts apps add with the `books_doctype_js` hook, by doctype. */
   scripts?: Record<string, string>;
-  /** Link queries generated from the apps' Desk JS, by doctype, then `fieldname` or `table.fieldname`. */
-  queries?: Record<string, Record<string, LinkRule>>;
-  /** In accessory mode, with the Books doctypes whose positions lay out the ERPNext ones. */
-  accessory?: AccessoryLayoutMeta;
 }
 
-/**
- * The meta of the doctypes, as Frappe's getdoctype sends it, in one request.
- * In accessory mode, `layouts` are the Books twins that lay out the ERPNext `doctypes`.
- */
-export async function getBooksMeta(
-  doctypes: string[],
-  layouts?: string[]
-): Promise<BooksMeta> {
+/** The meta of the doctypes, as Frappe's getdoctype sends it, in one request. */
+export async function getBooksMeta(doctypes: string[]): Promise<BooksMeta> {
   return await call<BooksMeta>('frappe_books.meta.get_books_meta', {
     doctypes,
-    layouts,
   });
 }

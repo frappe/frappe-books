@@ -175,8 +175,7 @@ export default {
     },
     /**
      * How the link searches, in this order: the field's presentation filters;
-     * a form script's set_query and, in accessory mode, the DocField's
-     * link_filters; else the model's filters.
+     * a form script's set_query; else the model's filters.
      */
     async getSearch() {
       if (this.df.filters) {

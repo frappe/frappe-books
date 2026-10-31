@@ -1,7 +1,6 @@
 import type { Schema } from 'schemas/types';
 import type { FrappeDoc } from './document';
 import type { DocTypeMeta } from './meta';
-import { getActiveDoctype } from './mode';
 import type { Placements } from './schema';
 
 export type FrappeModel = typeof FrappeDoc;
@@ -19,21 +18,11 @@ export interface FrappeDocType {
 const models = new Map<string, FrappeModel>();
 const docTypes = new Map<string, FrappeDocType>();
 
-/**
- * Registers the model of each schema; a regional model replaces the one of its
- * schema. Accessory mode leaves out the models it has no doctype for.
- */
+/** Registers the model of each schema; a regional model replaces the one of its schema. */
 export function registerFrappeModels(map: Record<string, FrappeModel>) {
   for (const [schemaName, Model] of Object.entries(map)) {
-    if (getActiveDoctype(Model)) {
-      models.set(schemaName, Model);
-    }
+    models.set(schemaName, Model);
   }
-}
-
-/** The DocType a registered model shows in the current mode. */
-export function getModelDoctype(Model: FrappeModel): string {
-  return getActiveDoctype(Model)!;
 }
 
 /** Whether the schema is known: a model's, or the rows of a table it holds. */

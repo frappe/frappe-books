@@ -1,10 +1,5 @@
 import type { DocValue } from 'fyo/core/types';
 import type { FrappeDoc } from './document';
-import {
-  getAccessoryCompany,
-  hasOtherCompanies,
-  isAccessoryMode,
-} from './mode';
 
 /**
  * Fields a form shows for the company /books works on that live in a
@@ -13,17 +8,12 @@ import {
  * on save as it does for any caller.
  */
 
-/** The table's row of the current company; standalone rows all belong to its one company. */
+/** The table's row of the company; the rows all belong to the one company. */
 export function getCompanyRow(
   doc: FrappeDoc,
   tableField: string
 ): FrappeDoc | undefined {
-  const rows = (doc[tableField] ?? []) as FrappeDoc[];
-  if (!isAccessoryMode()) {
-    return rows[0];
-  }
-
-  return rows.find((row) => row.company === getAccessoryCompany());
+  return ((doc[tableField] ?? []) as FrappeDoc[])[0];
 }
 
 export function getCompanyRowValue(
@@ -49,8 +39,7 @@ export function setCompanyRowValue(
   const row = getCompanyRow(doc, tableField);
   if (!row) {
     if (!empty) {
-      const company = isAccessoryMode() ? getAccessoryCompany() : undefined;
-      doc.push(tableField, { company, [fieldname]: value });
+      doc.push(tableField, { [fieldname]: value });
     }
     return;
   }
@@ -65,16 +54,7 @@ export function setCompanyRowValue(
   }
 }
 
-/** What a company-row field says under it: the company, when ERPNext has others. */
-export function getCompanyRowDescription(doc: FrappeDoc): string | undefined {
-  if (!hasOtherCompanies()) {
-    return undefined;
-  }
-
-  return doc.fyo.t`For ${getAccessoryCompany() ?? ''}`;
-}
-
-/** A row holds no values but its company, like an ERPNext row whose only account was cleared. */
+/** A row holds no values but its company, like a row whose only account was cleared. */
 function isEmptyRow(row: FrappeDoc): boolean {
   return row.schema.fields
     .filter((field) => !field.meta && field.fieldname !== 'company')

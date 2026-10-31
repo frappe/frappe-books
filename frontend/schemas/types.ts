@@ -79,20 +79,9 @@ export interface BaseField {
   filters?: Filter[]; // A Link's own search filters
   linkFilters?: Filter[]; // A Link's search filters, from its DocField's link_filters
   getOptions?: () => Promise<{ label: string; value: string }[]>;
-  moreDetails?: 'picked' | 'ifMissing'; // Accessory mode: an ERPNext field with no Books position, in More details when picked or while mandatory and empty
-  appTab?: string; // Accessory mode: the end tab of a custom field, `custom`, `other` or its app's title
   rows?: number; // UI Facing config, number of rows for Text field (default 3)
   narrow?: boolean; // UI Facing: a desktop form caps the field at max-w-xs (320px), like a tax template above its table
-  control?: FieldControl; // The control an ERPNext field type shows in accessory mode; the fieldtype still holds the value
 }
-
-export type FieldControl =
-  | 'TextEditor'
-  | 'TableMultiSelect'
-  | 'MultiSelectList'
-  | 'Time'
-  | 'Percent'
-  | 'ReadOnly';
 
 export type SelectOption = { value: string; label: string };
 export interface OptionField extends Omit<BaseField, 'fieldtype'> {

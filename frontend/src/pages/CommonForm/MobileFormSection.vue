@@ -209,9 +209,7 @@ function groupFields(fields: Field[]): Field[][] {
 
 function isPaired(first: Field, second: Field): boolean {
   const pairs = props.doc.schema.mobileFieldPairs ?? [];
-  if (
-    pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)
-  ) {
+  if (pairs.some(([a, b]) => a === first.fieldname && b === second.fieldname)) {
     return true;
   }
 
@@ -254,9 +252,7 @@ function getTotalLines(field: Field) {
   const emphasis =
     kind.value === 'totals' &&
     field ===
-      props.fields
-        .filter((f) => f.fieldtype === FieldTypeEnum.Currency)
-        .at(-1);
+      props.fields.filter((f) => f.fieldtype === FieldTypeEnum.Currency).at(-1);
 
   if (field.fieldtype !== FieldTypeEnum.Table) {
     const value = isCalculating(props.doc, field)

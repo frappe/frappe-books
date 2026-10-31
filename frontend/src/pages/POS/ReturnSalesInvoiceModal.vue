@@ -48,7 +48,8 @@
         variant="solid"
         :disabled="!selectedInvoiceName"
         @click="returnSelectedInvoice"
-        >{{ t`Create return` }}</FrappeButton>
+        >{{ t`Create return` }}</FrappeButton
+      >
     </template>
   </Modal>
 </template>
@@ -67,9 +68,12 @@ import {
   getReturnableFilters,
 } from 'src/utils/pos';
 import Paginator from 'src/components/Paginator.vue';
-import { TextInput as FrappeTextInput, Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import {
+  TextInput as FrappeTextInput,
+  Button as FrappeButton,
+  Icon as FrappeIcon,
+} from 'frappe-ui';
 import { isMobile } from 'src/utils/viewport';
-
 
 export default defineComponent({
   name: 'ReturnSalesInvoice',

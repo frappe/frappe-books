@@ -16,7 +16,9 @@
           :show-label="true"
           :border="true"
           :required="false"
-          :read-only="isPOSRowFieldReadOnly(row, 'price_list_rate', permissions)"
+          :read-only="
+            isPOSRowFieldReadOnly(row, 'price_list_rate', permissions)
+          "
           @change="(value: Money) => setValue('price_list_rate', value)"
         />
         <FormControl

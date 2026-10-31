@@ -11,7 +11,9 @@
       <FrappeButton v-if="canEditTree" @click="addRootGroup">{{
         t`Add root group`
       }}</FrappeButton>
-      <FrappeButton v-if="!isAllExpanded" @click="expand">{{ t`Expand` }}</FrappeButton>
+      <FrappeButton v-if="!isAllExpanded" @click="expand">{{
+        t`Expand`
+      }}</FrappeButton>
       <FrappeButton v-if="!isAllCollapsed" @click="collapse">{{
         t`Collapse`
       }}</FrappeButton>
@@ -298,11 +300,12 @@ export default defineComponent({
         );
       }
 
-      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete')) actions.push({
-        label: account.is_group ? t`Delete group` : t`Delete account`,
-        theme: 'red',
-        onClick: () => this.deleteAccount(account),
-      });
+      if (account.parent_account && fyo.can(ModelNameEnum.Account, 'delete'))
+        actions.push({
+          label: account.is_group ? t`Delete group` : t`Delete account`,
+          theme: 'red',
+          onClick: () => this.deleteAccount(account),
+        });
       return actions;
     },
     expand() {
@@ -487,7 +490,9 @@ export default defineComponent({
           (child) => {
             const existing = previous.get(child.name);
             return existing
-              ? Object.assign(existing, { label: this.accountLabel(child.name) })
+              ? Object.assign(existing, {
+                  label: this.accountLabel(child.name),
+                })
               : child;
           }
         );
@@ -589,4 +594,3 @@ export default defineComponent({
   },
 });
 </script>
-

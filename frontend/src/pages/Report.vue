@@ -33,7 +33,7 @@
     <template v-if="isMobile">
       <MobileReport
         v-if="report"
-        :report="(report as Report)"
+        :report="report as Report"
         :defaults="filterDefaults"
         :loading="loading || (report.loading && !report.reportData.length)"
         @open-filters="filtersOpen = true"
@@ -44,7 +44,7 @@
       <MobileReportFilters
         v-if="report"
         v-model:open="filtersOpen"
-        :report="(report as Report)"
+        :report="report as Report"
         :defaults="filterDefaults"
         @apply="reload"
       />
@@ -52,7 +52,7 @@
 
     <ReportFilters
       v-else-if="report && report.filters.length"
-      :report="(report as Report)"
+      :report="report as Report"
       :loading="loading"
     />
 
@@ -130,21 +130,24 @@ export default defineComponent({
     },
     groupedActions() {
       const actions = this.report?.getActions() ?? [];
-      const actionsMap = actions.reduce((acc, ac) => {
-        if (!ac.group) {
-          ac.group = 'none';
-        }
+      const actionsMap = actions.reduce(
+        (acc, ac) => {
+          if (!ac.group) {
+            ac.group = 'none';
+          }
 
-        acc[ac.group] ??= {
-          group: ac.group,
-          label: ac.label ?? '',
-          type: ac.type ?? 'secondary',
-          actions: [],
-        };
+          acc[ac.group] ??= {
+            group: ac.group,
+            label: ac.label ?? '',
+            type: ac.type ?? 'secondary',
+            actions: [],
+          };
 
-        acc[ac.group].actions.push(ac);
-        return acc;
-      }, {} as Record<string, ActionGroup>);
+          acc[ac.group].actions.push(ac);
+          return acc;
+        },
+        {} as Record<string, ActionGroup>
+      );
 
       return Object.values(actionsMap);
     },

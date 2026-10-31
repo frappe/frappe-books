@@ -19,10 +19,8 @@ import {
   ColumnField,
   PhoneLayout,
   ReportCell,
-  ReportChart,
   ReportData,
   ReportRow,
-  SummaryItem,
 } from './types';
 
 export abstract class Report extends Observable<RawValue> {
@@ -49,14 +47,6 @@ export abstract class Report extends Observable<RawValue> {
   usePagination = false;
   loading = false;
   serverDefaults?: ServerFilters;
-  /** What a report may return besides its rows. */
-  message = '';
-  chart: ReportChart | null = null;
-  summary: SummaryItem[] = [];
-  /** Why the report could not run, as the server says it. */
-  error = '';
-  /** A required filter left empty, which keeps the report from running. */
-  missingFilter: Field | null = null;
 
   constructor(fyo: Fyo) {
     super();
@@ -87,16 +77,6 @@ export abstract class Report extends Observable<RawValue> {
   /** Select filters shown as tabs, while their options fit. */
   get tabFilters(): string[] {
     return ['periodicity'];
-  }
-
-  /** Whether filter pills mark required filters with `*`. */
-  get marksRequired(): boolean {
-    return false;
-  }
-
-  /** Whether group rows show a chevron that folds them. */
-  get foldsFromChevrons(): boolean {
-    return false;
   }
 
   get dateFilters(): [from: string, to: string] {

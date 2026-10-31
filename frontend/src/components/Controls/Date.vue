@@ -53,14 +53,6 @@
         df.label
       }}</span>
     </template>
-    <template v-if="showsRequiredMark" #suffix="{ open, setOpen }">
-      <span class="text-base text-ink-red-5" aria-hidden="true">*</span>
-      <span
-        data-slot="chevron"
-        class="lucide-chevron-down size-4 cursor-pointer"
-        @mousedown.prevent="setOpen(!open)"
-      />
-    </template>
   </component>
 </template>
 

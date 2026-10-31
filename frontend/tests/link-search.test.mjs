@@ -68,7 +68,7 @@ test('link options grouped by a record field come from one search', async () => 
     df: { target: 'Account', groupBy: 'root_type' },
   });
 
-  const options = await link.getOptions('', { filters: null });
+  const options = await link.getOptions('', null);
 
   assert.deepEqual(options, [
     { label: 'Sales', value: 'Sales', group: 'Income' },
@@ -86,7 +86,7 @@ test("a multi-label link shows its records' other fields from one search", async
     thirdLink: 'email',
   });
 
-  const options = await link.getOptions('as', { filters: null });
+  const options = await link.getOptions('as', null);
 
   assert.deepEqual(options, [
     {
@@ -102,14 +102,12 @@ test("a multi-label link shows its records' other fields from one search", async
 
 test("a link without model filters searches by its DocField's link_filters", async (t) => {
   t.after(() => delete fyo.singles.SystemSettings);
-  const linkFilters = { account_type: ['in', ['Cash', 'Bank']] };
+  const linkFilters = [['account_type', 'in', ['Cash', 'Bank']]];
   const link = makeControl(Link, {
     df: { target: 'Account', schemaName: 'Defaults', linkFilters },
   });
 
-  assert.deepEqual(await link.getFilters(), [
-    ['account_type', 'in', ['Cash', 'Bank']],
-  ]);
+  assert.deepEqual(await link.getFilters(), linkFilters);
   fyo.singles.SystemSettings = { remove_filter: true };
   assert.equal(await link.getFilters(), null);
 });

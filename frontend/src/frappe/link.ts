@@ -1,7 +1,6 @@
 import { translateValue } from 'fyo/utils/translation';
-import { serverHtmlToLine } from 'src/utils/serverHtml';
 import { call } from 'src/web/api';
-import { getValue } from './api';
+import { getValue, type Filter } from './api';
 import { getDocType, isFrappeBacked } from './doctypes';
 import { getOpenFrappeDocs } from './documents';
 import { getSchema } from './registry';
@@ -17,46 +16,6 @@ export type LinkOption = {
   description?: string;
 };
 
-/** Desk's link filters: a dict, or a list of filters. */
-export type DeskFilters = Record<string, unknown> | unknown[][];
-
-/** How a Link searches: with Desk's filters, a list or a dict, and maybe a whitelisted query method. */
-export interface LinkSearch {
-  query?: string;
-  filters: DeskFilters | null;
-}
-
-type QueryRow = { value: string; label?: string; description?: string };
-
-/** Link options for `search`: from its query method, as Desk's link searches, else from `searchFrappeLink`. */
-export async function searchLink(
-  schemaName: string,
-  text: string,
-  search: LinkSearch,
-  limit: number,
-  fields: string[] = []
-): Promise<LinkOption[]> {
-  if (!search.query) {
-    return searchFrappeLink(schemaName, text, search.filters, limit, fields);
-  }
-
-  // A query method reads the text as typed, e.g. to rank names that start with it.
-  const rows = await call<QueryRow[]>('frappe.desk.search.search_link', {
-    doctype: getLinkDoctype(schemaName).doctype,
-    txt: text,
-    query: search.query,
-    filters: search.filters ?? {},
-    page_length: limit,
-  });
-  return rows.map(({ value, label, description }) => ({
-    label: label || value,
-    value,
-    record: { name: value },
-    // A query method's description may be HTML, like a customer's address lines.
-    description: description ? serverHtmlToLine(description) : undefined,
-  }));
-}
-
 /**
  * Link options from Frappe's link search, each with its record's `fields`.
  * Letters typed are matched in order, e.g. `rce` finds `Rice`, as Books'
@@ -67,7 +26,7 @@ export async function searchLink(
 export async function searchFrappeLink(
   schemaName: string,
   text: string,
-  filters: LinkSearch['filters'],
+  filters: Filter[] | null,
   limit: number,
   fields: string[] = []
 ): Promise<LinkOption[]> {

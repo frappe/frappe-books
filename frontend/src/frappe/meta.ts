@@ -70,8 +70,6 @@ export interface BooksMeta {
   metas: DocTypeMeta[];
   /** Where Books Custom Forms put custom fields, by doctype and fieldname. */
   placements: Record<string, Placements | undefined>;
-  /** The form scripts apps add with the `books_doctype_js` hook, by doctype. */
-  scripts?: Record<string, string>;
 }
 
 /** The meta of the doctypes, as Frappe's getdoctype sends it, in one request. */

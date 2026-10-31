@@ -9,7 +9,6 @@ import { Address } from './baseModels/Address/Address';
 import { Contact } from './baseModels/Contact/Contact';
 import { CustomForm } from './baseModels/CustomForm/CustomForm';
 import { Defaults } from './baseModels/Defaults/Defaults';
-import { ERPNextSettings } from './baseModels/ERPNextSettings/ERPNextSettings';
 import { GetStarted } from './baseModels/GetStarted/GetStarted';
 import { Item } from './baseModels/Item/Item';
 import { JournalEntry } from './baseModels/JournalEntry/JournalEntry';
@@ -41,10 +40,6 @@ import { SerialNo } from './inventory/SerialNo';
 import { DeliveryNote } from './inventory/DeliveryNote';
 import { StockLedgerEntry } from './inventory/StockLedgerEntry';
 import { StockEntry } from './inventory/StockEntry';
-import {
-  POSScreenDefaults,
-  POSScreenSettings,
-} from './inventory/Point of Sale/POSScreenSettings';
 import { POSSettings } from './inventory/Point of Sale/POSSettings';
 import { POSProfile } from './baseModels/POSProfile/PosProfile';
 import { POSOpeningEntry } from './inventory/Point of Sale/POSOpeningEntry';
@@ -97,8 +92,6 @@ export const frappeModels: Record<string, FrappeModel> = {
   SerialNo,
   CustomForm,
   POSSettings,
-  POSScreenSettings,
-  POSScreenDefaults,
   POSProfile,
   POSOpeningEntry,
   POSClosingEntry,
@@ -110,7 +103,6 @@ export const frappeModels: Record<string, FrappeModel> = {
   DeliveryNote,
   PurchaseReceipt,
   SystemSettings,
-  ERPNextSettings,
 };
 
 /** Regional models of Frappe-backed schemas, which replace their `frappeModels` entries. */

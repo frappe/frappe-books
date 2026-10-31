@@ -12,7 +12,7 @@
     :text-right="textRight"
     :container-styles="containerStyles"
     :trailing-actions="canLink"
-    :linked="canLink || !!deskUrl"
+    :linked="canLink"
     @open="routeToLinkedDoc"
   >
     <template v-if="canLink" #trailing>
@@ -173,7 +173,6 @@ import { Button as FrappeButton, Combobox as FrappeCombobox } from 'frappe-ui';
 import { FieldTypeEnum } from 'schemas/types';
 import { fuzzyMatch } from 'src/utils';
 import { isFrappeBacked } from 'src/frappe/doctypes';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel, getSchema, toSchemaName } from 'src/frappe/registry';
 import { fyo } from 'src/initFyo';
 import { h } from 'vue';
@@ -280,22 +279,6 @@ export default {
       );
       // Only entries the user may read open.
       return hasTarget && fyo.can(this.linkSchemaName, 'read');
-    },
-    /** Desk's form of a linked ERPNext record that /books has no screen for. */
-    deskUrl() {
-      const { fieldtype, target } = this.df ?? {};
-      if (
-        !isAccessoryMode() ||
-        fieldtype !== FieldTypeEnum.Link ||
-        !this.value ||
-        !target ||
-        isFrappeBacked(target)
-      ) {
-        return '';
-      }
-
-      const slug = target.toLowerCase().replaceAll(' ', '-');
-      return `/app/${slug}/${encodeURIComponent(this.value)}`;
     },
   },
   watch: {
@@ -546,9 +529,6 @@ export default {
     },
     async routeToLinkedDoc() {
       if (!this.canLink) {
-        if (this.deskUrl) {
-          window.open(this.deskUrl, '_blank', 'noopener');
-        }
         return;
       }
       // Imported on use: src/utils/ui imports the router, whose pages import this control.

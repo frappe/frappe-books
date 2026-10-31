@@ -36,7 +36,6 @@
         {{ t`Export` }}
       </FrappeButton>
       <FilterDropdown ref="filterDropdown" :schema-name="schemaName" @change="applyFilter" />
-      <OpenInERPNextButton :get-url="() => getDeskListUrl(doctype)" />
       <FrappeButton
         v-if="canCreate"
         variant="solid"
@@ -144,9 +143,7 @@ import {
 } from 'frappe-ui';
 import ExportWizard from 'src/components/ExportWizard.vue';
 import FilterDropdown from 'src/components/FilterDropdown.vue';
-import OpenInERPNextButton from 'src/components/OpenInERPNextButton.vue';
 import PageHeader from 'src/components/PageHeader.vue';
-import { getDeskListUrl } from 'src/frappe/desk';
 import { getDocType } from 'src/frappe/doctypes';
 
 import { getField, getModel, getSchema, getSearchFields } from 'src/frappe/registry';
@@ -174,7 +171,6 @@ import { ModelNameEnum } from 'models/types';
 export default defineComponent({
   name: 'ListView',
   components: {
-    OpenInERPNextButton,
     PageHeader,
     List,
     FilterDropdown,
@@ -230,9 +226,6 @@ export default defineComponent({
     };
   },
   computed: {
-    doctype(): string {
-      return getDocType(this.schemaName).doctype;
-    },
     context(): string {
       return 'ListView-' + this.schemaName;
     },
@@ -295,7 +288,6 @@ export default defineComponent({
     this.shortcuts?.delete(this.context);
   },
   methods: {
-    getDeskListUrl,
     setShortcuts() {
       if (!this.shortcuts) {
         return;

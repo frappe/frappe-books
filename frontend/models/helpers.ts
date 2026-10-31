@@ -1,5 +1,3 @@
-import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
-import { ERPNEXT_STATUS_COLORS } from 'src/frappe/erpnextStatusColors';
 import {
   Action,
   BadgeData,
@@ -139,7 +137,7 @@ export function getMakeInvoiceAction(
       if (schemaName === ModelNameEnum.Quotation) {
         return (
           doc.isSubmitted &&
-          doc.quotation_to === toActiveDoctype('Books Customer')
+          doc.quotation_to === 'Books Customer'
         );
       }
 
@@ -308,10 +306,7 @@ const stateThemes: Record<string, BadgeTheme | undefined> = {
   Purple: 'violet',
 };
 
-/**
- * A stored status as its `status` option labels it and its DocType state
- * colours it, else ERPNext's list view in accessory mode.
- */
+/** A stored status as its `status` option labels it and its DocType state colours it. */
 export function getStateBadge(
   schema: Schema | undefined,
   status: string
@@ -319,8 +314,7 @@ export function getStateBadge(
   const field = schema?.fields.find(
     ({ fieldname }) => fieldname === 'status'
   ) as OptionField | undefined;
-  const color =
-    field && (field.states?.[status] ?? getERPNextStatusColor(schema!, status));
+  const color = field?.states?.[status];
   if (!color) {
     return undefined;
   }
@@ -330,15 +324,6 @@ export function getStateBadge(
     label: option?.label ?? status,
     theme: stateThemes[color] ?? 'gray',
   };
-}
-
-function getERPNextStatusColor(
-  schema: Schema,
-  status: string
-): string | undefined {
-  return isAccessoryMode()
-    ? ERPNEXT_STATUS_COLORS[getDocType(schema.name).doctype]?.[status]
-    : undefined;
 }
 
 /** Unsaved and docstatus badges, which Frappe's desk also draws without states. */

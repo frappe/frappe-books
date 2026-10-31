@@ -46,10 +46,8 @@ import {
   getSingleSchemaNames,
   loadFrappeDocTypes,
 } from 'src/frappe/registry';
-import type { DocValues } from 'src/frappe/api';
-import { getDocType, registerFrappeModels } from 'src/frappe/doctypes';
-import { getFrappeDoc, openFrappeDoc } from 'src/frappe/documents';
-import { isAccessoryMode } from 'src/frappe/mode';
+import { registerFrappeModels } from 'src/frappe/doctypes';
+import { getFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
 import { Search } from 'src/utils/search';
 import { Shortcuts } from 'src/utils/shortcuts';
@@ -145,26 +143,23 @@ export default defineComponent({
         user: boot.user,
       };
       await loadFrappeDocTypes();
-      const sent = await getUISettings();
       // Amounts load in the currency and precision the system settings set.
       const systemSettings = ModelNameEnum.SystemSettings;
       fyo.initializeMoneyMaker(
-        (await loadSingle(systemSettings, sent)) as SystemSettings
+        (await getFrappeDoc(systemSettings, systemSettings)) as SystemSettings
       );
-      // Some singles, like the ERPNext settings, are only for some roles.
+      // Some singles are only for some roles.
       const singles = getSingleSchemaNames().filter(
         (name) =>
           name !== ModelNameEnum.SetupWizard &&
           name !== systemSettings &&
-          (fyo.can(name, 'read') || sent[getDocType(name).doctype])
+          fyo.can(name, 'read')
       );
       await Promise.all([
-        ...singles.map((name) => loadSingle(name, sent)),
+        ...singles.map((name) => getFrappeDoc(name, name)),
         loadCompany(books.company),
       ]);
-      // ERPNext's setup wizard sets up accessory mode.
-      this.needsSetup =
-        !isAccessoryMode() && !fyo.singles.AccountingSettings?.setup_complete;
+      this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
         this.searcher.initialize();
@@ -183,36 +178,6 @@ export default defineComponent({
     },
   },
 });
-
-/**
- * Books' UI settings by doctype, which accessory mode sends to users whose
- * ERPNext roles cannot read some of the singles.
- */
-async function getUISettings(): Promise<Record<string, DocValues>> {
-  const unreadable = getSingleSchemaNames().some(
-    (name) => !fyo.can(name, 'read')
-  );
-  if (!isAccessoryMode() || !unreadable) {
-    return {};
-  }
-
-  return await call<Record<string, DocValues>>(
-    'frappe_books.accessory.ui_settings.get_ui_settings'
-  );
-}
-
-/** A single as saved: loaded, or from the values sent when the user cannot read it. */
-async function loadSingle(
-  name: string,
-  sent: Record<string, DocValues>
-): Promise<FrappeDoc> {
-  const values = fyo.can(name, 'read')
-    ? undefined
-    : sent[getDocType(name).doctype];
-  return values
-    ? await openFrappeDoc(name, values)
-    : await getFrappeDoc(name, name);
-}
 
 /** The one company is read from `fyo.singles`, as the settings are. */
 async function loadCompany(name: string | null) {

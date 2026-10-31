@@ -114,8 +114,7 @@ export function useDocShortcuts(
   shortcuts: Shortcuts,
   docRef: DocRef,
   name: string,
-  isMultiple = true,
-  syncOrSubmit: (doc: FrappeDoc) => Promise<unknown> = syncOrSubmitDoc
+  isMultiple = true
 ) {
   let context = name;
   if (isMultiple) {
@@ -125,7 +124,7 @@ export function useDocShortcuts(
   const syncOrSubmitCallback = async () => {
     if (docRef.value) {
       await commitFocusedEdit();
-      await syncOrSubmit(docRef.value);
+      await syncOrSubmitDoc(docRef.value);
     }
   };
 

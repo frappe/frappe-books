@@ -48,7 +48,6 @@
             :class="[
               'min-w-0 self-start w-full',
               field.fieldtype === 'Table' ? 'md:col-span-full text-base' : '',
-              isWideControl(field) ? 'md:col-span-full' : '',
               (field as TargetField).card ? 'md:col-span-full' : '',
               field.fieldtype === 'AttachImage' ? 'md:row-span-2' : '',
               field.fieldname === 'terms_and_conditions' ? 'md:col-span-full' : '',
@@ -64,7 +63,7 @@
               <slot name="table" />
             </div>
             <Table
-              v-if="field.fieldtype === 'Table' && !field.control"
+              v-if="field.fieldtype === 'Table'"
               ref="fields"
               :show-label="true"
               :border="true"
@@ -195,10 +194,6 @@ export default defineComponent({
     focusOrSelectFormControl(this.doc, this.$refs.nameField);
   },
   methods: {
-    /** Rich text and picked records span the row. */
-    isWideControl({ control }: Field): boolean {
-      return control === 'TextEditor' || control === 'TableMultiSelect';
-    },
     getTotal(field: Field): string {
       if (isCalculating(this.doc, field)) {
         return this.t`Calculating…`;

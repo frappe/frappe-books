@@ -48,15 +48,8 @@
       :primary-action="{ label: t`Show`, onClick: () => showFirstError() }"
     />
 
-    <FormErrorPanel
-      v-if="errorPanel"
-      class="mx-4 mt-3"
-      :action="errorPanel.action"
-      :messages="errorPanel.messages"
-      @dismiss="$emit('dismiss-error')"
-    />
     <FrappeAlert
-      v-else-if="doc.previewError && !failedSection && !isAccessory"
+      v-if="doc.previewError && !failedSection"
       class="mx-4 mt-3"
       theme="red"
       :title="t`Not saved`"
@@ -69,7 +62,7 @@
     >
       <!-- A failed preview shows above the section whose rows it failed on. -->
       <FrappeAlert
-        v-if="doc.previewError && section === failedSection && !isAccessory"
+        v-if="doc.previewError && section === failedSection"
         class="mx-4 mt-3"
         theme="red"
         :title="t`Not saved`"
@@ -167,9 +160,6 @@ import { UIGroupedFields } from 'src/utils/types';
 import { getActionsForDoc, getTabOptions } from 'src/utils/ui';
 import { computed, nextTick, useTemplateRef, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { isAccessoryMode } from 'src/frappe/mode';
-import type { ServerMessage } from 'src/web/api';
-import FormErrorPanel from './FormErrorPanel.vue';
 import MobileFormSection from './MobileFormSection.vue';
 import LinkedRecordsSection from './LinkedRecordsSection.vue';
 
@@ -186,8 +176,6 @@ const props = defineProps<{
   missingFields: Field[];
   canPrint: boolean;
   canShowLinks: boolean;
-  /** Accessory mode: why the last save, submit or preview failed. */
-  errorPanel?: { action: 'save' | 'submit'; messages: ServerMessage[] } | null;
 }>();
 
 const emit = defineEmits<{
@@ -199,10 +187,7 @@ const emit = defineEmits<{
   submit: [];
   print: [];
   'show-links': [];
-  'dismiss-error': [];
 }>();
-
-const isAccessory = isAccessoryMode();
 
 const router = useRouter();
 
@@ -252,9 +237,7 @@ const errorTabs = computed(() => {
 
 const actions = computed(() => getActionsForDoc(props.doc) as FormAction[]);
 
-const showsSave = computed(
-  () => props.doc.canSave || props.doc.showsDisabledSave
-);
+const showsSave = computed(() => props.doc.canSave);
 
 /** The next step runs from the footer unless saving or submitting comes first. */
 const footerStep = computed(() =>

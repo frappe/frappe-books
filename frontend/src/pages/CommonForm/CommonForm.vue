@@ -10,8 +10,6 @@
       :missing-fields="missingFields"
       :can-print="canPrint"
       :can-show-links="canShowLinks"
-      :error-panel="errorPanel"
-      @dismiss-error="dismissError"
       @value-change="onValueChange"
       @row-change="updateGroupedFields"
       @editrow="(doc: FrappeDoc) => showRowEditForm(doc)"
@@ -41,7 +39,6 @@
       :doc="doc"
       :fieldname="row.fieldname"
       :index="row.index"
-      :errors="rowErrors"
       @close="closeRow"
     />
   </div>
@@ -76,7 +73,7 @@
             <template v-if="group.group" #default>{{ group.group }}</template>
           </DropdownWithActions>
           <FrappeButton
-            v-if="doc.canSave || doc.showsDisabledSave"
+            v-if="doc.canSave"
             variant="solid"
             :disabled="doc.isSyncing || !doc.canSave"
             @click="sync()"
@@ -106,15 +103,8 @@
             variant="underline"
           />
         </div>
-        <FormErrorPanel
-          v-if="errorPanel"
-          class="mt-4"
-          :action="errorPanel.action"
-          :messages="errorPanel.messages"
-          @dismiss="dismissError"
-        />
         <FrappeAlert
-          v-else-if="doc.previewError && !isAccessory"
+          v-if="doc.previewError"
           class="mt-4"
           theme="red"
           :title="t`Not saved`"
@@ -163,7 +153,6 @@
           :doc="doc"
           :fieldname="row.fieldname"
           :index="row.index"
-          :errors="rowErrors"
           @previous="showRowAt"
           @next="showRowAt"
           @close="closeRow"
@@ -219,29 +208,15 @@ import {
 import { isMobile } from 'src/utils/viewport';
 import { useDocShortcuts } from 'src/utils/vueUtils';
 import { computed, defineComponent, inject, nextTick } from 'vue';
-import { isAccessoryMode } from 'src/frappe/mode';
-import { noteMissingExtras, showMissingExtras } from 'src/frappe/extraFields';
-import { getMissingFieldsOf } from 'src/frappe/missingMessages';
-import { getServerMessages, type ServerMessage } from 'src/web/api';
-import { syncOrSubmitDoc } from 'src/utils/vueUtils';
 import CommonFormSection from './CommonFormSection.vue';
-import { getExtraPlace, getRowBooksFields } from './extraFieldsView';
-import FormErrorPanel from './FormErrorPanel.vue';
 import FormSkeleton from './FormSkeleton.vue';
 import LinkedEntries from './LinkedEntries.vue';
 import LinkedRecordsSection from './LinkedRecordsSection.vue';
 import MobileForm from './MobileForm.vue';
 import RowEditForm from './RowEditForm.vue';
 
-/** A failed save or submit, as the server said it. */
-interface FormError {
-  action: 'save' | 'submit';
-  messages: ServerMessage[];
-}
-
 export default defineComponent({
   components: {
-    FormErrorPanel,
     FrappeAlert,
     FormContainer,
     CommonFormSection,
@@ -271,17 +246,9 @@ export default defineComponent({
   setup() {
     const shortcuts = inject(shortcutsKey);
     const { doc: docOrNull, load: loadDoc } = useBooksDoc();
-    // Accessory forms save through their own checks and error panel.
-    const formActions: { syncOrSubmit?: () => Promise<unknown> } = {};
     let context = 'CommonForm';
     if (shortcuts) {
-      context = useDocShortcuts(
-        shortcuts,
-        docOrNull,
-        'CommonForm',
-        true,
-        (doc) => formActions.syncOrSubmit?.() ?? syncOrSubmitDoc(doc)
-      );
+      context = useDocShortcuts(shortcuts, docOrNull, 'CommonForm', true);
     }
 
     return {
@@ -290,7 +257,6 @@ export default defineComponent({
       shortcuts,
       context,
       isMobile,
-      formActions,
     };
   },
   data() {
@@ -303,9 +269,6 @@ export default defineComponent({
       showLinks: false,
       useFullWidth: false,
       row: null,
-      rowErrors: {},
-      formError: null,
-      dismissedPreviewError: '',
     } as {
       errors: Record<string, string>;
       missingFields: Field[];
@@ -315,36 +278,12 @@ export default defineComponent({
       showLinks: boolean;
       useFullWidth: boolean;
       row: null | { index: number; fieldname: string };
-      rowErrors: Record<string, string>;
-      formError: FormError | null;
-      dismissedPreviewError: string;
     };
   },
   computed: {
-    isAccessory(): boolean {
-      return isAccessoryMode();
-    },
     /** The values the fields' conditions read; a preview's fills change them after an edit, or with none. */
     conditionValues(): EvalDoc | null {
       return this.hasDoc ? getEvalDoc(this.doc) : null;
-    },
-    /** Accessory mode: why the last save, submit or preview failed, until dismissed. */
-    errorPanel(): FormError | null {
-      if (!this.isAccessory || !this.hasDoc) {
-        return null;
-      }
-
-      if (this.formError) {
-        return this.formError;
-      }
-
-      const { previewError, previewErrorMessages } = this.doc;
-      if (!previewError || previewError === this.dismissedPreviewError) {
-        return null;
-      }
-
-      const messages = previewErrorMessages ?? [{ message: previewError }];
-      return { action: 'save', messages };
     },
     canShowBarcode(): boolean {
       if (!this.fyo.isFeatureOn('show_barcode_field')) {
@@ -529,21 +468,7 @@ export default defineComponent({
       if (doc) {
         setFormShowsPreviewErrors(doc, true);
       }
-      if (doc && this.isAccessory) {
-        noteMissingExtras(doc);
-        this.updateGroupedFields();
-      }
     },
-  },
-  created() {
-    if (this.isAccessory) {
-      this.formActions.syncOrSubmit = () =>
-        this.doc.canSave
-          ? this.sync()
-          : this.doc.canSubmit
-            ? this.submit()
-            : syncOrSubmitDoc(this.doc);
-    }
   },
   beforeMount() {
     this.useFullWidth = !!this.fyo.singles.Misc?.use_full_width;
@@ -616,11 +541,6 @@ export default defineComponent({
       }
     },
     async sync() {
-      if (this.isAccessory) {
-        await this.runAccessoryAction('save');
-        return;
-      }
-
       if (this.isMobile && !this.checkRequiredFields()) {
         return;
       }
@@ -630,11 +550,6 @@ export default defineComponent({
       }
     },
     async submit() {
-      if (this.isAccessory) {
-        await this.runAccessoryAction('submit');
-        return;
-      }
-
       if (this.isMobile && !this.checkRequiredFields()) {
         return;
       }
@@ -643,114 +558,11 @@ export default defineComponent({
         this.updateGroupedFields();
       }
     },
-    /** Accessory mode: saves or submits after its mandatory check; ERPNext's refusal shows in the error panel. */
-    async runAccessoryAction(action: FormError['action']) {
-      this.formError = null;
-      this.dismissedPreviewError = '';
-      if (!(await this.checkMandatory())) {
-        return;
-      }
-
-      const onError = (error: unknown) => this.showActionError(action, error);
-      const done =
-        action === 'submit'
-          ? await commonDocSubmit(this.doc, onError)
-          : await commonDocSync(this.doc, onError);
-      if (done) {
-        this.updateGroupedFields();
-      }
-    },
-    /**
-     * Shows the first empty mandatory field the form or a row editor shows,
-     * with no server call: its tab or section opens and it says it is required.
-     */
-    async checkMandatory(): Promise<boolean> {
-      await this.doc.whenFilled().catch(() => undefined);
-      const [missing] = this.getShownMissing(this.doc);
-      if (missing) {
-        this.errors[missing.fieldname] = this.t`${missing.label} is required`;
-        await this.revealField(missing.fieldname);
-        return false;
-      }
-
-      for (const { fieldname } of this.doc.tableFields) {
-        for (const row of (this.doc.get(fieldname) ?? []) as FrappeDoc[]) {
-          const fields = this.getShownMissing(row);
-          if (fields.length) {
-            this.openRowWithErrors(row, fields);
-            return false;
-          }
-        }
-      }
-
-      return true;
-    },
-    /** A document's or row's empty mandatory fields its form shows, More details taking back those that had left. */
-    getShownMissing(doc: FrappeDoc): Field[] {
-      const missing = doc.missingFields;
-      showMissingExtras(
-        doc,
-        missing.map(({ fieldname }) => fieldname)
-      );
-      if (!doc.parentdoc) {
-        this.updateGroupedFields();
-      }
-      const shown = doc.parentdoc
-        ? getRowBooksFields(doc)
-        : [...(this.groupedFields?.values() ?? [])].flatMap((tab) =>
-            [...tab.values()].flat()
-          );
-      return missing.filter(
-        ({ fieldname }) =>
-          shown.some((field) => field.fieldname === fieldname) ||
-          !!getExtraPlace(doc, fieldname)
-      );
-    },
-    openRowWithErrors(row: FrappeDoc, fields: Field[]) {
-      this.rowErrors = Object.fromEntries(
-        fields.map((field) => [
-          field.fieldname,
-          this.t`${field.label} is required`,
-        ])
-      );
-      this.row = { index: row.idx!, fieldname: row.parentFieldname! };
-    },
     closeRow() {
       this.row = null;
-      this.rowErrors = {};
     },
     showRowAt(index: number) {
       this.row!.index = index;
-      this.rowErrors = {};
-    },
-    /** Selects the tab holding a field, then scrolls to it. */
-    async revealField(fieldname: string) {
-      const tab = [...(this.groupedFields ?? [])].find(([, sections]) =>
-        [...sections.values()].flat().some((f) => f.fieldname === fieldname)
-      )?.[0];
-      this.activeTab = tab ?? this.tabOptions[0]?.value ?? this.activeTab;
-
-      await nextTick();
-      document
-        .querySelector(`[data-fieldname="${fieldname}"]`)
-        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    },
-    /** Shows ERPNext's refusal; a mandatory field it names says so too. */
-    showActionError(action: FormError['action'], error: unknown) {
-      const messages = getServerMessages(error);
-      this.formError = { action, messages };
-      for (const { doc, fieldname } of getMissingFieldsOf(this.doc, messages)) {
-        if (doc === this.doc) {
-          showMissingExtras(doc, [fieldname]);
-          const label = doc.fieldMap[fieldname]?.label ?? fieldname;
-          this.errors[fieldname] = this.t`${label} is required`;
-        }
-      }
-      this.updateGroupedFields();
-    },
-    dismissError() {
-      this.formError = null;
-      this.dismissedPreviewError = this.doc.previewError ?? '';
     },
     /** Phones mark missing fields in place instead of in a dialog. */
     checkRequiredFields(): boolean {

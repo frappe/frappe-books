@@ -64,7 +64,6 @@ import {
   getPOSInvoiceCount,
   getPOSInvoiceFields,
   getPOSInvoices,
-  getProfileFilters,
   getReturnableFilters,
 } from 'src/utils/pos';
 import Paginator from 'src/components/Paginator.vue';
@@ -156,10 +155,7 @@ export default defineComponent({
     async setInvoices() {
       const search = this.invoiceSearchTerm;
       const length = this.pageEnd - this.pageStart;
-      const filters = [
-        ...getReturnableFilters(),
-        ...getProfileFilters(this.sinvDoc),
-      ];
+      const filters = getReturnableFilters();
       const loading = Promise.all([
         getPOSInvoices(filters, search, this.pageStart, length),
         getPOSInvoiceCount(filters, search),

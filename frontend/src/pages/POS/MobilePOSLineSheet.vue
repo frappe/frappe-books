@@ -115,7 +115,7 @@ const permissions = ref<POSPermissions>({
 });
 
 onMounted(async () => {
-  permissions.value = await getPOSPermissions(props.row?.parentdoc);
+  permissions.value = await getPOSPermissions();
 });
 
 async function setValue(field: POSRowField, value: number | Money) {

@@ -9,7 +9,6 @@ import { ModelNameEnum } from 'models/types';
 import type { Money } from 'pesa';
 import type { POSItem } from 'src/components/POS/types';
 import { getFrappeDoc } from 'src/frappe/documents';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 import { safeParseFloat } from 'utils/index';
 import type { POSPermissions } from './posSetup';
@@ -241,7 +240,7 @@ async function validateStock(
   }
 
   if (doc.is_stock_item) {
-    await validatePOSStock(rows, sale);
+    await validatePOSStock(rows);
   }
 }
 
@@ -277,24 +276,16 @@ function getItemRows(
   );
 }
 
-/**
- * A new row of the item, set as a cashier picks it, so the server prices it
- * and fills its details. ERPNext's preview starts a row afresh for its new
- * item, keeping what was set after the item, so the batch follows it there.
- */
+/** A new row of the item, set as a cashier picks it, so the server prices it and fills its details. */
 async function appendRow(
   sale: SalesInvoice,
   item: string,
   quantity: number,
   batch?: string
 ): Promise<SalesInvoiceItem> {
-  const isAccessory = isAccessoryMode();
-  await sale.append('items', isAccessory ? {} : { batch_no: batch });
+  await sale.append('items', { batch_no: batch });
   const row = sale.items!.at(-1)!;
   await row.set('item_code', item);
-  if (isAccessory && batch) {
-    await row.set('batch_no', batch);
-  }
 
   await writeQuantity(row, getQuantityField(), quantity);
   return row;

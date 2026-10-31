@@ -1,6 +1,5 @@
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { getList } from 'src/frappe/api';
-import { toActiveDoctype } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 
 /** Whether the POS offers coupons on the sale: the feature is on and its totals can still change. */
@@ -30,7 +29,7 @@ export function canApplyCoupon(sale: SalesInvoice): boolean {
 
 /** The coupon a typed code is for, as ERPNext looks codes up; else `code` names the coupon. */
 export async function getCouponName(code: string): Promise<string> {
-  const [coupon] = await getList(toActiveDoctype('Books Coupon Code'), {
+  const [coupon] = await getList('Books Coupon Code', {
     fields: ['name'],
     filters: [['coupon_code', '=', code]],
     limit: 1,

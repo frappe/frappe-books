@@ -28,8 +28,7 @@
 
 <script lang="ts">
 import { showToast } from 'src/utils/interactive';
-import { isAccessoryMode } from 'src/frappe/mode';
-import { getERPNextScannedItem, getScannedItem } from 'src/utils/posItemSearch';
+import { getScannedItem } from 'src/utils/posItemSearch';
 import { TextInput as FrappeTextInput } from 'frappe-ui';
 import BarcodeScanButton from 'src/mobile/scan/BarcodeScanButton.vue';
 import { isMobile } from 'src/utils/viewport';
@@ -87,9 +86,7 @@ export default defineComponent({
       this.cooldown = barcode;
       setTimeout(() => (this.cooldown = ''), 100);
 
-      const scanned = isAccessoryMode()
-        ? await getERPNextScannedItem(barcode)
-        : await getScannedItem(barcode);
+      const scanned = await getScannedItem(barcode);
       if (!scanned) {
         return this.error(this.t`Item with barcode ${barcode} not found.`);
       }

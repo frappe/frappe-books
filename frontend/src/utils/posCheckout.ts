@@ -10,7 +10,6 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import type { Money } from 'pesa';
 import type { PaymentMethodOption } from 'src/components/POS/types';
 import { getAllDocuments } from 'src/frappe/api';
-import { isAccessoryMode, toActiveDoctype } from 'src/frappe/mode';
 import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
 import {
@@ -30,8 +29,6 @@ import { getPOSProfile } from './posSetup';
 
 const PAY_POS_INVOICE =
   'frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice.pay_pos_invoice';
-// ERPNext Payment Entries pay a submitted POS invoice.
-const PAY_ERPNEXT_POS_INVOICE = 'frappe_books.accessory.pos.pay_pos_invoice';
 
 /** What the cashier takes for a POS sale, by Books Sales Invoice Payment fieldnames. The checkout's actions set it. */
 export type Tender = {
@@ -172,7 +169,7 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
     },
     async start() {
       startTenders(due.value);
-      methods.value = await getPaymentMethods(getSale());
+      methods.value = await getPaymentMethods();
     },
     reset,
     checkout: ({ pay }: { pay: boolean }) =>
@@ -182,13 +179,6 @@ export function usePOSCheckout(getSale: () => SalesInvoice): POSCheckout {
       ),
   });
   return posCheckout as POSCheckout;
-}
-
-/** ERPNext's return refunds its sale's payments; a POS sale or return leaves them to the cashier's tenders. */
-export async function clearPayments(sale: SalesInvoice) {
-  for (const row of sale.payments ?? []) {
-    await row.set('amount', fyo.pesa(0));
-  }
 }
 
 /** Submits a draft sale, paid with `tenders`; a submitted sale is only paid. */
@@ -203,11 +193,9 @@ async function checkOutSale(
 
   await submitSale(sale, tenders);
   const invoice = sale.name!;
-  // An ERPNext POS invoice holds its payments itself.
-  const payments =
-    tenders.length && !isAccessoryMode()
-      ? getInvoicePayments(invoice)
-      : Promise.resolve([]);
+  const payments = tenders.length
+    ? getInvoicePayments(invoice)
+    : Promise.resolve([]);
   return { invoice, payments };
 }
 
@@ -309,75 +297,23 @@ function isTenderComplete(
   );
 }
 
-/** The payment methods: all, or an ERPNext sale's POS Profile's. */
-async function getPaymentMethods(
-  sale: SalesInvoice
-): Promise<PaymentMethodOption[]> {
-  if (!isAccessoryMode()) {
-    return (await getAllDocuments('Books Mode of Payment', {
-      fields: ['name', 'type', 'requires_clearance_date'],
-    })) as PaymentMethodOption[];
-  }
-
-  const profile = await getPOSProfile(sale);
-  const modes = (profile?.payments ?? []).map((row) => row.mode_of_payment);
-  const methods = (await getAllDocuments(
-    toActiveDoctype('Books Mode of Payment'),
-    { fields: ['name', 'type'], filters: [['name', 'in', modes]] }
-  )) as PaymentMethodOption[];
-  // In the profile's order, which puts its default first
-  return sortBy(methods, ({ name }) => modes.indexOf(name));
+/** The payment methods. */
+async function getPaymentMethods(): Promise<PaymentMethodOption[]> {
+  return (await getAllDocuments('Books Mode of Payment', {
+    fields: ['name', 'type', 'requires_clearance_date'],
+  })) as PaymentMethodOption[];
 }
 
 /** The server pays the sale with its payments rows when it submits it. */
 async function submitSale(sale: SalesInvoice, tenders: Tender[]) {
-  if (isAccessoryMode()) {
-    await setERPNextPayments(sale, tenders);
-  } else {
-    await sale.set('payments', null);
-    for (const tender of tenders) {
-      await sale.append('payments', tender);
-    }
+  await sale.set('payments', null);
+  for (const tender of tenders) {
+    await sale.append('payments', tender);
   }
 
   await validatePOSCheckout(sale);
-  try {
-    await sale.sync();
-    await sale.submit();
-  } catch (error) {
-    // An ERPNext draft owes its total less its payment rows; a refused checkout leaves it unpaid.
-    if (isAccessoryMode()) {
-      await clearPayments(sale);
-    }
-    throw error;
-  }
-}
-
-/**
- * An ERPNext POS invoice has a payment row per mode of its POS Profile, as
- * its preview lists them; the tenders fill theirs, a refund as a negative
- * amount, and the others pay nothing.
- */
-async function setERPNextPayments(sale: SalesInvoice, tenders: Tender[]) {
-  const sign = sale.isReturn ? -1 : 1;
-  await clearPayments(sale);
-  for (const { amount, ...tender } of tenders) {
-    const row = await getPaymentRow(sale, tender.mode_of_payment);
-    await row.set({ ...tender, amount: amount.mul(sign) });
-  }
-}
-
-async function getPaymentRow(
-  sale: SalesInvoice,
-  mode?: string
-): Promise<SalesInvoicePayment> {
-  const row = sale.payments?.find((row) => row.mode_of_payment === mode);
-  if (row) {
-    return row;
-  }
-
-  await sale.append('payments', { mode_of_payment: mode });
-  return sale.payments!.at(-1)!;
+  await sale.sync();
+  await sale.submit();
 }
 
 /** Pays a sale submitted earlier and returns the payment names. */
@@ -389,8 +325,7 @@ async function payInvoice(
     return [];
   }
 
-  const method = isAccessoryMode() ? PAY_ERPNEXT_POS_INVOICE : PAY_POS_INVOICE;
-  return await call<string[]>(method, {
+  return await call<string[]>(PAY_POS_INVOICE, {
     invoice,
     payments: tenders.map((tender) => ({
       ...tender,

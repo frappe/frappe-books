@@ -68,7 +68,6 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import {
   getPOSInvoiceFields,
   getPOSInvoices,
-  getProfileFilters,
 } from 'src/utils/pos';
 import {
   Badge as FrappeBadge,
@@ -153,10 +152,9 @@ export default defineComponent({
     /** Both tabs' invoices whose name has the search term; a later search replaces them. */
     async setInvoices() {
       const search = this.invoiceSearchTerm;
-      const profileFilters = getProfileFilters(this.sinvDoc);
       const loading = Promise.all([
-        getPOSInvoices([...SAVED_FILTERS, ...profileFilters], search),
-        getPOSInvoices([...SUBMITTED_FILTERS, ...profileFilters], search),
+        getPOSInvoices(SAVED_FILTERS, search),
+        getPOSInvoices(SUBMITTED_FILTERS, search),
       ]).then(([saved, submitted]) => {
         if (this.loading === loading) {
           this.savedInvoices = saved;

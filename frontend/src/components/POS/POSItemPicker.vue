@@ -113,19 +113,13 @@ export default defineComponent({
       ];
     },
   },
-  watch: {
-    // An ERPNext POS Profile names the groups it sells.
-    async profile() {
-      await this.setItemGroups();
-    },
-  },
   async mounted() {
     await this.setItemGroups();
   },
   methods: {
     async setItemGroups() {
       if (fyo.isFeatureOn('enable_item_group')) {
-        this.itemGroups = await getPOSItemGroups(this.profile);
+        this.itemGroups = await getPOSItemGroups();
       }
     },
   },

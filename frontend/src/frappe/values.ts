@@ -7,7 +7,6 @@ import { FieldTypeEnum } from 'schemas/types';
 import type { Field, RawValue, Schema } from 'schemas/types';
 import { getIsNullOrUndef, safeParseFloat, safeParseInt } from 'utils';
 import type { DocValues } from './api';
-import { isAccessoryMode } from './mode';
 
 const DATETIME_FORMAT = 'yyyy-MM-dd HH:mm:ss.SSS';
 // Frappe compares these to the stored values as text, down to microseconds.
@@ -72,7 +71,7 @@ export function toFrappeValue(
 ): RawValue {
   switch (field.fieldtype) {
     case FieldTypeEnum.Currency:
-      return toFrappeAmount(toRawCurrency(value, fyo, field));
+      return toRawCurrency(value, fyo, field);
     case FieldTypeEnum.Date:
       return toRawDate(value, field);
     case FieldTypeEnum.Datetime:
@@ -218,11 +217,6 @@ function toDocCheck(value: RawValue, field: Field): boolean {
   }
 
   throwError(value, field, 'doc');
-}
-
-/** Books' server keeps an amount's precision as text; ERPNext computes with numbers. */
-function toFrappeAmount(amount: string): string | number {
-  return isAccessoryMode() ? Number(amount) : amount;
 }
 
 function toRawCurrency(value: DocValue, fyo: Fyo, field: Field): string {

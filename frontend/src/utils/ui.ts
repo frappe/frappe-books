@@ -13,8 +13,6 @@ import { ModelNameEnum } from 'models/types';
 import { Field, Schema } from 'schemas/types';
 import { handleErrorWithDialog } from 'src/errorHandling';
 import { getCount, type Filter } from 'src/frappe/api';
-import { getDeskFormUrl, openInDesk } from 'src/frappe/desk';
-import { isAccessoryMode } from 'src/frappe/mode';
 import { getModel } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -27,12 +25,6 @@ import { SelectFileOptions } from 'utils/types';
 import { RouteLocationRaw } from 'vue-router';
 import { selectFile } from './browser';
 import { isFieldShown } from './doc';
-import {
-  DEFAULT_SECTION,
-  getEndTabLabel,
-  sortEndTabs,
-} from 'src/frappe/accessoryLayout';
-import { getMoreDetailsFields } from 'src/frappe/extraFields';
 import { showDialog, showToast } from './interactive';
 import { showSidebar } from './refs';
 import {
@@ -171,20 +163,8 @@ export async function cancelDocWithPrompt(
   })) as boolean;
 }
 
-/**
- * The submitted documents that cancelling `doc` also cancels: an invoice's
- * payments, or, in accessory mode, every submitted document linked to it,
- * as Desk's Cancel All does.
- */
+/** The submitted documents that cancelling `doc` also cancels: an invoice's payments. */
 async function getDocsToCancel(doc: FrappeDoc): Promise<LinkedDoc[]> {
-  if (isAccessoryMode()) {
-    const { docs } = await call<{ docs: LinkedDoc[] }>(
-      'frappe.desk.form.linked_with.get_submitted_linked_docs',
-      { doctype: doc.doctype, name: doc.name }
-    );
-    return docs;
-  }
-
   if (!['SalesInvoice', 'PurchaseInvoice'].includes(doc.schemaName)) {
     return [];
   }
@@ -198,53 +178,6 @@ async function getInvoicePayments(doc: FrappeDoc): Promise<LinkedDoc[]> {
     doctype: fyo.store.permissions?.doctypes[doc.schemaName],
     name: doc.name,
   });
-}
-
-/**
- * Accessory mode cancels the documents linked to `doc` with it, all or
- * nothing, as Desk's Cancel All does; a failure stays in the dialog to try again.
- */
-async function cancelAllWithPrompt(doc: FrappeDoc, linkedDocs: LinkedDoc[]) {
-  return (await showDialog({
-    title: t`Cancel ${getDocReferenceLabel(doc)}?`,
-    detail: getCancelAllDetail(doc, linkedDocs),
-    destructive: true,
-    keepsOpenOnError: true,
-    buttons: [
-      {
-        label: t`Cancel all`,
-        async action() {
-          try {
-            await doc.cancel(linkedDocs);
-          } catch (err) {
-            const message = getErrorMessage(err as Error);
-            throw new Error(`${message}\n${t`Nothing was cancelled.`}`, {
-              cause: err,
-            });
-          }
-
-          return true;
-        },
-        isPrimary: true,
-      },
-      { label: t`Go back`, action: () => false, isEscape: true },
-    ],
-  })) as boolean;
-}
-
-function getCancelAllDetail(doc: FrappeDoc, linkedDocs: LinkedDoc[]): string {
-  const type = doc.typeLabel.toLowerCase();
-  const rows = linkedDocs.map(
-    ({ doctype, name }) => `${doctype} <b>${name}</b>`
-  );
-  return [
-    t`Cancelling this ${type} in ERPNext also cancels every submitted document linked to it.`,
-    '',
-    linkedDocs.length === 1
-      ? t`1 linked document will also be cancelled:`
-      : t`${linkedDocs.length} linked documents will also be cancelled:`,
-    ...rows,
-  ].join('<br>');
 }
 
 function getCancelDetail(payments: LinkedDoc[]): string {
@@ -267,7 +200,6 @@ export function getActionsForDoc(doc?: FrappeDoc): Action[] {
     ...getActions(doc),
     getDuplicateAction(doc),
     getNewAction(doc),
-    getOpenInERPNextAction(doc),
     getDeleteAction(doc),
     getCancelAction(doc),
   ];
@@ -367,19 +299,6 @@ function getDuplicateAction(doc: FrappeDoc): Action {
   };
 }
 
-/** Accessory mode: a saved ERPNext document in Desk, where ERPNext's own form shows it. */
-function getOpenInERPNextAction(doc: FrappeDoc): Action {
-  return {
-    label: t`Open in ERPNext`,
-    condition: (doc: FrappeDoc) =>
-      isAccessoryMode() &&
-      !doc.notInserted &&
-      !doc.schema.isSingle &&
-      !doc.doctype.startsWith('Books '),
-    action: () => openInDesk(getDeskFormUrl(doc.doctype, doc.name!)),
-  };
-}
-
 function getNewAction(doc: FrappeDoc): Action {
   return {
     label: t`New entry`,
@@ -403,7 +322,6 @@ export function getFieldsGroupedByTabAndSection(
   doc: FrappeDoc
 ): UIGroupedFields {
   const grouped: UIGroupedFields = new Map();
-  const appTabs = new Map<string, Field[]>();
   for (const field of doc.getFormFields(schema?.fields ?? [])) {
     const tab = field.tab ?? 'Main';
     const section = field.section ?? 'Default';
@@ -416,13 +334,7 @@ export function getFieldsGroupedByTabAndSection(
       tabbed.set(section, []);
     }
 
-    // Accessory mode's ERPNext fields with no Books position: the More details tab shows these; see `extraFields.ts`.
-    if (field.meta || field.moreDetails || !isFieldShown(doc, field)) {
-      continue;
-    }
-
-    if (field.appTab) {
-      appTabs.set(field.appTab, [...(appTabs.get(field.appTab) ?? []), field]);
+    if (field.meta || !isFieldShown(doc, field)) {
       continue;
     }
 
@@ -449,20 +361,6 @@ export function getFieldsGroupedByTabAndSection(
     }
   }
 
-  // Accessory mode's picked and still-missing ERPNext fields follow as a tab, then custom
-  // fields and other apps' fields as tabs of their own.
-  const moreDetails = doc.getFormFields(getMoreDetailsFields(doc));
-  if (moreDetails.length) {
-    grouped.set(t`More details`, new Map([[DEFAULT_SECTION, moreDetails]]));
-  }
-
-  for (const tab of sortEndTabs([...appTabs.keys()])) {
-    grouped.set(
-      getEndTabLabel(tab),
-      new Map([[DEFAULT_SECTION, appTabs.get(tab)!]])
-    );
-  }
-
   return grouped;
 }
 
@@ -485,7 +383,7 @@ export function getFormRoute(schemaName: string, name: string): string {
     return route;
   }
 
-  // ERPNext names may hold any character, like the % of "GST 18% - AR".
+  // Names may hold any character, like the % of "GST 18%".
   return `/edit/${schemaName}/${encodeURIComponent(name)}`;
 }
 
@@ -624,39 +522,18 @@ export async function commonDocDelete(
 
 export async function commonDocCancel(doc: FrappeDoc): Promise<boolean> {
   const linkedDocs = await getDocsToCancel(doc);
-  if (!isAccessoryMode() || !linkedDocs.length) {
-    const cancelled = await cancelDocWithPrompt(doc, linkedDocs);
-    if (cancelled) {
-      showActionToast(doc, 'cancel');
-    }
-    return cancelled;
+  const cancelled = await cancelDocWithPrompt(doc, linkedDocs);
+  if (cancelled) {
+    showActionToast(doc, 'cancel');
   }
-
-  if (!(await cancelAllWithPrompt(doc, linkedDocs))) {
-    return false;
-  }
-
-  const label = getDocReferenceLabel(doc);
-  const count = linkedDocs.length;
-  const message =
-    count === 1
-      ? t`Cancelled ${label} and 1 linked document`
-      : t`Cancelled ${label} and ${count} linked documents`;
-  showToast({ type: 'success', message, duration: 'short' });
-  return true;
+  return cancelled;
 }
 
-/** Shows a failed save or submit: in a dialog, or through `onError`, as accessory forms show it in place. */
-export type ActionErrorHandler = (error: unknown) => void;
-
-export async function commonDocSync(
-  doc: FrappeDoc,
-  onError?: ActionErrorHandler
-): Promise<boolean> {
+export async function commonDocSync(doc: FrappeDoc): Promise<boolean> {
   try {
     await doc.sync();
   } catch (error) {
-    await reportActionError(error, doc, onError, true);
+    await handleErrorWithDialog(error, doc, true);
     return false;
   }
 
@@ -664,36 +541,18 @@ export async function commonDocSync(
   return true;
 }
 
-export async function commonDocSubmit(
-  doc: FrappeDoc,
-  onError?: ActionErrorHandler
-): Promise<boolean> {
+export async function commonDocSubmit(doc: FrappeDoc): Promise<boolean> {
   if (!(await confirmSubmitWarning(doc))) {
     return false;
   }
 
-  const success = await showSubmitDialog(doc, onError);
+  const success = await showSubmitDialog(doc);
   if (!success) {
     return false;
   }
 
   showSubmitToast(doc);
   return true;
-}
-
-/** A stale copy still asks to reload in a dialog. */
-async function reportActionError(
-  error: unknown,
-  doc: FrappeDoc,
-  onError: ActionErrorHandler | undefined,
-  dontThrow: boolean
-) {
-  if (onError && !(error instanceof ConflictError)) {
-    onError(error);
-    return;
-  }
-
-  await handleErrorWithDialog(error, doc, dontThrow);
 }
 
 /** The model's warning before a submit; a Yes accepts it, a No stops the submit. */
@@ -718,7 +577,7 @@ async function confirmSubmitWarning(doc: FrappeDoc): Promise<boolean> {
   })) as boolean;
 }
 
-async function showSubmitDialog(doc: FrappeDoc, onError?: ActionErrorHandler) {
+async function showSubmitDialog(doc: FrappeDoc) {
   const title = t`Submit ${getDocReferenceLabel(doc)}?`;
   const detail = getDocSubmitMessage(doc);
 
@@ -756,7 +615,7 @@ async function showSubmitDialog(doc: FrappeDoc, onError?: ActionErrorHandler) {
   const success = (await showDialog(dialogOptions)) as boolean;
   if (actionError) {
     // Show the error after the confirmation closes so it cannot offer a stale retry.
-    await reportActionError(actionError, doc, onError, true);
+    await handleErrorWithDialog(actionError, doc, true);
   }
 
   return success;

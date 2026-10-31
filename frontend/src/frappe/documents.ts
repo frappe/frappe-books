@@ -6,7 +6,6 @@ import { call } from 'src/web/api';
 import type { DocValues } from './api';
 import type { FrappeDoc } from './document';
 import { getDocType } from './doctypes';
-import { isAccessoryMode } from './mode';
 import { getNamingField } from './schema';
 import { toDocValues } from './values';
 
@@ -38,25 +37,13 @@ export function newFrappeDoc(
 
 /**
  * What the source DocType's server `mapper`, like an invoice's make_payment,
- * builds from its document `sourceName`; in accessory mode, the ERPNext
- * mapper the server names for it.
+ * builds from its document `sourceName`.
  */
 export async function getMappedValues(
   sourceSchemaName: string,
   sourceName: string,
   mapper: string
 ): Promise<DocValues> {
-  if (isAccessoryMode()) {
-    return await call<DocValues>(
-      'frappe_books.accessory.mappers.make_mapped_doc',
-      {
-        source_doctype: getDocType(sourceSchemaName).doctype,
-        source_name: sourceName,
-        mapper,
-      }
-    );
-  }
-
   return await call<DocValues>('frappe.model.mapper.make_mapped_doc', {
     method: `${getControllerModule(sourceSchemaName)}.${mapper}`,
     source_name: sourceName,

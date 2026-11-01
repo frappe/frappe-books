@@ -309,12 +309,7 @@ export default defineComponent({
             continue;
           }
 
-          // An ERPNext doctype lacks some Books fields, like the stock not transferred.
-          const fields = (linkEntryDisplayFields[key] ?? ['name']).filter(
-            (fieldname) =>
-              fieldname === 'name' ||
-              getSchema(key)?.fields.some((f) => f.fieldname === fieldname)
-          );
+          const fields = linkEntryDisplayFields[key] ?? ['name'];
           const details = await getFrappeRows(
             this.fyo,
             key,

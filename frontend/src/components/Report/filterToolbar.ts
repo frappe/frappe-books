@@ -18,12 +18,8 @@ export interface FiscalYear {
   end?: Date;
 }
 
-/** Filter pairs a date range picker sets: Books' own and ERPNext's. */
-const DATE_PAIRS = [
-  ['fromDate', 'toDate'],
-  ['from_date', 'to_date'],
-  ['period_start_date', 'period_end_date'],
-];
+/** The filter pair a date range picker sets. */
+const DATE_PAIRS = [['fromDate', 'toDate']];
 
 /** One range for the From and To dates, then the tabs, then the rest in order. */
 export function getFilterItems(

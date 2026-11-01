@@ -3,14 +3,9 @@
     <FrappeScrollArea
       v-if="dataSlice.length"
       orientation="both"
-      class="min-h-0 flex-1 [container-type:inline-size]"
+      class="min-h-0 flex-1"
       viewport-class="px-3 pb-10 sm:px-5"
     >
-      <!-- As wide as the report body, not the table, and kept in view when the table scrolls sideways. -->
-      <ReportExtras
-        :report="report"
-        class="sticky start-0 mb-4 w-[calc(100cqw-1.5rem)] sm:w-[calc(100cqw-2.5rem)]"
-      />
       <FrappeList
         ref="list"
         :columns="listColumns"
@@ -37,7 +32,6 @@
           <template #default="{ item: row, index, value }">
             <FrappeListRow
               v-if="!row.folded"
-              :class="{ 'bg-surface-gray-1': row.isShaded }"
               :value="value"
               :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
             >
@@ -52,20 +46,6 @@
                 ]"
                 :style="getIndentStyle(cell)"
               >
-                <!-- Group rows of ERPNext's account trees fold from a chevron; leaves line up with their names. -->
-                <template v-if="hasChevrons && cellIndex === 0">
-                  <FrappeIcon
-                    v-if="row.isGroup"
-                    :icon="
-                      row.foldedBelow
-                        ? 'lucide-chevron-right'
-                        : 'lucide-chevron-down'
-                    "
-                    class="me-1 size-4 shrink-0 text-ink-gray-5"
-                    :class="{ 'rtl-rotate-180': row.foldedBelow }"
-                  />
-                  <span v-else class="w-5 shrink-0" />
-                </template>
                 <ReportOverflowText :value="cell.value" />
               </FrappeListCell>
             </FrappeListRow>
@@ -73,20 +53,6 @@
         </FrappeListRows>
       </FrappeList>
     </FrappeScrollArea>
-    <EmptyState
-      v-else-if="report.missingFilter"
-      class="flex-1 pb-20"
-      icon="lucide-filter"
-      :title="t`Set ${report.missingFilter.label} to run this report`"
-      :description="t`Filters marked * are required by ERPNext`"
-    />
-    <EmptyState
-      v-else-if="report.error"
-      class="flex-1 pb-20"
-      icon="lucide-triangle-alert"
-      :title="t`Report could not be run`"
-      :description="report.error"
-    />
     <FrappeLoadingText
       v-else-if="report.loading"
       class="mt-20 w-full justify-center"
@@ -109,11 +75,9 @@
 </template>
 <script>
 import {
-  Icon as FrappeIcon,
   LoadingText as FrappeLoadingText,
   ScrollArea as FrappeScrollArea,
 } from 'frappe-ui';
-import EmptyState from 'src/components/EmptyState.vue';
 import { Report } from 'reports/Report';
 import {
   List as FrappeList,
@@ -130,15 +94,11 @@ import Paginator from '../Paginator.vue';
 import ReportColumnHeader from './ReportColumnHeader.vue';
 import { getReportCellColorClass } from './cellColor';
 import { ReportColumnWidths } from './ReportColumnWidths';
-import ReportExtras from './ReportExtras.vue';
 import ReportOverflowText from './ReportOverflowText.vue';
 
 export default defineComponent({
   components: {
-    EmptyState,
-    FrappeIcon,
     FrappeLoadingText,
-    ReportExtras,
     FrappeList,
     FrappeListCell,
     FrappeListHeader,
@@ -180,9 +140,6 @@ export default defineComponent({
       return this.report.reportData.flatMap((row, index) =>
         row.isEmpty || row.isSummary ? [] : [index]
       );
-    },
-    hasChevrons() {
-      return this.report.foldsFromChevrons;
     },
     listColumns() {
       return this.report.columns.map(
@@ -248,9 +205,6 @@ export default defineComponent({
       const italics = cell.italics ? 'italic' : '';
       if (row.isGroup) {
         return [cell.bold ? 'text-sm-bold' : 'text-sm-semibold', italics];
-      }
-      if (row.isShaded) {
-        return ['text-base-semibold text-ink-gray-9', italics];
       }
       return [cell.bold ? 'text-base-bold' : '', italics];
     },

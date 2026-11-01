@@ -1,7 +1,6 @@
 <script>
 import { t } from 'fyo';
-import { getLinkDisplayValue, searchLink } from 'src/frappe/link';
-import { getLinkSearch, toFilterList } from 'src/frappe/linkSearch';
+import { getLinkDisplayValue, searchFrappeLink } from 'src/frappe/link';
 import { getModel, getSchema } from 'src/frappe/registry';
 import { newFrappeDoc } from 'src/frappe/documents';
 import { fyo } from 'src/initFyo';
@@ -49,11 +48,11 @@ export default {
     getTargetSchemaName() {
       return this.df.target;
     },
-    async getOptions(keyword, search) {
+    async getOptions(keyword, filters) {
       const { groupBy } = this.df;
       const options = await this.searchOptions(
         keyword,
-        search,
+        filters,
         groupBy ? [groupBy] : []
       );
       return options.map(({ record, ...option }) =>
@@ -61,32 +60,27 @@ export default {
       );
     },
     /** Options from Frappe's link search, each with its record's `fields`. */
-    async searchOptions(keyword, search, fields) {
+    async searchOptions(keyword, filters, fields) {
       const schemaName = this.getTargetSchemaName();
       if (!schemaName) {
         return [];
       }
 
-      return await searchLink(
+      return await searchFrappeLink(
         schemaName,
         keyword,
-        search,
+        filters,
         LINK_PAGE_LENGTH,
         fields
       );
     },
     async getSuggestions(keyword = '') {
-      const search = this.filtersDisabled
-        ? { filters: null }
-        : await this.getSearch();
-      let options = await this.getOptions(keyword, search);
+      const filters = this.filtersDisabled ? null : await this.getFilters();
+      let options = await this.getOptions(keyword, filters);
       options = sortByFuzzyMatch(keyword, options, (item) => [item.label]);
 
       if (options.length === 0 && !this.df.emptyMessage) {
-        if (
-          search.filters &&
-          !!fyo.singles.SystemSettings?.allow_filter_bypass
-        ) {
+        if (filters && !!fyo.singles.SystemSettings?.allow_filter_bypass) {
           options = [
             {
               label: t`Show unfiltered results`,
@@ -168,32 +162,15 @@ export default {
         : await this.getFilters();
       return getNewDocValues(target, filters ?? []);
     },
-    /** The search's filters as a list; a query method's filters are its arguments, not field values. */
     async getFilters() {
-      const { query, filters } = await this.getSearch();
-      return query ? null : toFilterList(filters);
-    },
-    /**
-     * How the link searches, in this order: the field's presentation filters;
-     * a form script's set_query; else the model's filters.
-     */
-    async getSearch() {
       if (this.df.filters) {
-        return { filters: this.df.filters };
+        return this.df.filters;
       }
 
       if (fyo.singles.SystemSettings?.remove_filter) {
-        return { filters: null };
+        return null;
       }
 
-      // A report filter has neither a document nor a schema.
-      const ownsField = this.doc && this.doc.schemaName === this.df.schemaName;
-      const search = ownsField
-        ? await getLinkSearch(this.df.fieldname, this.doc)
-        : undefined;
-      return search ?? { filters: await this.getModelFilters() };
-    },
-    async getModelFilters() {
       const { schemaName, fieldname } = this.df;
       const getFilters = getModel(schemaName)?.filters?.[fieldname];
 

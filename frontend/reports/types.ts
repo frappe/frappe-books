@@ -21,8 +21,6 @@ export interface ReportRow {
   isTotal?: boolean;
   /** An opening, total or closing row, which pages do not count. */
   isSummary?: boolean;
-  /** A total row shaded as ERPNext's account trees shade them. */
-  isShaded?: boolean;
   folded?: boolean;
   foldedBelow?: boolean;
 }
@@ -35,28 +33,6 @@ export interface ColumnField extends Omit<BaseField, 'fieldtype'> {
   target?: string;
   /** Frappe's column options: a Link's doctype, or the row field holding a Currency's currency. */
   options?: string;
-}
-
-/** A chart as Frappe's reports return it. */
-export interface ReportChart {
-  type?: string;
-  data: {
-    labels: string[];
-    datasets: { name?: string; values: number[] }[];
-  };
-  colors?: string[];
-  fieldtype?: FieldType;
-  currency?: string;
-}
-
-/** A card of a Frappe report's summary, or a separator glyph between cards. */
-export interface SummaryItem {
-  type?: 'separator';
-  label?: string;
-  value: RawValue;
-  datatype?: FieldType;
-  currency?: string;
-  indicator?: string;
 }
 
 export type Periodicity = 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';

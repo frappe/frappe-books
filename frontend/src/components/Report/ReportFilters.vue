@@ -27,17 +27,6 @@
             aria-hidden="true"
           />
         </template>
-        <template
-          v-if="report.marksRequired && isRequired(item)"
-          #suffix="{ open, setOpen }"
-        >
-          <span class="text-base text-ink-red-5" aria-hidden="true">*</span>
-          <span
-            data-slot="chevron"
-            class="lucide-chevron-down size-4 cursor-pointer"
-            @mousedown.prevent="setOpen(!open)"
-          />
-        </template>
         <template #actions="{ setRange, close }">
           <FrappeItemListRow
             v-for="preset in getPresets()"
@@ -71,7 +60,6 @@
         :show-label="item.field.fieldtype === 'Check'"
         :inline-label="item.field.fieldtype !== 'Check'"
         :trigger-button="isLinkField(item.field) || undefined"
-        :required-mark="report.marksRequired"
         :placeholder="t`All`"
         :layout="item.field.fieldtype === 'Check' ? 'inline' : undefined"
         :value="report.get(item.field.fieldname)"

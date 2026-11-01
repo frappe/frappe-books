@@ -165,7 +165,6 @@
 import { DocValue } from 'fyo/core/types';
 import { Action, LinkedRecords } from 'fyo/model/types';
 import { FrappeDoc, setFormShowsPreviewErrors } from 'src/frappe/document';
-import { openForm } from 'src/frappe/formScripts';
 import { DEFAULT_CURRENCY } from 'fyo/utils/consts';
 import { ValidationError } from 'fyo/utils/errors';
 import {
@@ -585,7 +584,6 @@ export default defineComponent({
 
       try {
         await this.loadDoc(this.schemaName, this.name, true);
-        await openForm(this.doc);
       } catch (error) {
         await handleErrorWithDialog(error);
       }

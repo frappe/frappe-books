@@ -13,7 +13,6 @@ import {
 } from './doctypes';
 import { isTableDocField } from './fieldProperties';
 import { getOpenFrappeDocs } from './documents';
-import { addFormScripts } from './formScripts';
 import { getBooksMeta, type BooksMeta, type DocTypeMeta } from './meta';
 import {
   getNamingField,
@@ -30,7 +29,6 @@ const QUICK_VIEW_SKIPPED_FIELDTYPES = ['Table', 'AttachImage', 'Attachment'];
 export async function loadFrappeDocTypes() {
   const models = getFrappeModels();
   const booksMeta = await getModelsMeta(models);
-  addFormScripts(booksMeta.scripts);
   setDocTypes(models, booksMeta);
 
   fyo.observer.on('sync:CustomForm', reloadCustomized);

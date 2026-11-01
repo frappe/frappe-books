@@ -34,7 +34,7 @@ export interface POSItem {
   id?: number;
   image?: string;
   name: string;
-  /** The name the POS shows: an ERPNext item's item name, else its code. */
+  /** The name the POS shows: the item's name, else its code. */
   itemName: string;
   /** The item's barcodes, which a scan matches. */
   barcodes: string[];

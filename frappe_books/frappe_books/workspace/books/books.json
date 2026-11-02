@@ -1,7 +1,7 @@
 {
  "app": "frappe_books",
  "charts": [],
- "content": "[{\"id\":\"books-head\",\"type\":\"header\",\"data\":{\"text\":\"Frappe Books\",\"col\":12}},{\"id\":\"sale\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Sales Invoice\",\"col\":3}},{\"id\":\"purchase\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Invoice\",\"col\":3}},{\"id\":\"space-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"transactions\",\"type\":\"card\",\"data\":{\"card_name\":\"Transactions\",\"col\":4}},{\"id\":\"masters\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"inventory\",\"type\":\"card\",\"data\":{\"card_name\":\"Inventory\",\"col\":4}},{\"id\":\"commerce\",\"type\":\"card\",\"data\":{\"card_name\":\"Commerce\",\"col\":4}},{\"id\":\"settings\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings and Data\",\"col\":4}}]",
+ "content": "[{\"id\":\"books-head\",\"type\":\"header\",\"data\":{\"text\":\"RareBooks\",\"col\":12}},{\"id\":\"sale\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Sales Invoice\",\"col\":3}},{\"id\":\"purchase\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"New Purchase Invoice\",\"col\":3}},{\"id\":\"space-1\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"transactions\",\"type\":\"card\",\"data\":{\"card_name\":\"Transactions\",\"col\":4}},{\"id\":\"masters\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"inventory\",\"type\":\"card\",\"data\":{\"card_name\":\"Inventory\",\"col\":4}},{\"id\":\"commerce\",\"type\":\"card\",\"data\":{\"card_name\":\"Commerce\",\"col\":4}},{\"id\":\"settings\",\"type\":\"card\",\"data\":{\"card_name\":\"Settings and Data\",\"col\":4}}]",
  "custom_blocks": [],
  "doctype": "Workspace",
  "for_user": "",
@@ -46,7 +46,7 @@
   {"label":"Data Import","link_to":"Data Import","link_type":"DocType","type":"Link"},
   {"label":"Data Export","link_to":"Data Export","link_type":"DocType","type":"Link"}
  ],
- "module": "Frappe Books",
+ "module": "RareBooks",
  "name": "Books",
  "number_cards": [],
  "owner": "Administrator",

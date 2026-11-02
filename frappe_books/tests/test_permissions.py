@@ -198,7 +198,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 	def test_only_managers_import(self):
 		importable = frappe.get_all(
-			"DocType", filters={"module": "Frappe Books", "allow_import": 1}, pluck="name"
+			"DocType", filters={"module": "RareBooks", "allow_import": 1}, pluck="name"
 		)
 		for doctype in importable:
 			with self.subTest(doctype=doctype):

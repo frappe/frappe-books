@@ -66,4 +66,4 @@ class BooksCompany(Document):
 
 	def before_insert(self):
 		if default_company():
-			frappe.throw(_("Frappe Books keeps one company."))
+			frappe.throw(_("RareBooks keeps one company."))

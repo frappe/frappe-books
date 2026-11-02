@@ -1,6 +1,6 @@
-# Frappe Books
+# RareBooks
 
-Frappe Books is small-business accounting, inventory and point of sale on Frappe Framework, used through the /books app.
+RareBooks is small-business accounting, inventory and point of sale on Frappe Framework, used through the /books app.
 
 ## Invoicing
 

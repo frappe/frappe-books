@@ -511,8 +511,8 @@ msgid "And"
 msgstr ""
 
 #: frontend/src/components/ShortcutsHelper.vue:42
-msgid "Applicable anywhere in Frappe Books"
-msgstr "Gælder overalt i Frappe Books"
+msgid "Applicable anywhere in RareBooks"
+msgstr "Gælder overalt i RareBooks"
 
 #: frontend/src/components/ShortcutsHelper.vue:160
 msgid "Applicable when POS is open"
@@ -3553,16 +3553,16 @@ msgstr ""
 
 #. Header text in the Books Workspace
 #: frappe_books/frappe_books/workspace/books/books.json
-msgid "Frappe Books"
+msgid "RareBooks"
 msgstr ""
 
 #: frappe_books/frappe_books/doctype/books_setup_wizard/books_setup_wizard.py:57
-msgid "Frappe Books setup is already complete."
+msgid "RareBooks setup is already complete."
 msgstr ""
 
 #: frappe_books/frappe_books/doctype/books_setup_wizard/books_setup_wizard.js:8
 #: frappe_books/frappe_books/doctype/books_setup_wizard/books_setup_wizard.py:60
-msgid "Frappe Books setup is complete."
+msgid "RareBooks setup is complete."
 msgstr ""
 
 #. Label of the free_item (Link) field in DocType 'Books Pricing Rule'
@@ -6947,7 +6947,7 @@ msgid "Reload"
 msgstr ""
 
 #: frontend/src/pages/Settings/Settings.vue:214
-msgid "Reload Frappe Books?"
+msgid "Reload RareBooks?"
 msgstr "Genindlæs Frappe Bøger?"
 
 #: frappe_books/frappe_books/print_format/frappe_books___journal_entry/frappe_books___journal_entry.html:1
@@ -7467,7 +7467,7 @@ msgid "Search"
 msgstr ""
 
 #: frontend/src/components/SearchBar.vue:15
-msgid "Search Frappe Books"
+msgid "Search RareBooks"
 msgstr ""
 
 #: frontend/src/components/POS/POSItemPicker.vue:9

@@ -137,7 +137,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		formats = dict(
 			frappe.get_all(
 				"Print Format",
-				filters={"module": "Frappe Books", "standard": "Yes"},
+				filters={"module": "RareBooks", "standard": "Yes"},
 				fields=["name", "doc_type"],
 				as_list=True,
 			)
@@ -203,7 +203,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def test_built_in_formats_print_in_frappes_print_font(self):
 		invoice = self.make_invoice()
 		with self.change_settings("Print Settings", font="Verdana"):
-			for print_format in frappe.get_all("Print Format", {"module": "Frappe Books"}, pluck="name"):
+			for print_format in frappe.get_all("Print Format", {"module": "RareBooks"}, pluck="name"):
 				with self.subTest(print_format=print_format):
 					self.assertNotIn("print.font", frappe.db.get_value("Print Format", print_format, "html"))
 			html = get_print(invoice.doctype, invoice.name, print_format="Business - Sales Invoice")

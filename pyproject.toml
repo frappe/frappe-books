@@ -3,7 +3,7 @@ name = "frappe_books"
 authors = [
     { name = "Frappe Technologies Pvt. Ltd.", email = "hello@frappe.io"}
 ]
-description = "Frappe Books for Frappe Framework"
+description = "RareBooks for Frappe Framework"
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]

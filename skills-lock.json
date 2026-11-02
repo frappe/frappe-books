@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "skills": {
+    "code-style": {
+      "source": "frappe/skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-style/SKILL.md",
+      "computedHash": "5edbb9ee68ce8d586d85a0e5c4b739a58f443fd9e533227f01995048eec9a562"
+    },
+    "frappe-app-dev": {
+      "source": "frappe/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frappe-app-dev/SKILL.md",
+      "computedHash": "392c67d084868201f21ece49d2a30c06be72a6a37c3b56db42cc429fdc3f0cc2"
+    },
+    "frappe-code-review": {
+      "source": "frappe/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frappe-code-review/SKILL.md",
+      "computedHash": "8bd75b01219f4a86f72b6d35adce81424d79fa33c60ec46ce1d6fe1acb7d851e"
+    },
+    "frappe-ui": {
+      "source": "frappe/frappe-ui",
+      "sourceType": "github",
+      "skillPath": "skills/frappe-ui/SKILL.md",
+      "computedHash": "5f4c32e16302b223275a61e287b6d5b41dc312a00d6f3aa9cb3d615c99a4df08"
+    },
+    "mariadb-query-optimization": {
+      "source": "mariadb/skills",
+      "sourceType": "github",
+      "skillPath": "mariadb-query-optimization/SKILL.md",
+      "computedHash": "153cf34ee27837b7df4d76e7d6ad3a5777493cbc59a352a69cff063a6ec9b0e0"
+    },
+    "playwright-best-practices": {
+      "source": "currents-dev/playwright-best-practices-skill",
+      "sourceType": "github",
+      "skillPath": "playwright-best-practices/SKILL.md",
+      "computedHash": "88623575c97314e115f0e361a7d942e31d3b7a4e8925832257e1ad33f52096e4"
+    },
+    "playwright-cli": {
+      "source": "microsoft/playwright-cli",
+      "sourceType": "github",
+      "skillPath": "skills/playwright-cli/SKILL.md",
+      "computedHash": "f83ce162ac7dc75431bf9620a70097409e2d626326173ab9595932afd01354ca"
+    },
+    "tailwindcss": {
+      "source": "hairyf/skills",
+      "sourceType": "github",
+      "skillPath": "skills/tailwindcss/SKILL.md",
+      "computedHash": "78937e1d72496af3e902292eb66b8ad2cdd2d34b90b5428257aae9056678d465"
+    },
+    "vite": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vite/SKILL.md",
+      "computedHash": "8a05956b65faa8131826da179f2d09afe73931971466d5640d95388b4182cda5"
+    },
+    "vue-best-practices": {
+      "source": "vuejs-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-best-practices/SKILL.md",
+      "computedHash": "dc4e09f71772f07102e470451812a74cb7193b019b5a02e738e29951451b24cc"
+    },
+    "vue-router-best-practices": {
+      "source": "vuejs-ai/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vue-router-best-practices/SKILL.md",
+      "computedHash": "5a8f2f8021fe27cef48d8cf053b4cdb9375c0dc5d5e066330888229d0370f55c"
+    }
+  }
+}

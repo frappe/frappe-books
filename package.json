@@ -1,5 +1,5 @@
 {
-  "name": "frappe-books",
+  "name": "rarebooks",
   "private": true,
   "scripts": {
     "postinstall": "yarn --cwd frontend install --frozen-lockfile",

@@ -15,7 +15,7 @@
           variant="subtle"
           class="min-w-0 flex-1"
           :placeholder="t`Type to search...`"
-          :aria-label="t`Search Frappe Books`"
+          :aria-label="t`Search RareBooks`"
           @keydown.enter="input?.inputElement?.blur()"
         >
           <template #prefix>

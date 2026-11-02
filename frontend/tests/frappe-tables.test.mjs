@@ -13,7 +13,7 @@ import {
 
 const billMeta = {
   name: 'Books Bill',
-  module: 'Frappe Books',
+  module: 'RareBooks',
   autoname: 'hash',
   permissions: [],
   states: [

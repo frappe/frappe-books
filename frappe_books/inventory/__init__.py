@@ -1,1 +1,1 @@
-"""Inventory services for Frappe Books."""
+"""Inventory services for RareBooks."""

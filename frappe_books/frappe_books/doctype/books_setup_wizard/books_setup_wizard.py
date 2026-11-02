@@ -115,8 +115,8 @@ def complete_setup() -> dict:
 	wizard = frappe.get_single("Books Setup Wizard")
 	wizard.check_permission("write")
 	if frappe.db.get_single_value("Books Accounting Settings", "setup_complete"):
-		frappe.throw(_("Frappe Books setup is already complete."))
+		frappe.throw(_("RareBooks setup is already complete."))
 	wizard.save()
 	result = run_setup(wizard)
-	frappe.msgprint(_("Frappe Books setup is complete."), alert=True)
+	frappe.msgprint(_("RareBooks setup is complete."), alert=True)
 	return result

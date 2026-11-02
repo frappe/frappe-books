@@ -72,7 +72,7 @@
  "links": [],
  "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
- "module": "Frappe Books",
+ "module": "RareBooks",
  "name": "Books Lead",
  "naming_rule": "By fieldname",
  "owner": "Administrator",

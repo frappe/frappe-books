@@ -19,7 +19,7 @@ export function getCustomizableForms(): { value: string; label: string }[] {
   const settingsTables = getSettingsTables();
   return getForms(
     ({ meta, schema }) =>
-      meta.module === 'Frappe Books' &&
+      meta.module === 'RareBooks' &&
       !LEDGERS.includes(schema.name) &&
       !settingsTables.has(schema.name)
   );

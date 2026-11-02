@@ -1,1 +1,1 @@
-"""Shared test support for Frappe Books."""
+"""Shared test support for RareBooks."""

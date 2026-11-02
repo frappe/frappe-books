@@ -177,7 +177,7 @@ test('a rejected settings save retains edits and does not offer a successful-sav
   await expect(error).toBeVisible();
   await error.getByRole('button', { name: 'Okay', exact: true }).click();
   await expect(
-    page.getByText('Reload Frappe Books?', { exact: true })
+    page.getByText('Reload RareBooks?', { exact: true })
   ).toHaveCount(0);
   await expect(
     page.getByRole('button', { name: 'Save', exact: true })

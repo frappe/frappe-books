@@ -12,7 +12,7 @@
     v-model:open="openModal"
     v-model:query="query"
     :filterable="false"
-    :title="t`Search Frappe Books`"
+    :title="t`Search RareBooks`"
     @select="selectSearchItem"
   >
     <CommandPaletteInput :placeholder="t`Type to search...`" />

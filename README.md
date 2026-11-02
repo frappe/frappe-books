@@ -1,17 +1,17 @@
 <div align="center">
 	<a href="https://frappe.io/books">
-		<img src="./frappe_books/public/pwa/icon.svg" alt="Frappe Books logo" height="80px" width="80px"/>
+		<img src="./frappe_books/public/pwa/icon.svg" alt="RareBooks logo" height="80px" width="80px"/>
 	</a>
-	<h2>Frappe Books</h2>
+	<h2>RareBooks</h2>
 	<p>Modern Accounting Made Simple</p>
 
-[![Database compatibility](https://github.com/frappe/frappe-books/actions/workflows/database-tests.yml/badge.svg)](https://github.com/frappe/frappe-books/actions/workflows/database-tests.yml)
+[![Database compatibility](https://github.com/frappe/rarebooks/actions/workflows/database-tests.yml/badge.svg)](https://github.com/frappe/rarebooks/actions/workflows/database-tests.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](license.txt)
 
 </div>
 
 <div align="center">
-	<img src="./docs/images/desktop-dashboard.png" alt="Frappe Books dashboard"/>
+	<img src="./docs/images/desktop-dashboard.png" alt="RareBooks dashboard"/>
 </div>
 
 <div align="center">
@@ -22,13 +22,13 @@
 	<a href="https://github.com/frappe/books">Desktop App</a>
 </div>
 
-## Frappe Books
+## RareBooks
 
 Open-source accounting for small businesses and freelancers, built on the Frappe Framework.
 
 ### Motivation
 
-Frappe Books started as a desktop app that keeps one company in one file on one computer. This app puts the same Books interface on a Frappe site. Your team signs in from a browser on any computer or phone. Frappe controls users, roles, and permissions, and your data stays on your own server.
+RareBooks started as a desktop app that keeps one company in one file on one computer. This app puts the same Books interface on a Frappe site. Your team signs in from a browser on any computer or phone. Frappe controls users, roles, and permissions, and your data stays on your own server.
 
 ### Key Features
 
@@ -66,13 +66,13 @@ Frappe Books started as a desktop app that keeps one company in one file on one 
 
 ## Learning and Community
 
-1. [Documentation](https://docs.frappe.io/books): The user guide for Frappe Books.
-2. [Telegram Group](https://t.me/frappebooks): Talk with other Frappe Books users.
+1. [Documentation](https://docs.frappe.io/books): The user guide for RareBooks.
+2. [Telegram Group](https://t.me/frappebooks): Talk with other RareBooks users.
 3. [Frappe Forum](https://discuss.frappe.io): Ask questions about the Frappe Framework and its apps.
 
 ## Contributing
 
-1. [Report an Issue](https://github.com/frappe/frappe-books/issues)
+1. [Report an Issue](https://github.com/frappe/rarebooks/issues)
 2. [Report a Security Vulnerability](https://frappe.io/security)
 
 ## License

@@ -5,7 +5,7 @@ frappe.ui.form.on("Books Setup Wizard", {
 	async refresh(frm) {
 		if (await frappe.db.get_single_value("Books Accounting Settings", "setup_complete")) {
 			frm.disable_save();
-			frm.dashboard.set_headline_alert(__("Frappe Books setup is complete."), "green");
+			frm.dashboard.set_headline_alert(__("RareBooks setup is complete."), "green");
 			return;
 		}
 

@@ -1,4 +1,4 @@
-"""Install and test bootstrap data for Frappe Books."""
+"""Install and test bootstrap data for RareBooks."""
 
 import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup

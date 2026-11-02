@@ -3,7 +3,7 @@ from frappe_books.company import COMPANY_DOCTYPES
 app_name = "frappe_books"
 app_title = "Books"
 app_publisher = "Frappe Technologies Pvt. Ltd."
-app_description = "Frappe Books for Frappe Framework"
+app_description = "RareBooks for Frappe Framework"
 app_email = "hello@frappe.io"
 app_license = "agpl-3.0"
 app_logo_url = "/assets/frappe_books/books-icon.png"

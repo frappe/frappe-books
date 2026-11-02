@@ -96,7 +96,7 @@ export function useSettings() {
     }
 
     await showDialog({
-      title: t`Reload Frappe Books?`,
+      title: t`Reload RareBooks?`,
       detail: t`Changes made to settings will be visible on reload.`,
       type: 'info',
       buttons: [

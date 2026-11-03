@@ -10,6 +10,7 @@ yarn test:ui
 
 The default site is `http://books-test.localhost:8000` with the local `Administrator` / `admin` login.
 Set `BOOKS_TEST_URL`, `BOOKS_TEST_USER`, and `BOOKS_TEST_PASSWORD` to use another test site.
+A spec that needs a user with fewer rights passes a login with `roles` to `useBooksSession` (see `dashboard-best-sellers-sales-only.spec.ts`); the admin login creates that user on the site if it is missing.
 Set `BOOKS_BROWSER_CHANNEL=chrome` to use an installed Chrome browser.
 
 `list-filter-database.spec.ts` seeds records on the site with `bench execute` and checks the rows its list filters return. `mobile-search.spec.ts` indexes its record for search the same way, as Frappe indexes saved records only every five minutes. Both need `BOOKS_FILTER_TEST_BENCH` (the bench folder) and `BOOKS_FILTER_TEST_SITE` (a site with `allow_tests`); without them, their record tests are skipped.

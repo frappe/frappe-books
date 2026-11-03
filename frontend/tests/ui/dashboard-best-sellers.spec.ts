@@ -106,7 +106,8 @@ test('clicking a slice does not leave the dashboard', async ({ page }) => {
   await card(page).scrollIntoViewIfNeeded();
   await expect(card(page)).toHaveAttribute('data-state', 'ready');
   await card(page).locator('svg path').first().click({ force: true });
-  await card(page).getByText('World Atlas').click();
+  // The slice also writes its name in the centre, so pick the legend entry by role.
+  await card(page).getByRole('button', { name: 'Hide World Atlas' }).click();
 
   expect(page.url()).toBe(url);
 });

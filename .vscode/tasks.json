@@ -1,0 +1,29 @@
+{
+ "version": "2.0.0",
+ "tasks": [
+  {
+   "label": "bench",
+   "detail": "bench start in ~/books-bench",
+   "type": "shell",
+   "command": "bench start",
+   "options": { "cwd": "${env:HOME}/books-bench" },
+   "isBackground": true,
+   "problemMatcher": []
+  },
+  {
+   "label": "vite",
+   "detail": "yarn dev against http://books.localhost:8000",
+   "type": "shell",
+   "command": "yarn dev",
+   "options": { "env": { "BOOKS_SITE_URL": "http://books.localhost:8000" } },
+   "isBackground": true,
+   "problemMatcher": []
+  },
+  {
+   "label": "dev",
+   "detail": "Start the bench and the Vite dev server",
+   "dependsOn": ["bench", "vite"],
+   "problemMatcher": []
+  }
+ ]
+}

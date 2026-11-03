@@ -45,7 +45,8 @@ frontend/test-results/
 frontend/playwright-report/
 
 # IDEs and editors
-.vscode/
+.vscode/*
+!.vscode/tasks.json
 .vs/
 .idea/
 .kdev4/

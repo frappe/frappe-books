@@ -57,6 +57,11 @@
               v-if="canRead.ledger"
               class="h-72 min-w-0 md:h-80"
             />
+            <BestSellers
+              v-if="canRead.sales"
+              class="h-96 min-w-0 md:h-80"
+              :period="period"
+            />
           </div>
         </template>
       </div>
@@ -69,6 +74,7 @@ import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
 import AccountBalances from './AccountBalances.vue';
+import BestSellers from './BestSellers.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
 import InvoiceCards from './InvoiceCards.vue';
@@ -85,6 +91,7 @@ export default {
     FrappeScrollArea,
     PageHeader,
     AccountBalances,
+    BestSellers,
     Cashflow,
     ProfitAndLoss,
     Expenses,

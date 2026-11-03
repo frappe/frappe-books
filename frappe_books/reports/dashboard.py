@@ -1,5 +1,8 @@
+from collections import Counter
+
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Coalesce, Sum
 from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
@@ -7,6 +10,8 @@ from frappe_books.reports.filters import datetime_conditions
 from frappe_books.reports.periods import get_fiscal_year
 
 LEDGER = "Books GL Entry"
+SALES_INVOICE = "Books Sales Invoice"
+TOP_COUNT = 5
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 PERIOD_MONTHS = {"This Year": 12, "This Quarter": 3, "This Month": 1}
 MONTH_FIELDS = [{"YEAR": "posting_date", "as": "year"}, {"MONTH": "posting_date", "as": "month"}]
@@ -72,10 +77,34 @@ def get_top_expenses(period: str) -> list[dict]:
 	)
 	# The query engine wraps an ORDER BY on this expression alias in MAX() on Postgres.
 	spent = sorted((row for row in rows if row.balance > 0), key=lambda row: row.balance, reverse=True)
-	expenses = [{"account": row.account, "total": rounded(row.balance)} for row in spent[:5]]
-	if others := spent[5:]:
+	expenses = [{"account": row.account, "total": rounded(row.balance)} for row in spent[:TOP_COUNT]]
+	if others := spent[TOP_COUNT:]:
 		expenses.append({"account": _("Others"), "total": rounded(sum(row.balance for row in others))})
 	return expenses
+
+
+@frappe.whitelist()
+def get_best_sellers(period: str) -> dict:
+	"""Return the five items with the most sales in the period, the rest as Others, and their total."""
+	frappe.has_permission(SALES_INVOICE, "read", throw=True)
+	from_date, to_date = get_period_dates(period)
+	sales = [(row.item_code, rounded(row.amount)) for row in _item_sales(from_date, to_date)]
+	# The raw sums are floats on SQLite and Decimals elsewhere, so rank the rounded amounts.
+	sold = sorted(
+		((code, amount) for code, amount in sales if amount > 0), key=lambda sale: (-sale[1], sale[0])
+	)
+	top = sold[:TOP_COUNT]
+	labels = _item_labels([code for code, _amount in top])
+	items = [{"item": code, "item_name": labels[code], "amount": amount} for code, amount in top]
+	if others := sold[TOP_COUNT:]:
+		items.append(
+			{
+				"item": None,
+				"item_name": _("Others"),
+				"amount": rounded(sum_decimal(amount for _code, amount in others)),
+			}
+		)
+	return {"items": items, "total": rounded(sum_decimal(row["amount"] for row in items))}
 
 
 @frappe.whitelist()
@@ -147,6 +176,41 @@ def _monthly_totals(from_date, to_date, filters, fields) -> dict:
 		order_by="year, month",
 	)
 	return {f"{row.year:04d}-{row.month:02d}": row for row in rows}
+
+
+def _item_sales(from_date, to_date) -> list:
+	"""Each item's sold amount in base currency over the period's submitted invoices, returns included."""
+	invoice = frappe.qb.DocType(SALES_INVOICE)
+	row = frappe.qb.DocType("Books Sales Invoice Item")
+	# No ORDER BY: the query engine wraps an ORDER BY on an expression alias in MAX() on Postgres.
+	return (
+		frappe.qb.from_(row)
+		.join(invoice)
+		.on(row.parent == invoice.name)
+		.select(row.item_code, Sum(row.amount * Coalesce(invoice.conversion_rate, 1)).as_("amount"))
+		.where(row.parenttype == SALES_INVOICE)
+		.where(row.parentfield == "items")
+		.where(invoice.docstatus == 1)
+		.where(invoice.posting_date >= from_date)
+		.where(invoice.posting_date <= to_date)
+		.groupby(row.item_code)
+		.run(as_dict=True)
+	)
+
+
+def _item_labels(codes) -> dict:
+	"""Each item's name, or its code when it has none; a name shared with another slice gets its code."""
+	# A sales reader already sees these names on the invoice rows, so Item read is not needed.
+	if not codes:
+		return {}
+	items = frappe.get_all("Books Item", filters={"name": ["in", codes]}, fields=["name", "item_name"])
+	names = {item.name: item.item_name for item in items}
+	labels = {code: names.get(code) or code for code in codes}
+	counts = Counter(labels.values())
+	return {
+		code: f"{label} ({code})" if counts[label] > 1 or label == _("Others") else label
+		for code, label in labels.items()
+	}
 
 
 def _dashboard_accounts():

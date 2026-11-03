@@ -35,6 +35,18 @@ export interface CashBalances {
   as_of: string;
 }
 
+export interface BestSeller {
+  /** Empty on the Others slice. */
+  item: string | null;
+  item_name: string;
+  amount: number;
+}
+
+export interface BestSellers {
+  items: BestSeller[];
+  total: number;
+}
+
 /** Dashboard figures are computed on the server for a period that ends today. */
 export function getDashboardData<T>(
   method: 'get_cashflow' | 'get_profit_and_loss' | 'get_top_expenses',
@@ -51,6 +63,13 @@ export function getInvoiceSummary(
     'frappe_books.reports.dashboard.get_invoice_summary',
     { doctype, period }
   );
+}
+
+/** The period's five best selling items by base currency sales, the rest as Others. */
+export function getBestSellers(period: PeriodKey): Promise<BestSellers> {
+  return call<BestSellers>('frappe_books.reports.dashboard.get_best_sellers', {
+    period,
+  });
 }
 
 /** Cash and bank balances as of today; the period does not apply. */

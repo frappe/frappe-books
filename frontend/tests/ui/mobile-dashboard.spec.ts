@@ -17,6 +17,13 @@ test.beforeEach(async ({ page }) => {
   await page.route(/reports\.dashboard\.get_cash_balances/, (route) =>
     route.fulfill({ json: { message: balances } })
   );
+  const sellers = {
+    items: [{ item: 'ATLAS-01', item_name: 'World Atlas', amount: 5000 }],
+    total: 5000,
+  };
+  await page.route(/reports\.dashboard\.get_best_sellers/, (route) =>
+    route.fulfill({ json: { message: sellers } })
+  );
 });
 
 useBooksSession();
@@ -138,6 +145,21 @@ test('account balances sit full width on a card of their own', async ({
   const viewport = page.viewportSize()!;
   expect(box.width).toBeGreaterThan(viewport.width - 40);
   expect(box.height).toBe(288);
+  await expect(card).toHaveCSS('border-top-style', 'solid');
+});
+
+test('best sellers sit full width on a card of their own', async ({ page }) => {
+  const sellers = page.locator('[data-slot="chart-container"]', {
+    hasText: 'Best sellers',
+  });
+  const card = sellers.locator('..');
+  await card.scrollIntoViewIfNeeded();
+  await expect(sellers).toHaveAttribute('data-state', 'ready');
+
+  const box = (await card.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.width).toBeGreaterThan(viewport.width - 40);
+  expect(box.height).toBe(384);
   await expect(card).toHaveCSS('border-top-style', 'solid');
 });
 

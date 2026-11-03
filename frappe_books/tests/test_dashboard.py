@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from frappe_books.reports.dashboard import (
+	get_best_sellers,
 	get_cash_balances,
 	get_cashflow,
 	get_invoice_summary,
@@ -13,7 +14,7 @@ from frappe_books.reports.dashboard import (
 	get_top_expenses,
 )
 from frappe_books.reports.financial_statements import get_account_balances
-from frappe_books.tests.accounting import make_account, root_group
+from frappe_books.tests.accounting import ensure_user, make_account, root_group, unique_name
 
 TODAY = "2031-12-15"
 PERIODS = ("This Year", "This Quarter", "This Month", "YTD")
@@ -231,6 +232,83 @@ class IntegrationTestAccountBalances(IntegrationTestCase):
 		self.assertEqual(result["credit_root_types"], ["Equity", "Income", "Liability"])
 
 
+class IntegrationTestBestSellers(IntegrationTestCase):
+	def _best_sellers(self):
+		with self.freeze_time(TODAY):
+			return get_best_sellers("This Month")
+
+	def test_the_five_best_sellers_come_first_and_the_rest_are_others(self):
+		codes = [_item(f"Seller {index}") for index in range(7)]
+		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (60, 50, 40, 30, 20, 10, 5), strict=True)))
+		_invoice("2031-12-02", 0, 0, items=[(codes[4], 45)])
+
+		result = self._best_sellers()
+
+		self.assertEqual(
+			[(row["item"], row["amount"]) for row in result["items"]],
+			[(codes[4], 65), (codes[0], 60), (codes[1], 50), (codes[2], 40), (codes[3], 30), (None, 15)],
+		)
+		self.assertEqual(result["items"][0]["item_name"], "Seller 4")
+		self.assertEqual(result["items"][-1]["item_name"], "Others")
+		self.assertEqual(result["total"], Decimal("260.00"))
+		self.assertEqual(result["total"], sum(row["amount"] for row in result["items"]))
+
+	def test_amounts_are_converted_to_the_base_currency(self):
+		doubled, plain = _item("Imported Book"), _item("Local Book")
+		_invoice("2031-12-01", 0, 0, conversion_rate=2, items=[(doubled, 30)])
+		_invoice("2031-12-01", 0, 0, conversion_rate=None, items=[(plain, 50)])
+
+		amounts = _amounts(self._best_sellers())
+
+		self.assertEqual((amounts[doubled], amounts[plain]), (Decimal("60.00"), Decimal("50.00")))
+
+	def test_shared_names_show_their_code_and_unknown_items_show_the_code(self):
+		first, second = _item("Atlas"), _item("Atlas")
+		missing = unique_name("No Such Item")
+		_invoice("2031-12-01", 0, 0, items=[(first, 30), (second, 20), (missing, 10)])
+
+		labels = {row["item"]: row["item_name"] for row in self._best_sellers()["items"]}
+
+		self.assertEqual(labels, {first: f"Atlas ({first})", second: f"Atlas ({second})", missing: missing})
+
+	def test_an_item_named_others_keeps_its_own_slice(self):
+		codes = [_item("Others"), *(_item(f"Shelf {index}") for index in range(5))]
+		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (90, 50, 40, 30, 20, 10), strict=True)))
+
+		items = self._best_sellers()["items"]
+
+		self.assertEqual(items[0]["item_name"], f"Others ({codes[0]})")
+		self.assertEqual((items[-1]["item"], items[-1]["item_name"]), (None, "Others"))
+
+	def test_returns_lower_an_item_and_drafts_cancelled_and_other_periods_do_not_count(self):
+		kept, returned, cleared = _item("Kept Book"), _item("Returned Book"), _item("Cleared Book")
+		_invoice("2031-12-01", 0, 0, items=[(kept, 100), (returned, 80), (cleared, 40)])
+		_invoice("2031-12-05", 0, 0, is_return=1, items=[(returned, -30), (cleared, -40)])
+		_invoice("2031-12-06", 0, 0, docstatus=0, items=[(kept, 500)])
+		_invoice("2031-12-07", 0, 0, docstatus=2, items=[(kept, 500)])
+		_invoice("2031-11-30", 0, 0, items=[(kept, 500)])
+		_invoice("2031-12-16", 0, 0, items=[(kept, 500)])
+
+		result = self._best_sellers()
+
+		self.assertEqual(
+			[(row["item"], row["amount"]) for row in result["items"]], [(kept, 100), (returned, 50)]
+		)
+		self.assertEqual(result["total"], Decimal("150.00"))
+
+	def test_few_items_have_no_others_and_no_sales_is_empty(self):
+		self.assertEqual(self._best_sellers(), {"items": [], "total": 0})
+
+		codes = [_item(f"Few {index}") for index in range(3)]
+		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (30, 20, 10), strict=True)))
+
+		self.assertEqual([row["item"] for row in self._best_sellers()["items"]], codes)
+
+	def test_users_who_cannot_read_sales_invoices_are_refused(self):
+		with self.set_user(ensure_user("books-dashboard-outsider@example.com", "Translator")):
+			self.assertRaises(frappe.PermissionError, get_best_sellers, "This Month")
+
+
 def _post(account, debit, credit, date="2031-01-10", **values):
 	frappe.get_doc(
 		{
@@ -244,21 +322,59 @@ def _post(account, debit, credit, date="2031-01-10", **values):
 	).insert()
 
 
-def _invoice(date, total, outstanding, **values):
-	"""Insert a submitted invoice dated `date`, a date with an optional time."""
+def _invoice(date, total, outstanding, items=(), **values):
+	"""Insert a submitted invoice dated `date`, a date with an optional time.
+
+	`items` is a list of `(item_code, amount)` rows; `db_insert()` writes no child rows, so they are inserted here.
+	"""
 	posting_date, _, posting_time = date.partition(" ")
-	frappe.get_doc(
+	invoice = frappe.get_doc(
 		{
 			"doctype": "Books Sales Invoice",
 			"name": frappe.generate_hash(),
 			"posting_date": posting_date,
 			"posting_time": posting_time or None,
 			"docstatus": 1,
+			"conversion_rate": 1,
 			"base_grand_total": total,
 			"outstanding_amount": outstanding,
 			**values,
 		}
+	)
+	invoice.db_insert()
+	for idx, (item_code, amount) in enumerate(items, start=1):
+		frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice Item",
+				"name": frappe.generate_hash(),
+				"parent": invoice.name,
+				"parenttype": invoice.doctype,
+				"parentfield": "items",
+				"idx": idx,
+				"docstatus": invoice.docstatus,
+				"item_code": item_code,
+				"amount": amount,
+			}
+		).db_insert()
+
+
+def _item(item_name):
+	"""Insert an item named `item_name` with a unique code, and return the code."""
+	code = unique_name("Dashboard Item")
+	frappe.get_doc(
+		{
+			"doctype": "Books Item",
+			"name": code,
+			"item_code": code,
+			"item_name": item_name,
+			"stock_uom": "Unit",
+		}
 	).db_insert()
+	return code
+
+
+def _amounts(result):
+	return {row["item"]: row["amount"] for row in result["items"]}
 
 
 def _dates(*dates):

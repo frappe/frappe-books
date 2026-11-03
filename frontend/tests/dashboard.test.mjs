@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  getCashBalances,
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,
@@ -23,6 +24,19 @@ test('dashboard figures come from the server for the chosen period', async () =>
       args: { doctype: 'Books Sales Invoice', period: 'YTD' },
     },
   ]);
+});
+
+// covers: AC-2 (the balances take no period)
+test('cash balances come from the server without a period', async () => {
+  const balances = { accounts: [], total: 0, as_of: '2031-12-15' };
+  const calls = stubServer(() => balances);
+
+  const result = await getCashBalances();
+
+  assert.deepEqual(calls, [
+    { method: 'frappe_books.reports.dashboard.get_cash_balances', args: {} },
+  ]);
+  assert.deepEqual(result, balances);
 });
 
 test('paid and unpaid lists show the submitted invoices of the period', () => {

@@ -7,6 +7,18 @@ test.use({
   hasTouch: true,
 });
 
+// Registered before the session opens Books, so no test depends on the site's accounts.
+test.beforeEach(async ({ page }) => {
+  const balances = {
+    accounts: [{ account: 'Cash - RB', account_name: 'Cash', balance: 1500 }],
+    total: 1500,
+    as_of: '2031-12-15',
+  };
+  await page.route(/reports\.dashboard\.get_cash_balances/, (route) =>
+    route.fulfill({ json: { message: balances } })
+  );
+});
+
 useBooksSession();
 
 const createButton = (page: Page) =>
@@ -86,11 +98,13 @@ test('a section that fails to load can be retried', async ({ page }) => {
   await expect(page.getByText('Failed to load')).toBeVisible();
 
   fail = false;
-  await page.getByRole('button', { name: 'Try again' }).click();
+  // The aborted request can also raise the offline screen, which has its own Try again.
+  const expenses = page.locator('[data-slot="chart-container"]', {
+    hasText: 'Top expenses',
+  });
+  await expenses.getByRole('button', { name: 'Try again' }).click();
   await expect(page.getByText('Failed to load')).toBeHidden();
-  await expect(
-    page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
-  ).toHaveAttribute('data-state', /ready|empty/);
+  await expect(expenses).toHaveAttribute('data-state', /ready|empty/);
 });
 
 test('top expenses shows the full total spending under its title', async ({
@@ -108,6 +122,23 @@ test('top expenses shows the full total spending under its title', async ({
   await expect(
     page.locator('[data-slot="chart-container"]', { hasText: 'Top expenses' })
   ).toContainText('Total spending: ₹ 12,34,567.89');
+});
+
+test('account balances sit full width on a card of their own', async ({
+  page,
+}) => {
+  const balances = page.locator('[data-slot="chart-container"]', {
+    hasText: 'Account balances',
+  });
+  const card = balances.locator('..');
+  await card.scrollIntoViewIfNeeded();
+  await expect(balances).toHaveAttribute('data-state', 'ready');
+
+  const box = (await card.boundingBox())!;
+  const viewport = page.viewportSize()!;
+  expect(box.width).toBeGreaterThan(viewport.width - 40);
+  expect(box.height).toBe(288);
+  await expect(card).toHaveCSS('border-top-style', 'solid');
 });
 
 test('invoice cards name their totals in sentence case', async ({ page }) => {

@@ -10,6 +10,7 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.linked_entries import get_linked_entries
 from frappe_books.reports.dashboard import (
+	get_cash_balances,
 	get_cashflow,
 	get_invoice_summary,
 	get_profit_and_loss,
@@ -148,6 +149,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 				with self.subTest(method=method.__name__):
 					self.assertRaises(frappe.PermissionError, method, "This Month")
 			self.assertRaises(frappe.PermissionError, get_account_balances)
+			self.assertRaises(frappe.PermissionError, get_cash_balances)
 
 	def test_books_user_keeps_the_accounts_the_server_chooses(self):
 		income = make_account("Rights Income", root_type="Income", account_type="Income Account")

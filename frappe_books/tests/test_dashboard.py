@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from frappe_books.reports.dashboard import (
+	get_cash_balances,
 	get_cashflow,
 	get_invoice_summary,
 	get_period_dates,
@@ -12,7 +13,7 @@ from frappe_books.reports.dashboard import (
 	get_top_expenses,
 )
 from frappe_books.reports.financial_statements import get_account_balances
-from frappe_books.tests.accounting import make_account
+from frappe_books.tests.accounting import make_account, root_group
 
 TODAY = "2031-12-15"
 PERIODS = ("This Year", "This Quarter", "This Month", "YTD")
@@ -148,6 +149,72 @@ class IntegrationTestInvoiceDrillDown(IntegrationTestCase):
 			self.assertEqual(len(frappe.get_list("Books Sales Invoice", filters=filters)), count)
 
 
+class IntegrationTestCashBalances(IntegrationTestCase):
+	def test_cash_and_bank_leaves_are_listed_in_chart_order_with_their_total(self):
+		cash = make_account("Drawer Cash", account_type="Cash")
+		bank = make_account("Drawer Bank", account_type="Bank")
+		group = make_account(
+			"Drawer Banks", account_type="Bank", is_group=1, parent_account=root_group("Asset")
+		)
+		rent = make_account("Drawer Rent", root_type="Expense")
+		for account, debit, credit in ((cash, 80, 0), (cash, 0, 30), (bank, 200, 0), (rent, 15, 0)):
+			_post(account, debit, credit, "2031-12-01")
+
+		with self.freeze_time(TODAY):
+			result = get_cash_balances()
+
+		balances = {row["account"]: row["balance"] for row in result["accounts"]}
+		names = list(balances)
+		self.assertEqual((balances[cash.name], balances[bank.name]), (Decimal("50.00"), Decimal("200.00")))
+		self.assertLess(names.index(cash.name), names.index(bank.name))
+		self.assertNotIn(group.name, balances)
+		self.assertNotIn(rent.name, balances)
+		self.assertEqual(result["accounts"][names.index(cash.name)]["account_name"], cash.account_name)
+		self.assertEqual(result["total"], sum(balances.values()))
+		self.assertEqual(result["as_of"], getdate(TODAY))
+
+	def test_entries_after_today_and_cancelled_entries_are_left_out(self):
+		cash = make_account("Cut Off Cash", account_type="Cash")
+		_post(cash, 100, 0, TODAY)
+		_post(cash, 40, 0, "2031-12-16")
+		_post(cash, 25, 0, "2031-12-01", is_cancelled=1)
+
+		with self.freeze_time(TODAY):
+			balances = {row["account"]: row["balance"] for row in get_cash_balances()["accounts"]}
+
+		self.assertEqual(balances[cash.name], Decimal("100.00"))
+
+	def test_unused_accounts_show_zero_and_an_overdraft_lowers_the_total(self):
+		unused = make_account("Unused Bank", account_type="Bank")
+		overdrawn = make_account("Overdrawn Bank", account_type="Bank")
+		_post(overdrawn, 0, 40, "2031-12-01")
+
+		with self.freeze_time(TODAY):
+			result = get_cash_balances()
+
+		balances = {row["account"]: row["balance"] for row in result["accounts"]}
+		self.assertEqual(
+			(balances[unused.name], balances[overdrawn.name]), (Decimal("0.00"), Decimal("-40.00"))
+		)
+		self.assertEqual(result["total"], sum(balances.values()))
+
+	def test_the_total_adds_the_rounded_rows_and_dust_rounds_to_zero(self):
+		# Three rows of 10.004 add to 30.01 raw but 30.00 rounded, so a raw sum would be off by a cent.
+		rows = [make_account(f"Rounding Cash {index}", account_type="Cash") for index in range(3)]
+		dust = make_account("Dust Bank", account_type="Bank")
+		for account in rows:
+			_post(account, 10.004, 0, "2031-12-01")
+		_post(dust, 0, 0.004, "2031-12-01")
+
+		with self.freeze_time(TODAY):
+			result = get_cash_balances()
+
+		balances = {row["account"]: row["balance"] for row in result["accounts"]}
+		self.assertEqual([balances[account.name] for account in rows], [Decimal("10.00")] * 3)
+		self.assertEqual(balances[dust.name], 0)
+		self.assertEqual(result["total"], sum(balances.values()))
+
+
 class IntegrationTestAccountBalances(IntegrationTestCase):
 	def test_account_balances_are_kept_on_the_root_type_side(self):
 		cash = make_account("Balance Cash", account_type="Cash")
@@ -164,7 +231,7 @@ class IntegrationTestAccountBalances(IntegrationTestCase):
 		self.assertEqual(result["credit_root_types"], ["Equity", "Income", "Liability"])
 
 
-def _post(account, debit, credit, date="2031-01-10"):
+def _post(account, debit, credit, date="2031-01-10", **values):
 	frappe.get_doc(
 		{
 			"doctype": "Books GL Entry",
@@ -172,6 +239,7 @@ def _post(account, debit, credit, date="2031-01-10"):
 			"account": account.name,
 			"debit": debit,
 			"credit": credit,
+			**values,
 		}
 	).insert()
 

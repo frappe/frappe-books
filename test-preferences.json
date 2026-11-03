@@ -1,0 +1,9 @@
+{
+ "tool": "node:test",
+ "gate": null,
+ "additionalTools": ["frappe run-tests (Python, FrappeTestCase)"],
+ "e2eTool": "playwright",
+ "testDir": "frontend/tests (node), frontend/tests/ui (Playwright), frappe_books/tests (Python)",
+ "filePattern": "*.test.mjs, *.spec.ts, test_*.py",
+ "packageManager": "yarn"
+}

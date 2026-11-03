@@ -39,15 +39,16 @@ spec [0001](../specs/0001-account-balances-card/index.md) · code in `frappe_boo
 ## Slice 2: Best sellers
 
 ### 2. Best sellers chart · in-progress
-A donut on the right of the new row, built like Top expenses, ranking items by sales amount in the selected period so you see what earns the most.
-**Done when:** the donut shows the top 5 items by sales amount (net of returns, submitted sales only) for the selected period with the rest grouped as Other, the subtitle and centre show the total, it follows the period selector, it only shows to users who can read sales invoices, and it has the same legend, loading, empty and error states as Top expenses.
+A donut on the right of the new row, built like Top expenses, ranking the top five items by sales amount in the selected period so you see what earns the most.
+**Done when:** the donut shows the top 5 items by sales amount (net of returns, submitted sales only) for the selected period (no Others slice), the subtitle shows the total sales of every item and the centre the sum of the five shown, it follows the period selector, it only shows to users who can read sales invoices, and it has the same legend, loading, empty and error states as Top expenses.
 spec [0002](../specs/0002-best-sellers-chart/index.md) · code in `frappe_books/reports/dashboard.py`, `frontend/src/pages/Dashboard/BestSellers.vue`
 - [x] Design it (spec): `/architect best sellers chart`
-- [x] Build it: `/develop best sellers chart`
+- [ ] Build it: `/develop best sellers chart`
   - [x] Server: `get_best_sellers` with permission check, top five, Others and total, plus Python tests for returns, currency, labels and edge cases (AC-1, AC-2, AC-3, AC-4, AC-5, AC-7)
   - [x] Thin card end to end: `getBestSellers`, minimal `BestSellers.vue` in the right column, following the period (AC-1, AC-5, AC-6, AC-7)
   - [x] Card complete: empty and error states, phone card, left column fallback, dark mode (AC-8, AC-9, AC-10)
   - [x] Playwright tests, desktop and mobile (AC-5, AC-6, AC-8, AC-9, AC-10)
+  - [ ] Top five only (spec update): drop the Others slice, "Total sales" over every item, `Top N` centre, tests updated (AC-3, AC-5)
 - [ ] Verify it: `/check verify best sellers chart`
 - [ ] Test it: `/test best sellers chart`
 

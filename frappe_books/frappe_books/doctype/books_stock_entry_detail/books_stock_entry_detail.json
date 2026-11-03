@@ -119,7 +119,7 @@
  "links": [],
  "modified": "2026-10-24 20:00:00.000000",
  "modified_by": "Administrator",
- "module": "RareBooks",
+ "module": "Frappe Books",
  "name": "Books Stock Entry Detail",
  "owner": "Administrator",
  "permissions": [],

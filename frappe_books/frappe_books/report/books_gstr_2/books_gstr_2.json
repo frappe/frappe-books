@@ -13,7 +13,7 @@
  "is_standard": "Yes",
  "modified": "2026-10-04 12:00:00.000000",
  "modified_by": "Administrator",
- "module": "RareBooks",
+ "module": "Frappe Books",
  "name": "Books GSTR-2",
  "owner": "Administrator",
  "prepared_report": 0,

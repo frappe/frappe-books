@@ -46,7 +46,7 @@
   {"label":"Data Import","link_to":"Data Import","link_type":"DocType","type":"Link"},
   {"label":"Data Export","link_to":"Data Export","link_type":"DocType","type":"Link"}
  ],
- "module": "RareBooks",
+ "module": "Frappe Books",
  "name": "Books",
  "number_cards": [],
  "owner": "Administrator",

@@ -37,7 +37,7 @@ def _link_queries(doctype: str, name: str):
 
 def _document_metas():
 	doctypes = frappe.get_all(
-		"DocType", filters={"module": "RareBooks", "istable": 0, "issingle": 0}, pluck="name"
+		"DocType", filters={"module": "Frappe Books", "istable": 0, "issingle": 0}, pluck="name"
 	)
 	return [frappe.get_meta(doctype) for doctype in doctypes]
 

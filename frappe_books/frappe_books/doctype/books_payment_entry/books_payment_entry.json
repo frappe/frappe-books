@@ -220,7 +220,7 @@
  "links": [],
  "modified": "2026-10-30 20:00:00.000000",
  "modified_by": "Administrator",
- "module": "RareBooks",
+ "module": "Frappe Books",
  "name": "Books Payment Entry",
  "naming_rule": "By script",
  "owner": "Administrator",

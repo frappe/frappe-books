@@ -8,7 +8,7 @@ from frappe.search.sqlite_search import (
 )
 from frappe.utils.caching import site_cache
 
-MODULE = "RareBooks"
+MODULE = "Frappe Books"
 
 
 class BooksSearch(SQLiteSearch):

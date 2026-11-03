@@ -98,7 +98,7 @@
  "links": [],
  "modified": "2026-10-30 12:00:00.000000",
  "modified_by": "Administrator",
- "module": "RareBooks",
+ "module": "Frappe Books",
  "name": "Books System Settings",
  "owner": "Administrator",
  "permissions": [

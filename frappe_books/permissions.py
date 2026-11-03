@@ -1,6 +1,6 @@
 import frappe
 
-BOOKS_MODULE = "RareBooks"
+BOOKS_MODULE = "Frappe Books"
 
 
 def has_app_permission() -> bool:

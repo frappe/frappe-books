@@ -241,7 +241,7 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 		with self.freeze_time(TODAY):
 			return get_best_sellers("This Month")
 
-	def test_the_five_best_sellers_come_first_and_the_rest_are_others(self):
+	def test_only_the_five_best_sellers_come_back_and_the_total_counts_every_item(self):
 		codes = [_item(f"Seller {index}") for index in range(7)]
 		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (60, 50, 40, 30, 20, 10, 5), strict=True)))
 		_invoice("2031-12-02", 0, 0, items=[(codes[4], 45)])
@@ -250,12 +250,24 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 
 		self.assertEqual(
 			[(row["item"], row["amount"]) for row in result["items"]],
-			[(codes[4], 65), (codes[0], 60), (codes[1], 50), (codes[2], 40), (codes[3], 30), (None, 15)],
+			[(codes[4], 65), (codes[0], 60), (codes[1], 50), (codes[2], 40), (codes[3], 30)],
 		)
 		self.assertEqual(result["items"][0]["item_name"], "Seller 4")
-		self.assertEqual(result["items"][-1]["item_name"], "Others")
+		self.assertNotIn(None, [row["item"] for row in result["items"]])
 		self.assertEqual(result["total"], Decimal("260.00"))
-		self.assertEqual(result["total"], sum(row["amount"] for row in result["items"]))
+		self.assertGreater(result["total"], sum(row["amount"] for row in result["items"]))
+
+	def test_a_tie_at_fifth_place_keeps_the_first_item_code(self):
+		codes = sorted(_item(f"Tied {index}") for index in range(6))
+		amounts = (90, 80, 70, 60, 50, 50)
+		_invoice("2031-12-01", 0, 0, items=list(zip(reversed(codes), amounts, strict=True)))
+
+		result = self._best_sellers()
+
+		fifth, sixth = codes[:2]
+		self.assertEqual(result["items"][-1]["item"], fifth)
+		self.assertNotIn(sixth, _amounts(result))
+		self.assertEqual(result["total"], Decimal("400.00"))
 
 	def test_amounts_are_converted_to_the_base_currency(self):
 		doubled, plain = _item("Imported Book"), _item("Local Book")
@@ -275,15 +287,6 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 
 		self.assertEqual(labels, {first: f"Atlas ({first})", second: f"Atlas ({second})", missing: missing})
 
-	def test_an_item_named_others_keeps_its_own_slice(self):
-		codes = [_item("Others"), *(_item(f"Shelf {index}") for index in range(5))]
-		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (90, 50, 40, 30, 20, 10), strict=True)))
-
-		items = self._best_sellers()["items"]
-
-		self.assertEqual(items[0]["item_name"], f"Others ({codes[0]})")
-		self.assertEqual((items[-1]["item"], items[-1]["item_name"]), (None, "Others"))
-
 	def test_returns_lower_an_item_and_drafts_cancelled_and_other_periods_do_not_count(self):
 		kept, returned, cleared = _item("Kept Book"), _item("Returned Book"), _item("Cleared Book")
 		_invoice("2031-12-01", 0, 0, items=[(kept, 100), (returned, 80), (cleared, 40)])
@@ -300,13 +303,15 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 		)
 		self.assertEqual(result["total"], Decimal("150.00"))
 
-	def test_few_items_have_no_others_and_no_sales_is_empty(self):
+	def test_few_items_all_come_back_and_no_sales_is_empty(self):
 		self.assertEqual(self._best_sellers(), {"items": [], "total": 0})
 
 		codes = [_item(f"Few {index}") for index in range(3)]
 		_invoice("2031-12-01", 0, 0, items=list(zip(codes, (30, 20, 10), strict=True)))
 
-		self.assertEqual([row["item"] for row in self._best_sellers()["items"]], codes)
+		result = self._best_sellers()
+		self.assertEqual([row["item"] for row in result["items"]], codes)
+		self.assertEqual(result["total"], Decimal("60.00"))
 
 	def test_users_who_cannot_read_sales_invoices_are_refused(self):
 		with self.set_user(ensure_user("books-dashboard-outsider@example.com", "Translator")):

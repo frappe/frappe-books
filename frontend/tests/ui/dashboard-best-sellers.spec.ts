@@ -10,9 +10,9 @@ const sellers = {
     { item: 'MAPS-03', item_name: 'Old Maps', amount: 1500 },
     { item: 'BIBLE-04', item_name: 'Family Bible', amount: 1000 },
     { item: 'NOVEL-05', item_name: 'Signed Novel', amount: 500 },
-    { item: null, item_name: 'Others', amount: 250 },
   ],
-  total: 11250,
+  // Items past the fifth count here but are not drawn.
+  total: 12000,
 };
 
 let response: unknown = sellers;
@@ -28,17 +28,31 @@ useBooksSession();
 const card = (page: Page) =>
   page.locator('[data-slot="chart-container"]', { hasText: 'Best sellers' });
 
-// covers: AC-5
-test('the card shows the items, Others and the total sales', async ({
+// covers: AC-3, AC-5
+test('the card shows the top five and the total sales of every item', async ({
   page,
 }) => {
   await card(page).scrollIntoViewIfNeeded();
   await expect(card(page)).toHaveAttribute('data-state', 'ready');
   // Whole amounts, so the checks hold for any site currency and precision.
-  await expect(card(page)).toContainText(/Total sales: .*11,250/);
-  for (const name of ['World Atlas', 'Signed Novel', 'Others']) {
-    await expect(card(page)).toContainText(name);
+  await expect(card(page)).toContainText(/Total sales: .*12,000/);
+  await expect(card(page)).toContainText('Top 5');
+  for (const { item_name } of sellers.items) {
+    await expect(
+      card(page).getByRole('button', { name: `Hide ${item_name}` })
+    ).toBeVisible();
   }
+  await expect(card(page)).not.toContainText('Others');
+});
+
+// covers: AC-5
+test('the centre counts the items returned', async ({ page }) => {
+  response = { items: sellers.items.slice(0, 3), total: 9500 };
+  await page.reload();
+  await card(page).scrollIntoViewIfNeeded();
+
+  await expect(card(page)).toHaveAttribute('data-state', 'ready');
+  await expect(card(page)).toContainText('Top 3');
 });
 
 // covers: AC-6

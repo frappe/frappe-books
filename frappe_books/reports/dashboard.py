@@ -85,7 +85,7 @@ def get_top_expenses(period: str) -> list[dict]:
 
 @frappe.whitelist()
 def get_best_sellers(period: str) -> dict:
-	"""Return the five items with the most sales in the period, the rest as Others, and their total."""
+	"""Return the five items with the most sales in the period, and the total sales of every item."""
 	frappe.has_permission(SALES_INVOICE, "read", throw=True)
 	from_date, to_date = get_period_dates(period)
 	sales = [(row.item_code, rounded(row.amount)) for row in _item_sales(from_date, to_date)]
@@ -96,15 +96,7 @@ def get_best_sellers(period: str) -> dict:
 	top = sold[:TOP_COUNT]
 	labels = _item_labels([code for code, _amount in top])
 	items = [{"item": code, "item_name": labels[code], "amount": amount} for code, amount in top]
-	if others := sold[TOP_COUNT:]:
-		items.append(
-			{
-				"item": None,
-				"item_name": _("Others"),
-				"amount": rounded(sum_decimal(amount for _code, amount in others)),
-			}
-		)
-	return {"items": items, "total": rounded(sum_decimal(row["amount"] for row in items))}
+	return {"items": items, "total": rounded(sum_decimal(amount for _code, amount in sold))}
 
 
 @frappe.whitelist()
@@ -209,10 +201,7 @@ def _item_labels(codes) -> dict:
 	names = {item.name: item.item_name for item in items}
 	labels = {code: names.get(code) or code for code in codes}
 	counts = Counter(labels.values())
-	return {
-		code: f"{label} ({code})" if counts[label] > 1 or label == _("Others") else label
-		for code, label in labels.items()
-	}
+	return {code: f"{label} ({code})" if counts[label] > 1 else label for code, label in labels.items()}
 
 
 def _dashboard_accounts():

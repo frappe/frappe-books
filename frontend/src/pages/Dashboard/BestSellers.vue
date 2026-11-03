@@ -9,7 +9,7 @@
       :data="items"
       category="item_name"
       value="amount"
-      :center-label="t`Total sales`"
+      :center-label="t`Top ${items.length}`"
       :format="(value: number) => fyo.format(value, 'Currency')"
     >
       <!-- A full total overflows the hole (frappe/frappe-ui#1259); the subtitle keeps it in full. -->

@@ -36,8 +36,7 @@ export interface CashBalances {
 }
 
 export interface BestSeller {
-  /** Empty on the Others slice. */
-  item: string | null;
+  item: string;
   item_name: string;
   amount: number;
 }
@@ -65,7 +64,7 @@ export function getInvoiceSummary(
   );
 }
 
-/** The period's five best selling items by base currency sales, the rest as Others. */
+/** The period's five best selling items by base currency sales, and the total sales of every item. */
 export function getBestSellers(period: PeriodKey): Promise<BestSellers> {
   return call<BestSellers>('frappe_books.reports.dashboard.get_best_sellers', {
     period,

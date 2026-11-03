@@ -2,7 +2,7 @@ from collections import Counter
 
 import frappe
 from frappe import _
-from frappe.query_builder.functions import Coalesce, Sum
+from frappe.query_builder.functions import Coalesce, NullIf, Sum
 from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
@@ -182,12 +182,14 @@ def _item_sales(from_date, to_date) -> list:
 	"""Each item's sold amount in base currency over the period's submitted invoices, returns included."""
 	invoice = frappe.qb.DocType(SALES_INVOICE)
 	row = frappe.qb.DocType("Books Sales Invoice Item")
+	# An empty rate is stored as 0; count it as 1, as the invoice code does with `conversion_rate or 1`.
+	rate = Coalesce(NullIf(invoice.conversion_rate, 0), 1)
 	# No ORDER BY: the query engine wraps an ORDER BY on an expression alias in MAX() on Postgres.
 	return (
 		frappe.qb.from_(row)
 		.join(invoice)
 		.on(row.parent == invoice.name)
-		.select(row.item_code, Sum(row.amount * Coalesce(invoice.conversion_rate, 1)).as_("amount"))
+		.select(row.item_code, Sum(row.amount * rate).as_("amount"))
 		.where(row.parenttype == SALES_INVOICE)
 		.where(row.parentfield == "items")
 		.where(invoice.docstatus == 1)

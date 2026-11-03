@@ -233,6 +233,10 @@ class IntegrationTestAccountBalances(IntegrationTestCase):
 
 
 class IntegrationTestBestSellers(IntegrationTestCase):
+	def tearDown(self):
+		# Every invoice in the period counts, so one test's rows must not reach the next.
+		frappe.db.rollback()
+
 	def _best_sellers(self):
 		with self.freeze_time(TODAY):
 			return get_best_sellers("This Month")

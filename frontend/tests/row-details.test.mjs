@@ -122,6 +122,27 @@ test('a payment reference summary labels its outstanding and allocation', () => 
   );
 });
 
+test('a journal row summary labels its debit and credit', () => {
+  const entry = newFrappeDoc('JournalEntry', {
+    accounts: [
+      {
+        account: 'Cash',
+        debit_in_account_currency: fyo.pesa(5000),
+        credit_in_account_currency: fyo.pesa(0),
+      },
+    ],
+  });
+  const [row] = entry.accounts;
+  const { mobileTableFields, mobileLabelledFields } = row.schema;
+  const fields = mobileTableFields.map((name) => row.fieldMap[name]);
+
+  const summary = getRowSummary(row, fields, undefined, mobileLabelledFields);
+  assert.deepEqual(
+    [summary.title, summary.meta, summary.amount, summary.amountLabel],
+    ['Cash', 'Debit 5,000.00', '0.00', 'Credit']
+  );
+});
+
 test('a POS closing row is a phone block with a negative difference in red', () => {
   const closing = newFrappeDoc('POSClosingEntry', {
     payment_reconciliation: [

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   findSidebarEntry,
+  getFilteredLists,
   getSidebarPath,
   matchesSidebarPath,
 } from '../src/utils/sidebarNavigation.ts';
@@ -107,4 +108,37 @@ test('a form of a doctype two entries list stays under the one it was opened fro
 
   assert.equal(findSidebarEntry(groups, form, list)?.item, purchases);
   assert.equal(findSidebarEntry(groups, form)?.item, sales);
+});
+
+test("a record's form offers the filtered lists of its doctype to belong to", () => {
+  const sales = {
+    name: 'sales',
+    route: '/list/PaymentEntry/Sales Payment',
+    filters: [['party_type', '=', 'Books Customer']],
+  };
+  const purchases = {
+    name: 'purchases',
+    route: '/list/PaymentEntry/Purchase Payment',
+    filters: [['party_type', '=', 'Books Supplier']],
+  };
+  const groups = [
+    { name: 'sales', route: '/list/SalesInvoice', items: [sales] },
+    { name: 'purchases', route: '/list/PurchaseInvoice', items: [purchases] },
+    {
+      name: 'items',
+      route: '/list/Item',
+      items: [{ name: 'item', route: '/list/Item' }],
+    },
+  ];
+  const route = (schemaName) => ({
+    path: `/edit/${schemaName}/X-1`,
+    params: { schemaName, name: 'X-1' },
+    meta: { sidebarPath: '/list/:schemaName' },
+  });
+
+  assert.deepEqual(
+    getFilteredLists(groups, route('PaymentEntry')).map(({ item }) => item),
+    [sales, purchases]
+  );
+  assert.deepEqual(getFilteredLists(groups, route('Item')), []);
 });

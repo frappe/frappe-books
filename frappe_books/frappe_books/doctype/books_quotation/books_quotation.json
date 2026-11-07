@@ -8,11 +8,11 @@
  "field_order": [
   "default_section_break_1",
   "naming_series",
+  "quotation_to",
   "party_name",
   "transaction_date",
   "status",
   "selling_price_list",
-  "quotation_to",
   "items_section_break_6",
   "items",
   "taxes_section",
@@ -49,10 +49,21 @@
    "set_only_once": 1
   },
   {
+   "default": "Books Customer",
+   "fieldname": "quotation_to",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Type",
+   "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Books Customer\",\"Books Lead\"]]]",
+   "options": "DocType",
+   "placeholder": "Type",
+   "reqd": 1
+  },
+  {
    "fieldname": "party_name",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
-   "label": "Customer",
+   "label": "Party",
    "options": "quotation_to",
    "reqd": 1
   },
@@ -84,17 +95,6 @@
    "fieldtype": "Link",
    "label": "Price List",
    "options": "Books Price List"
-  },
-  {
-   "default": "Books Customer",
-   "fieldname": "quotation_to",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Type",
-   "link_filters": "[[\"DocType\",\"name\",\"in\",[\"Books Customer\",\"Books Lead\"]]]",
-   "options": "DocType",
-   "placeholder": "Type",
-   "reqd": 1
   },
   {
    "fieldname": "items_section_break_6",
@@ -226,7 +226,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-24 20:00:00.000000",
+ "modified": "2026-11-07 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Quotation",

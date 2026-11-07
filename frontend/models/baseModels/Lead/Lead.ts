@@ -3,6 +3,7 @@ import {
   Action,
   LinkedRecords,
   ListViewSettings,
+  RequiredMap,
   ValidationMap,
 } from 'fyo/model/types';
 import { FieldTypeEnum } from 'schemas/types';
@@ -11,7 +12,7 @@ import { getLeadActions, getLeadStatusColumn } from 'models/helpers';
 import { FrappeDoc } from 'src/frappe/document';
 import type { Presentation } from 'src/frappe/schema';
 import { getStates } from '../Address/Address';
-import { ADDRESS_FIELDS } from '../Party/Party';
+import { ADDRESS_FIELDS, getAddressRequired } from '../Party/Party';
 
 const ADDRESS_SECTION = 'Address';
 
@@ -32,6 +33,8 @@ export class Lead extends FrappeDoc {
     email_id: validateEmail,
     mobile_no: validatePhoneNumber,
   };
+
+  required: RequiredMap = getAddressRequired(this);
 
   override getSectionDescription(section: string): string | undefined {
     if (this.notInserted && section === ADDRESS_SECTION) {

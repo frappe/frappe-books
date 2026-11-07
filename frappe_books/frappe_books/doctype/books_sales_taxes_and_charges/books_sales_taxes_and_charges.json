@@ -46,11 +46,12 @@
    "label": "Description"
   },
   {
-   "depends_on": "eval:doc.charge_type != 'Actual'",
+   "depends_on": "eval:doc.charge_type != 'Actual' && (doc.rate || !doc.set_by_item_tax_template)",
    "fieldname": "rate",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Tax Rate"
+   "label": "Tax Rate",
+   "read_only_depends_on": "eval:doc.set_by_item_tax_template"
   },
   {
    "fieldname": "tax_amount",

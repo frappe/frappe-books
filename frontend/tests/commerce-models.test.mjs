@@ -403,6 +403,25 @@ test('a new party asks for its contact and address, a saved one shows its primar
   }
 });
 
+test('any address value of a new party or lead asks for the whole address', () => {
+  for (const schemaName of ['Customer', 'Supplier', 'Lead']) {
+    const doc = newFrappeDoc(schemaName, { name: `New ${schemaName}` });
+    const required = () =>
+      ['address_line1', 'city', 'country'].filter(
+        (fieldname) => doc.getFieldState(doc.fieldMap[fieldname]).required
+      );
+
+    doc.country = 'India';
+    assert.deepEqual(required(), [], schemaName);
+    doc.city = 'Pune';
+    assert.deepEqual(
+      required(),
+      ['address_line1', 'city', 'country'],
+      schemaName
+    );
+  }
+});
+
 test('a primary contact or address is picked from those linked to the party', async () => {
   const customer = newFrappeDoc('Customer', { name: 'Asha' });
   const { filters, emptyMessages } = getModel('Customer');

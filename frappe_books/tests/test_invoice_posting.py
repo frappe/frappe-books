@@ -68,6 +68,24 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 							doctype, party, self.ledgers[doctype], self.item, account, **NO_FOLLOW_UPS
 						)
 
+	def test_a_tax_row_has_no_rate_when_its_items_rates_differ(self):
+		other = make_item(self.income, self.expense, make_tax(self.tax_account, rate=5).name).name
+		party = make_party(self.ledgers["Books Sales Invoice"]).name
+		rows = [{"item": item, "rate": 100, "quantity": 1} for item in (self.item, other)]
+		# Both items tax one account, at 10% and 5%.
+		for items, rate, amount in ((rows[:1], 10, 10), (rows, 0, 15)):
+			with self.subTest(rate=rate):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					party,
+					self.ledgers["Books Sales Invoice"],
+					self.item,
+					self.income,
+					items=items,
+					**NO_FOLLOW_UPS,
+				)
+				self.assertEqual([(row.rate, row.amount) for row in invoice.taxes], [(rate, amount)])
+
 	def test_a_number_too_large_to_store_names_its_row(self):
 		party = make_party(self.ledgers["Books Sales Invoice"]).name
 		row = {"item": self.item, "quantity": 10**12, "rate": 10**6}

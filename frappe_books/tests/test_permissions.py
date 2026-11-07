@@ -49,7 +49,7 @@ ROLE_MATRIX = {
 	"Books Account": (FULL, FULL, NONE, NONE),
 	"Books Tax": (FULL, FULL, READ, READ),
 	"Books Defaults": (FULL, FULL, READ, READ),
-	"Print Format": (FULL, FULL, READ, READ),
+	"Print Format": (FULL, READ, READ, READ),
 	"Books Custom Form": (FULL, READ, READ, READ),
 	"Books Ledger Entry": (READ, READ, NONE, NONE),
 	"Books Stock Ledger Entry": (READ, READ, READ, READ),
@@ -172,17 +172,18 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		with self.set_user(BOOKS_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
 
-	def test_books_manager_writes_print_formats_books_user_prints(self):
+	def test_only_system_manager_writes_print_formats_books_roles_print(self):
+		values = {
+			"doctype": "Print Format",
+			"name": unique_name("Manager Format"),
+			"doc_type": "Books Sales Invoice",
+			"custom_format": 1,
+			"html": "<div>{{ doc.name }}</div>",
+		}
 		with self.set_user(MANAGER):
-			print_format = frappe.get_doc(
-				{
-					"doctype": "Print Format",
-					"name": unique_name("Manager Format"),
-					"doc_type": "Books Sales Invoice",
-					"custom_format": 1,
-					"html": "<div>{{ doc.name }}</div>",
-				}
-			).insert()
+			self.assertRaises(frappe.PermissionError, frappe.get_doc(values).insert)
+		with self.set_user(SYSTEM_MANAGER):
+			print_format = frappe.get_doc(values).insert()
 		with self.set_user(BOOKS_USER):
 			self.assertTrue(frappe.has_permission("Print Format", "print"))
 			print_format.html = "<p>{{ doc.name }}</p>"

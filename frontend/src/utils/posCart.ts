@@ -110,11 +110,26 @@ export async function setPOSRowValue(
 
   // A row discounts by a percentage or by an amount per unit, as ERPNext's does.
   if (field === 'discount_amount') {
+    validateDiscountAmount(row, value as Money);
     row.discount_percentage = 0;
   } else if (field === 'discount_percentage') {
     row.discount_amount = fyo.pesa(0);
   }
   await row.set(field, value);
+}
+
+/** The server's limit, once the rate is known: a discount amount up to it, unless the sale discounts after tax. */
+function validateDiscountAmount(row: SalesInvoiceItem, discount: Money) {
+  const rate = row.price_list_rate;
+  if (!rate || rate.isZero() || row.parentdoc?.discount_after_tax) {
+    return;
+  }
+
+  if (discount.gt(rate)) {
+    throw new ValidationError(
+      t`Item discount amount cannot exceed the row rate.`
+    );
+  }
 }
 
 /** A cart row field's label, as the cart and its keypad show it. */

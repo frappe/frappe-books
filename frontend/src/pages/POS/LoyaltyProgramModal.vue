@@ -56,6 +56,8 @@ import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { defineComponent, inject } from 'vue';
 import { t } from 'fyo';
 import Int from 'src/components/Controls/Int.vue';
+import { getErrorMessage } from 'src/utils';
+import { redeemLoyaltyPoints } from 'src/utils/posDiscounts';
 
 export default defineComponent({
   name: 'LoyaltyProgramModal',
@@ -105,22 +107,20 @@ export default defineComponent({
       this.$emit('setLoyaltyPoints', this.initialLoyaltyPoints);
       this.$emit('toggleModal', 'LoyaltyProgram', false);
     },
-    /** The server checks the points against the customer's balance and the invoice total. */
-    applyLoyaltyPoints(newValue: number): boolean {
-      if (newValue < 0) {
+    /** Redeems the points; a refusal shows here and keeps the points the sale had. */
+    async saveLoyaltyPoints() {
+      if (this.pendingLoyaltyPoints < 0) {
         this.errorMessage = t`Loyalty points cannot be negative.`;
-        return false;
+        return;
       }
 
-      this.$emit('setLoyaltyPoints', newValue);
-      this.errorMessage = '';
-      return true;
-    },
-    saveLoyaltyPoints() {
-      const applied = this.applyLoyaltyPoints(this.pendingLoyaltyPoints);
-
-      if (applied) {
+      try {
+        await redeemLoyaltyPoints(this.sinvDoc, this.pendingLoyaltyPoints);
+        this.errorMessage = '';
         this.$emit('toggleModal', 'LoyaltyProgram', false);
+      } catch (error) {
+        this.errorMessage = getErrorMessage(error as Error);
+        this.$emit('setLoyaltyPoints', this.initialLoyaltyPoints);
       }
     },
   },

@@ -1,3 +1,5 @@
+import { t } from 'fyo';
+import { ValidationError } from 'fyo/utils/errors';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { getList } from 'src/frappe/api';
 import { fyo } from 'src/initFyo';
@@ -44,6 +46,25 @@ export function canRedeemLoyalty(sale: SalesInvoice): boolean {
     hasItemsAndCustomer(sale) &&
     sale.availableLoyaltyPoints > 0
   );
+}
+
+/** Redeems `points` on the sale; refuses, as its save does, more points than the customer has or than it costs. */
+export async function redeemLoyaltyPoints(sale: SalesInvoice, points: number) {
+  if (points > sale.availableLoyaltyPoints) {
+    throw new ValidationError(
+      t`Customer ${sale.customer ?? ''} has only ${sale.availableLoyaltyPoints} available loyalty points.`
+    );
+  }
+
+  await sale.set('loyalty_points', points);
+  await sale.set('redeem_loyalty_points', points > 0);
+  await sale.preview();
+  const zero = fyo.pesa(0);
+  if ((sale.loyalty_amount ?? zero).gt(sale.base_grand_total ?? zero)) {
+    throw new ValidationError(
+      t`Loyalty redemption cannot exceed the invoice total.`
+    );
+  }
 }
 
 function hasItemsAndCustomer(sale: SalesInvoice): boolean {

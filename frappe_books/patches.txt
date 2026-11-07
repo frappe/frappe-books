@@ -12,6 +12,7 @@ frappe_books.patches.type_swiss_trade_accounts
 frappe_books.patches.set_default_party_accounts
 frappe_books.patches.clear_dependent_switches
 frappe_books.patches.set_pos_shift_details
+frappe_books.patches.set_pos_invoice_profiles
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

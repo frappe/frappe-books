@@ -14,6 +14,7 @@ from frappe_books.accounting.party_contacts import (
 	party_field,
 	validate_primary_records,
 )
+from frappe_books.accounting.settlement import party_outstanding
 from frappe_books.company import default_company
 from frappe_books.regional import validate_gstin
 
@@ -27,6 +28,11 @@ class PartyController(Document):
 	def before_validate(self):
 		self.default_currency = self.default_currency or company_currency()
 		self.set_company_account()
+		self.set_balances()
+
+	def set_balances(self):
+		"""What the party owes comes from its invoices, whatever a save sends."""
+		self.outstanding_amount = 0 if self.is_new() else party_outstanding(self.doctype, self.name)
 
 	def validate(self):
 		self.validate_accounts()

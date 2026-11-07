@@ -10,6 +10,8 @@ from frappe.utils import cint
 from frappe_books.formats import frappe_date_format, frappe_number_format
 from frappe_books.settings import update_frappe_settings
 
+MAX_INTERNAL_PRECISION = 36
+
 # Frappe's System Settings fields that follow Books fields, with the Frappe value of a Books value.
 FRAPPE_FORMATS = {
 	"date_format": ("date_format", frappe_date_format),
@@ -37,6 +39,14 @@ class BooksSystemSettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books System Settings"
+
+	def validate(self):
+		# Only the offered formats have a Frappe date format to follow.
+		if self.date_format and self.date_format not in self.meta.get_options("date_format").split("\n"):
+			frappe.throw(_("{0} is not a date format Books offers.").format(self.date_format))
+		# Money math (pesa) runs with at most 36 decimals.
+		if cint(self.internal_precision) > MAX_INTERNAL_PRECISION:
+			frappe.throw(_("Internal Precision cannot be more than {0}.").format(MAX_INTERNAL_PRECISION))
 
 	@property
 	def currency(self):

@@ -197,6 +197,7 @@
 
 <script lang="ts">
 import { Badge as FrappeBadge, Button as FrappeButton, dialog } from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
 import { t } from 'fyo';
 import { DateTime } from 'luxon';
 import { fyo } from 'src/initFyo';
@@ -533,7 +534,7 @@ export default defineComponent({
         showToast({
           id: POS_ITEM_TOAST_ID,
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
           duration: 'short',
         });
       }
@@ -648,7 +649,7 @@ export default defineComponent({
       } catch (error) {
         return showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
 
@@ -778,7 +779,7 @@ export default defineComponent({
         showToast({
           id: POS_ITEM_TOAST_ID,
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
     },
@@ -811,7 +812,7 @@ export default defineComponent({
         showToast({
           id: POS_ITEM_TOAST_ID,
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
     },
@@ -833,7 +834,7 @@ export default defineComponent({
       } catch (error) {
         showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
     },
@@ -853,7 +854,7 @@ export default defineComponent({
             : this.showSaleToast(invoice, names)
         )
         .catch((error) =>
-          showToast({ type: 'error', message: t`${error as string}` })
+          showToast({ type: 'error', message: getErrorMessage(error as Error) })
         );
     },
     showPaymentToast(payments: string[]) {
@@ -917,7 +918,7 @@ export default defineComponent({
       try {
         await this.sinvDoc.preview();
       } catch (error) {
-        showToast({ type: 'error', message: t`${error as string}` });
+        showToast({ type: 'error', message: getErrorMessage(error as Error) });
       }
     },
     async routeToSinvList() {

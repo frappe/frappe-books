@@ -49,7 +49,7 @@
 </template>
 
 <script lang="ts">
-import { t } from 'fyo';
+import { getErrorMessage } from 'src/utils';
 import Modal from 'src/components/POS/POSDialog.vue';
 import { defineComponent, inject } from 'vue';
 import { showToast } from 'src/utils/interactive';
@@ -98,7 +98,7 @@ export default defineComponent({
       } catch (error) {
         showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
     },

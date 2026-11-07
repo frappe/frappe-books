@@ -92,6 +92,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton, Icon as FrappeIcon } from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
 import Modal from 'src/components/POS/POSDialog.vue';
 import CashCountTable from 'src/components/POS/CashCountTable.vue';
 import { paymentMethodIcons } from 'src/components/POS/types';
@@ -111,7 +112,6 @@ import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
 import { showToast } from 'src/utils/interactive';
-import { t } from 'fyo';
 import type { POSShift } from 'src/utils/posShift';
 
 export default defineComponent({
@@ -237,7 +237,7 @@ export default defineComponent({
       } catch (error) {
         showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
           duration: 'short',
         });
         return;

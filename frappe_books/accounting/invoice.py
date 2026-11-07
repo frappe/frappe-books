@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.desk.form import linked_with
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
@@ -186,8 +187,10 @@ class PostingInvoiceController(InvoiceController):
 		# The submit makes the payment, so it needs no right to make payments.
 		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
 		payment.flags.ignore_permissions = True
-		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
+		# No one enters a bank reference or clearance for an automatic payment: it refers to
+		# the invoice and clears as it is made.
 		payment.reference_id = self.name
+		payment.clearance_date = getdate(payment.date)
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)

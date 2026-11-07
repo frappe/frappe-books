@@ -37,6 +37,15 @@ class IntegrationTestSettlement(IntegrationTestCase):
 				settlement.settle(invoice.reload(), amount, reverse)
 				self.assertEqual(stored_balance(invoice), balance)
 
+	def test_a_party_save_keeps_what_its_invoices_owe(self):
+		self.submit_invoice()
+		customer = frappe.get_doc("Books Customer", self.party)
+		customer.update({"outstanding_amount": 99999, "loyalty_points": 500})
+		customer.save()
+
+		self.assertEqual(customer.db_get("outstanding_amount"), 198)
+		self.assertEqual(customer.db_get("loyalty_points"), 0)
+
 	def test_a_credit_note_owes_its_total_back(self):
 		credit_note = map_return("Books Sales Invoice", self.submit_invoice().name).insert()
 		# A draft shows its total as positive, as the Books app does.

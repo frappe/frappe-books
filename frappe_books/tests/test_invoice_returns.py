@@ -6,7 +6,13 @@ from frappe_books.frappe_books.doctype.books_delivery_note.test_books_delivery_n
 	make_batch,
 	seed_stock,
 )
-from frappe_books.tests.accounting import make_account, make_customer, make_invoice, make_item
+from frappe_books.tests.accounting import (
+	make_account,
+	make_customer,
+	make_invoice,
+	make_item,
+	set_company_value,
+)
 
 
 class IntegrationTestInvoiceReturns(IntegrationTestCase):
@@ -51,6 +57,41 @@ class IntegrationTestInvoiceReturns(IntegrationTestCase):
 		remaining = map_return(invoice.doctype, invoice.name)
 
 		self.assertEqual([row.qty for row in remaining.items], [-1])
+
+	def test_a_return_credits_an_item_at_most_at_its_sold_rate(self):
+		expense = make_account("Return Expense", root_type="Expense", account_type="Expense Account").name
+		set_company_value("default_discount_account", expense)
+		item = make_item(self.income.name, expense).name
+		invoice = self._submitted_invoice(item, discount_percentage=50)
+
+		for changes in ({"discount_percentage": 0, "discount_amount": 0}, {"price_list_rate": 300}):
+			with self.subTest(changes=changes):
+				credit_note = map_return(invoice.doctype, invoice.name)
+				credit_note.items[0].update({"qty": -1, **changes})
+				self.assertRaisesRegex(
+					frappe.ValidationError,
+					"cannot be returned at more than it was sold for",
+					credit_note.insert,
+				)
+
+		credit_note = map_return(invoice.doctype, invoice.name).insert()
+		self.assertEqual(credit_note.grand_total, -100)
+
+	def test_a_new_invoice_cannot_be_saved_as_returned(self):
+		expense = make_account("Return Expense", root_type="Expense", account_type="Expense Account").name
+		item = make_item(self.income.name, expense).name
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			item,
+			self.income.name,
+			is_fully_returned=1,
+			items=[{"item_code": item, "price_list_rate": 100, "qty": 2}],
+		).submit()
+
+		self.assertEqual(invoice.db_get("is_fully_returned"), 0)
+		self.assertEqual([row.qty for row in map_return(invoice.doctype, invoice.name).items], [-2])
 
 	def _submitted_invoice(self, item, **row):
 		return make_invoice(

@@ -5,6 +5,7 @@ import frappe
 
 from frappe_books.accounting.party import PartyController, map_invoice
 from frappe_books.accounting.party_contacts import link_lead_records
+from frappe_books.commerce.loyalty import get_available_points
 from frappe_books.settings import require_features
 
 
@@ -40,6 +41,11 @@ class BooksCustomer(PartyController):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Customer"
+
+	def set_balances(self):
+		"""Its loyalty points, too, come from its point entries."""
+		super().set_balances()
+		self.loyalty_points = 0 if self.is_new() else get_available_points(self.name)
 
 	def validate(self):
 		require_features(self, {"loyalty_program": "enable_loyalty_point_program"})

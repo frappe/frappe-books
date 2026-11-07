@@ -3,6 +3,7 @@
 
 from frappe.model.document import Document
 
+from frappe_books.accounting.accounts import validate_tax_accounts
 from frappe_books.accounting.ledger import validate_leaf_accounts
 
 
@@ -28,5 +29,5 @@ class BooksItemTaxTemplate(Document):
 
 	def validate(self):
 		# Invoices post to these accounts.
-		accounts = {row.get(field) for row in self.taxes for field in ("tax_type", "payment_account")}
-		validate_leaf_accounts(accounts - {None, ""})
+		validate_tax_accounts(self.taxes, "tax_type")
+		validate_leaf_accounts({row.payment_account for row in self.taxes} - {None, ""})

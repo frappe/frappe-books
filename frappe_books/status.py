@@ -31,10 +31,8 @@ def get_status(doc) -> str:
 		return "Return"
 	if doc.doctype in PARTLY_BILLED:
 		return _billing_status(doc)
-	if _is_returned(doc):
-		return RETURN_ISSUED[doc.doctype]
 	if doc.doctype in INVOICE_DOCTYPES:
-		return _payment_status(doc)
+		return _invoice_status(doc)
 	return SUBMITTED.get(doc.doctype, "Submitted")
 
 
@@ -51,11 +49,16 @@ def _billing_status(transfer) -> str:
 	return PARTLY_BILLED[transfer.doctype] if flt(transfer.per_billed) else "To Bill"
 
 
-def _is_returned(doc) -> bool:
+def _invoice_status(invoice) -> str:
+	"""A fully returned invoice, or a settled one with a return, shows the return; else what it owes."""
+	if invoice.is_fully_returned or (not as_decimal(invoice.outstanding_amount) and _is_returned(invoice)):
+		return RETURN_ISSUED[invoice.doctype]
+	return _payment_status(invoice)
+
+
+def _is_returned(invoice) -> bool:
 	"""An invoice has a submitted return against it."""
-	if doc.doctype not in INVOICE_DOCTYPES:
-		return False
-	return bool(frappe.db.exists(doc.doctype, {"return_against": doc.name, "docstatus": 1}))
+	return bool(frappe.db.exists(invoice.doctype, {"return_against": invoice.name, "docstatus": 1}))
 
 
 def _payment_status(invoice) -> str:

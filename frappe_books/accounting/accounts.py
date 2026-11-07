@@ -5,26 +5,56 @@ from frappe_books.company import default_company
 
 PARTY_ACCOUNT_TYPES = {"Books Customer": "Receivable", "Books Supplier": "Payable"}
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
+# Taxes and charges post to tax, charge, income or expense ledgers; never to money, parties, stock or equity.
+TAX_ACCOUNT_TYPES = (
+	"",
+	"Tax",
+	"Chargeable",
+	"Income Account",
+	"Expense Account",
+	"Expenses Included In Valuation",
+)
+TAX_ROOT_TYPES = ("Asset", "Liability", "Income", "Expense")
 
 
 def validate_account(doc, fieldname, account_types=(), root_types=()):
-	"""Throw unless the field holds a ledger account of one of the account types and root types."""
-	account = doc.get(fieldname)
-	values = account and frappe.db.get_value(
-		"Books Account", account, ["is_group", "account_type", "root_type"], as_dict=True
-	)
-	if not values:
+	"""Throw unless the field holds a ledger account of one of the account types and root types.
+
+	An empty string in `account_types` allows an account without a type.
+	"""
+	validate_row_accounts([doc], fieldname, account_types, root_types)
+
+
+def validate_row_accounts(rows, fieldname, account_types=(), root_types=()):
+	"""Check the field of each row as `validate_account` does, with one query for all of them."""
+	names = {row.get(fieldname) for row in rows} - {None, ""}
+	if not names:
 		return
-	label = _(doc.meta.get_label(fieldname))
-	if values.is_group:
-		frappe.throw(_("{0} cannot be the group account {1}.").format(label, account))
-	for allowed, value in ((account_types, values.account_type), (root_types, values.root_type)):
+	accounts = frappe.get_all(
+		"Books Account",
+		filters={"name": ["in", list(names)]},
+		fields=["name", "is_group", "account_type", "root_type"],
+	)
+	accounts = {account.name: account for account in accounts}
+	for row in rows:
+		if account := accounts.get(row.get(fieldname)):
+			_check_account(row, fieldname, account, account_types, root_types)
+
+
+def _check_account(row, fieldname, account, account_types, root_types):
+	label = _(row.meta.get_label(fieldname))
+	if row.get("parentfield"):
+		label = _("Row #{0}: {1}").format(row.idx, label)
+	if account.is_group:
+		frappe.throw(_("{0} cannot be the group account {1}.").format(label, account.name))
+	for allowed, value in ((account_types, account.account_type or ""), (root_types, account.root_type)):
 		if allowed and value not in allowed:
-			frappe.throw(
-				_("{0} must be of type {1}, but {2} is not.").format(
-					label, " or ".join(_(option) for option in allowed), account
-				)
-			)
+			options = " or ".join(_(option) for option in allowed if option)
+			frappe.throw(_("{0} must be of type {1}, but {2} is not.").format(label, options, account.name))
+
+
+def validate_tax_accounts(rows, fieldname="account_head"):
+	validate_row_accounts(rows, fieldname, TAX_ACCOUNT_TYPES, TAX_ROOT_TYPES)
 
 
 def validate_payment_account(doc, fieldname, method_type):

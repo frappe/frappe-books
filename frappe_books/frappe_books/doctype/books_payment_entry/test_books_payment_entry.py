@@ -325,6 +325,12 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.preview()
 		self.assertEqual([row.allocated_amount for row in payment.references], [100, 180])
 
+	def test_preview_takes_a_write_off_off_the_paid_amount(self):
+		set_company_value("write_off_account", make_account("Rules Write Off", root_type="Expense").name)
+		payment = self._payment(self.invoice, deductions=[{"amount": 10}])
+		payment.preview()
+		self.assertEqual((payment.paid_amount, payment.references[0].allocated_amount), (170, 180))
+
 	def test_a_payment_party_is_a_customer_or_a_supplier(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		payment = self._payment(self.invoice, party_type="Books Lead", party=lead.name)
@@ -491,6 +497,18 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.assertEqual(
 			[(row.debit, row.credit) for row in entries if row.account == writeoff.name], [(10, 0)]
 		)
+
+	def test_a_write_off_posts_only_to_an_income_or_expense_account(self):
+		equity = make_account("Rules Capital", root_type="Equity")
+		payment = self._payment(
+			self.invoice, paid_amount=170, deductions=[{"account": equity.name, "amount": 10}]
+		)
+		payment.references[0].allocated_amount = 180
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "Row #1: Account must be of type Expense or Income"
+		):
+			payment.insert()
 
 	def test_a_payment_write_off_credits_the_company_write_off_account(self):
 		writeoff = make_account("Rules Write Off", root_type="Expense")

@@ -64,6 +64,9 @@ class IntegrationTestPricing(IntegrationTestCase):
 		self.assertEqual([row.pricing_rule for row in invoice.pricing_rules], [rule.name])
 		invoice.submit()
 		self.assertEqual(frappe.db.get_value("Books Coupon Code", coupon.name, "used"), 1)
+		coupon.reload().used = 0
+		coupon.save()
+		self.assertEqual(coupon.db_get("used"), 1)
 		invoice.cancel()
 		self.assertEqual(frappe.db.get_value("Books Coupon Code", coupon.name, "used"), 0)
 

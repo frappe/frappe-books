@@ -117,7 +117,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 	def set_loyalty_amount(self):
 		"""What redeemed points pay, in the company currency; a return gives back its share of its original's."""
 		if self.return_against:
-			loyalty.set_return_redemption(self, self.grand_total)
+			loyalty.set_return_redemption(self)
 		self.loyalty_amount = loyalty.redemption_amount(self)
 
 	def get_ledger_posting(self):

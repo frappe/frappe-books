@@ -7,7 +7,7 @@ import frappe
 from frappe import _
 from frappe.utils import getdate
 
-from frappe_books.accounting.money import as_decimal, currency_unit, rounded
+from frappe_books.accounting.money import as_decimal, currency_unit, format_money, rounded
 from frappe_books.company import company_value
 
 
@@ -79,7 +79,7 @@ def _add_round_off(debits, credits):
 	if difference == 0:
 		return
 	if abs(difference) > _round_off_limit(len(debits) + len(credits)):
-		_throw_unbalanced(_total(debits), _total(credits))
+		throw_unbalanced(_total(debits), _total(credits))
 	account = company_value("round_off_account")
 	if not account:
 		frappe.throw(_("Set a round-off account in Books Company."))
@@ -96,7 +96,7 @@ def _validate(debits, credits):
 	debit = _total(debits)
 	credit = _total(credits)
 	if debit != credit:
-		_throw_unbalanced(debit, credit)
+		throw_unbalanced(debit, credit)
 	if debit == 0:
 		frappe.throw(_("Ledger posting total must be greater than zero."))
 	validate_leaf_accounts({key.account for key in debits | credits})
@@ -106,8 +106,10 @@ def _total(entries):
 	return sum(entries.values(), as_decimal(0))
 
 
-def _throw_unbalanced(debit, credit):
-	frappe.throw(_("Total debit {0} must equal total credit {1}.").format(debit, credit))
+def throw_unbalanced(debit, credit):
+	frappe.throw(
+		_("Total debit {0} must equal total credit {1}.").format(format_money(debit), format_money(credit))
+	)
 
 
 def reverse_entries(voucher):

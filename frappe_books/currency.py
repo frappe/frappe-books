@@ -1,5 +1,6 @@
 """Currency precision from CLDR, which Frappe's Currency number formats do not match for every currency, and exchange rates."""
 
+import datetime
 from decimal import Decimal
 
 import frappe
@@ -23,6 +24,12 @@ def smallest_unit(currency: str) -> Decimal:
 
 @frappe.whitelist()
 def get_exchange_rate(from_currency: str, to_currency: str, date: str | None = None) -> float | None:
+	return exchange_rate(from_currency, to_currency, date)
+
+
+def exchange_rate(
+	from_currency: str, to_currency: str, date: str | datetime.date | None = None
+) -> float | None:
 	"""Return the rate on `date` from a public rates service, or None when it has none.
 
 	Only the currency codes and the date leave the server.

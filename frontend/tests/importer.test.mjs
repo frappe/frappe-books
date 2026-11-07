@@ -36,6 +36,16 @@ test('import columns report duplicates and missing required fields', async () =>
   );
 });
 
+test('a required field the server has a default for is not required in a file', () => {
+  const series = new Importer('NumberSeries', fyo);
+  const start = series.templateFieldsMap.get('NumberSeries.start');
+  assert.equal(start.required, false);
+
+  const invoice = new Importer('SalesInvoice', fyo);
+  const date = invoice.templateFieldsMap.get('SalesInvoice.posting_date');
+  assert.equal(date.required, false);
+});
+
 test('child table fields are never required in an import template', async () => {
   const importer = new Importer('SalesInvoice', fyo);
   const childFields = [...importer.templateFieldsMap.values()].filter(
@@ -183,6 +193,19 @@ test('a file with fewer columns than the template has only its own columns', () 
   assert.deepEqual(headless.assignedTemplateFields, [null, null]);
 });
 
+test('a header row with a column of the file’s own maps the columns it names', () => {
+  const importer = new Importer('Customer', fyo);
+  const [first, second] = importer.assignedTemplateFields;
+  const header = (key) => importer.templateHeadersByFieldKey.get(key);
+
+  importer.selectFile(
+    [`${header(first)},${header(second)},Comments`, 'a,b,c'].join('\n')
+  );
+
+  assert.deepEqual(importer.assignedTemplateFields, [first, second, null]);
+  assert.equal(importer.valueMatrix.length, 1);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Customer', fyo);
   const [first, second, third] = importer.assignedTemplateFields;
@@ -227,6 +250,14 @@ test('the import file puts each document’s rows together, its values on the fi
   assert.deepEqual(file.gridRows, [0, 2, 1]);
   assert.deepEqual(getGridRows(file, [2, 3]), [0, 2]);
   assert.equal(importer.getRowName(2), 'A');
+});
+
+test('a failed row without a name is named by its row number', () => {
+  const importer = new Importer('Address', fyo);
+  importer.assignedTemplateFields = ['Address.address_line1'];
+  importer.valueMatrix = [[{ value: '1 Road' }], [{ value: '2 Road' }]];
+
+  assert.equal(importer.getRowName(1), 'Row 2');
 });
 
 test('a template without a name column imports a document per row, as Frappe names addresses', () => {
@@ -359,4 +390,19 @@ test('fix failed keeps the failed rows and the file columns', async () => {
     'Customer.email_id',
     'Customer.customer_name',
   ]);
+});
+
+test('a Check cell reads 1/0, Yes/No and True/False; other text is a cell error', () => {
+  const importer = new Importer('Account', fyo);
+  const column = importer.assignedTemplateFields.indexOf('Account.is_group');
+  assert.notEqual(column, -1);
+  const read = (text) => importer.getValueMatrixItem(column, text);
+
+  for (const text of ['1', 'Yes', 'TRUE', ' true ']) {
+    assert.deepEqual(read(text), { value: true, rawValue: text }, text);
+  }
+  for (const text of ['0', 'No', 'false']) {
+    assert.deepEqual(read(text), { value: false, rawValue: text }, text);
+  }
+  assert.equal(read('maybe').error, true);
 });

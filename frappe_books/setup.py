@@ -48,10 +48,11 @@ CORE_PERMISSIONS = {
 	"Data Import": {
 		"Books Manager": ("read", "write", "create", "if_owner"),
 	},
+	# Print Format Jinja can read any table, so only System Manager writes them, as in Frappe.
 	"Print Format": {
 		"Books User": ("read", "print"),
 		"Books Cashier": ("read", "print"),
-		"Books Manager": ("read", "write", "create", "delete", "print"),
+		"Books Manager": ("read", "print"),
 	},
 }
 

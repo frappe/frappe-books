@@ -708,7 +708,8 @@ function getDocReferenceLabel(doc: FrappeDoc) {
     return label;
   }
 
-  return doc.name || label;
+  // The form's title, e.g. `Customer` for the Custom Form named `Books Customer`.
+  return doc.formTitle || doc.name || label;
 }
 
 export const printSizes = [

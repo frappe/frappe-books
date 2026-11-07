@@ -23,6 +23,7 @@
     v-else-if="['Date', 'Datetime'].includes(field?.fieldtype ?? '')"
     :model-value="String(value ?? '')"
     v-bind="controlProps"
+    :format="pickerFormat"
     :clearable="true"
     side="bottom"
     align="start"
@@ -80,6 +81,7 @@ import type { FilterRow, FilterValue } from 'src/utils/filterQuery';
 import { toSchemaName } from 'src/frappe/registry';
 import { isMobile } from 'src/utils/viewport';
 import FilterLinkInput from './FilterLinkInput.vue';
+import { getDatePickerFormat } from './Controls/datePickerFormat';
 
 export default defineComponent({
   components: {
@@ -133,6 +135,11 @@ export default defineComponent({
       // The type filter holds a DocType, e.g. `Books Lead`; links search its schema.
       const target = targets.size === 1 ? [...targets][0] : '';
       return toSchemaName(target) ?? '';
+    },
+    /** Typed dates read in the system date format, as the form's date fields do. */
+    pickerFormat(): string {
+      const format = getDatePickerFormat();
+      return this.field?.fieldtype === 'Date' ? format : `${format} HH:mm:ss`;
     },
     /** Phones use the native date and time picker. */
     isNativeDate(): boolean {

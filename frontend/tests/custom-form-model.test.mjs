@@ -89,7 +89,8 @@ test('a row asks for options, a target or references as its field type needs', a
   const [row] = form.custom_fields;
   assert.ok(row instanceof CustomField);
   const shown = (fieldname) => !row.getFieldState(field(row, fieldname)).hidden;
-  const required = (fieldname) => row.getFieldState(field(row, fieldname)).required;
+  const required = (fieldname) =>
+    row.getFieldState(field(row, fieldname)).required;
   assert.deepEqual(['options', 'target', 'references'].map(shown), [
     false,
     false,

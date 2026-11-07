@@ -2,7 +2,9 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 from frappe_books.accounting.accounts import validate_changed_accounts
 from frappe_books.coa import ensure_discount_account
@@ -92,6 +94,13 @@ class BooksAccountingSettings(Document):
 
 	def validate(self):
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
+		self.validate_setup_complete()
 		validate_changed_accounts(self, ACCOUNT_TYPES)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)
+
+	def validate_setup_complete(self):
+		"""Only the setup sets it, as clearing it would let a second setup merge another chart in."""
+		before = self.get_doc_before_save()
+		if cint(self.setup_complete) != cint(before and before.setup_complete):
+			frappe.throw(_("Only the setup wizard can change Setup Complete."))

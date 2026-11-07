@@ -33,6 +33,34 @@ def validate_batches(rows):
 		_validate_batch(row, items[row["item"]], batch_items)
 
 
+def validate_listed_serial_numbers(rows):
+	"""Check the serial numbers rows list: of their item, one per stock unit, none twice. Rows without any pass."""
+	listed = [
+		{"item": row.item, "serial_number": row.serial_number, "quantity": row.quantity}
+		for row in rows
+		if row.item and row.serial_number
+	]
+	if listed:
+		_validate_serial_numbers(listed)
+
+
+def validate_serial_numbers_not_gone(rows):
+	"""Reject serial numbers that were in stock and have left it; ones not yet received pass."""
+	serial_numbers = sorted(set(_all_serial_numbers(rows)))
+	if not serial_numbers:
+		return
+	sle = frappe.qb.DocType(LEDGER)
+	gone = (
+		frappe.qb.from_(sle)
+		.select(sle.serial_number)
+		.where(sle.serial_number.isin(serial_numbers))
+		.groupby(sle.serial_number)
+		.having(Sum(sle.quantity) <= 0)
+	).run(pluck=True)
+	if gone:
+		frappe.throw(_("Serial number {0} has already left stock.").format(", ".join(sorted(gone))))
+
+
 def create_series_batches(rows):
 	"""Give rows of batch items without a batch a new batch named from the item's batch series.
 

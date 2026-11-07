@@ -381,7 +381,7 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 	def test_foreign_currency_invoice_needs_an_exchange_rate(self):
 		party = make_party(self.receivable.name, currency=foreign_currency())
 		with (
-			patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=None),
+			patch("frappe_books.accounting.invoice.exchange_rate", return_value=None),
 			self.assertRaisesRegex(frappe.ValidationError, "Set an exchange rate"),
 		):
 			make_invoice(

@@ -201,7 +201,7 @@ def _validate_batch(transfer, item, batch_items):
 		frappe.throw(_("Please select a batch first"))
 	if batch and not item.has_batch_no:
 		frappe.throw(_("Item {0} does not use batches.").format(transfer["item_code"]))
-	if batch_items.get(batch) and batch_items[batch] != transfer["item_code"]:
+	if batch and batch_items.get(batch) != transfer["item_code"]:
 		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
 
 

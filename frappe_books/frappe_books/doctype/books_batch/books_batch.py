@@ -16,7 +16,7 @@ class BooksBatch(Document):
 
 		batch_id: DF.Data
 		expiry_date: DF.Date | None
-		item: DF.Link | None
+		item: DF.Link
 		manufacturing_date: DF.Date | None
 	# end: auto-generated types
 

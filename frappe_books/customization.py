@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from contextlib import contextmanager
 
 import frappe
 from frappe import _
@@ -152,10 +153,29 @@ def get_saved_definition(doctype: str, fieldname: str) -> dict:
 
 def update_custom_fields(doc):
 	"""Save each row's definition in its Custom Field and delete those of removed rows."""
-	for row in doc.custom_fields:
-		_save_custom_field(doc.name, _custom_field_values(row))
-	_remove_stale_custom_fields(doc.name, {custom_target_field(row.fieldname) for row in doc.custom_fields})
-	frappe.clear_cache(doctype=doc.name)
+	with _table_altered_once(doc.name):
+		for row in doc.custom_fields:
+			_save_custom_field(doc.name, _custom_field_values(row))
+		_remove_stale_custom_fields(
+			doc.name, {custom_target_field(row.fieldname) for row in doc.custom_fields}
+		)
+
+
+@contextmanager
+def _table_altered_once(doctype: str):
+	"""Alter the table once, after every Custom Field passed Frappe's checks, as create_custom_fields does.
+
+	MariaDB commits at each ALTER TABLE, so a field failing after another altered the table saved part of the form.
+	"""
+	# Also clears the meta a failed save cached, when the save rolls back.
+	frappe.clear_cache(doctype=doctype)
+	frappe.flags.in_create_custom_fields = True
+	try:
+		yield
+	finally:
+		frappe.flags.in_create_custom_fields = False
+	frappe.clear_cache(doctype=doctype)
+	frappe.db.updatedb(doctype)
 
 
 def remove_custom_fields(doctype: str):

@@ -16,6 +16,7 @@ export class NumberSeries extends FrappeDoc {
           PaymentEntry: 'Payment Entry',
           JournalEntry: 'Journal Entry',
           StockEntry: 'Stock Entry',
+          DeliveryNote: 'Delivery Note',
           PurchaseReceipt: 'Purchase Receipt',
           PricingRule: 'Pricing Rule',
         },

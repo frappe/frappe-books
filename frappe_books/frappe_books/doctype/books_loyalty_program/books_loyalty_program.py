@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.commerce.loyalty import program_status
+from frappe_books.commerce.loyalty import program_status, program_uses
 from frappe_books.settings import require_feature
 
 
@@ -42,9 +42,8 @@ class BooksLoyaltyProgram(Document):
 		require_feature("enable_loyalty_program")
 		if getdate(self.from_date) > getdate(self.to_date):
 			frappe.throw(_("Loyalty program start date must be on or before its end date."))
+		self.used = 0 if self.is_new() else program_uses(self.name)
 		# The messages /books shows at these fields.
-		if self.used < 0:
-			frappe.throw(_("Used count cannot be negative"))
 		if self.maximum_use < 0:
 			frappe.throw(_("Maximum use cannot be negative"))
 		if self.maximum_use and self.used > self.maximum_use:

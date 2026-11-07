@@ -12,6 +12,7 @@ from frappe_books.frappe_books.doctype.books_pos_closing_entry.test_books_pos_cl
 	close_shift,
 )
 from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
+	open_shift,
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
@@ -154,7 +155,9 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		)
 		self.assertEqual(invoice.reload().status, "Paid")
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
-		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Bank": 100, "Cash": 80})
+		self.assertEqual(
+			transacted_amounts(sold_at, now_datetime(), frappe.session.user), {"Bank": 100, "Cash": 80}
+		)
 
 	def test_split_tenders_that_pay_in_full_need_no_partial_payments(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 0)
@@ -230,7 +233,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		payment = frappe.get_doc("Books Payment Entry", counter_payments(refund)[0])
 		self.assertEqual((payment.payment_type, payment.paid_from), ("Pay", self.counter))
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
-		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
+		self.assertEqual(transacted_amounts(sold_at, now_datetime(), frappe.session.user), {"Cash": 0})
 
 	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
 		with self.set_user(self.make_cashier()):
@@ -288,7 +291,11 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 	def make_cashier(self):
 		# A cashier cannot pick the Debit To account, so a POS sale takes this one, as set up.
 		frappe.db.set_single_value("Books POS Settings", "default_account", self.receivable.name)
-		return ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		cashier = ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		with self.set_user(cashier):
+			# A cashier sells in their own shift.
+			open_shift(0)
+		return cashier
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

@@ -7,8 +7,12 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate, now_datetime
 
-from frappe_books.commerce.pos import open_shift_name
-from frappe_books.frappe_books.doctype.books_pos_opening_entry.books_pos_opening_entry import get_open_shift
+from frappe_books.commerce import pricing
+from frappe_books.commerce.pos import any_open_shift, open_shift_name, pos_profile
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.books_pos_opening_entry import (
+	get_open_shift,
+	get_pos_profile,
+)
 from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, root_group, unique_name
 
 
@@ -86,11 +90,48 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 
 		self.assertIsNone(open_shift_name())
 
-	def test_only_one_shift_can_be_open(self):
+	def test_a_user_can_have_only_one_open_shift(self):
 		open_shift(0)
 
-		with self.assertRaisesRegex(frappe.ValidationError, "already open"):
+		with self.assertRaisesRegex(frappe.ValidationError, "already has an open POS shift"):
 			open_shift(0)
+
+	def test_each_cashier_opens_their_own_shift(self):
+		mine = open_shift(0)
+
+		with self.set_user(make_user("Books Cashier")):
+			theirs = open_shift(0)
+			self.assertEqual(get_open_shift(), theirs.name)
+
+		self.assertEqual(get_open_shift(), mine.name)
+
+	def test_a_cashier_reads_only_their_own_shifts(self):
+		mine = open_shift(0)
+
+		with self.set_user(make_user("Books Cashier")):
+			self.assertFalse(frappe.has_permission(mine.doctype, "read", doc=mine.name))
+
+	def test_a_shift_sells_with_the_profile_it_names(self):
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", None)
+		profile = make_profile(allow_rate_change=0)
+		draft = make_opening_shift(0)
+		draft.pos_profile = profile
+		draft.insert().submit()
+
+		self.assertEqual((pos_profile(), get_pos_profile()), (profile, profile))
+		self.assertEqual(pricing.pos_setting("allow_rate_change"), 0)
+		with self.set_user(make_user("Books Cashier")):
+			self.assertFalse(pos_profile())
+			self.assertEqual(pricing.pos_setting("allow_rate_change"), 1)
+
+	def test_a_new_shift_takes_the_profile_of_pos_settings(self):
+		profile = make_profile()
+		frappe.db.set_single_value("Books POS Settings", "pos_profile", profile)
+		draft = frappe.new_doc("Books POS Opening Entry")
+
+		draft.preview()
+
+		self.assertEqual(draft.pos_profile, profile)
 
 	def test_submitted_shift_cannot_be_edited_or_deleted(self):
 		shift = open_shift(100)
@@ -114,7 +155,17 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 		open_shift(0)
 
 		settings.enable_point_of_sale = 0
-		self.assertRaisesRegex(frappe.ValidationError, "Close the open POS shift", settings.save)
+		self.assertRaisesRegex(frappe.ValidationError, "Close the open POS shifts", settings.save)
+
+	def test_point_of_sale_stays_on_while_another_user_has_a_shift_open(self):
+		settings = frappe.get_single("Books Inventory Settings")
+		settings.enable_point_of_sale = 1
+		settings.save()
+		with self.set_user(make_user("Books Cashier")):
+			open_shift(0)
+
+		settings.enable_point_of_sale = 0
+		self.assertRaisesRegex(frappe.ValidationError, "Close the open POS shifts", settings.save)
 
 	def test_open_shift_is_read_with_shift_permission(self):
 		open_shift(0)
@@ -134,7 +185,7 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 
 def set_pos_accounts():
 	"""Configure POS accounts and start without an open shift, as tests in a class share one transaction."""
-	while shift := open_shift_name():
+	while shift := any_open_shift():
 		frappe.get_doc("Books POS Opening Entry", shift).cancel()
 	counter = make_account("POS Counter", account_type="Cash")
 	write_off = make_account("POS Write Off", root_type="Expense", account_type="Expense Account")
@@ -184,6 +235,21 @@ def open_shift(cash):
 	shift = make_opening_shift(cash).insert()
 	shift.submit()
 	return shift
+
+
+def make_profile(**values):
+	return (
+		frappe.get_doc(
+			{
+				"doctype": "Books POS Profile",
+				"name": unique_name("POS Profile"),
+				"warehouse": "Stores",
+				**values,
+			}
+		)
+		.insert()
+		.name
+	)
 
 
 def make_user(role):

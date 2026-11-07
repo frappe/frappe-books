@@ -47,7 +47,7 @@ _Avoid_: stock entry
 ## Point of sale
 
 **POS shift**:
-The period a cashier works the counter, opened with counted cash and closed with counted cash.
+The period a cashier works the counter, opened with counted cash and closed with counted cash. Each cashier has their own, which sells with the POS profile it names.
 _Avoid_: session, register
 
 **Cash method**:

@@ -4,7 +4,7 @@
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.utils import get_fullname, now_datetime
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.commerce.pos import (
@@ -15,6 +15,7 @@ from frappe_books.commerce.pos import (
 	lock_pos_settings,
 	make_cash_journal,
 	open_shift_name,
+	pos_profile,
 	validate_cash_rows,
 )
 from frappe_books.permissions import check_preview_permission
@@ -40,6 +41,7 @@ class BooksPOSOpeningEntry(Document):
 		journal_entry: DF.Link | None
 		opening_cash: DF.Table[BooksOpeningCash]
 		period_start_date: DF.Datetime
+		pos_profile: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books POS Opening Entry"
@@ -48,6 +50,7 @@ class BooksPOSOpeningEntry(Document):
 		if self._action == "submit" or not self.period_start_date:
 			# The shift opens when it is submitted, as its closing shift closes it.
 			self.period_start_date = now_datetime()
+		self.set_pos_profile()
 		if cash_total(self.opening_cash) < 0:
 			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
@@ -61,8 +64,14 @@ class BooksPOSOpeningEntry(Document):
 		"""Fill the start date, a row per mode of payment and the opening cash amount, without saving."""
 		check_preview_permission(self)
 		self.period_start_date = self.period_start_date or now_datetime()
+		self.set_pos_profile()
 		self.set_balance_details()
 		self.set_opening_cash_amount()
+
+	def set_pos_profile(self):
+		"""A shift sells with the profile POS Settings names, unless the cashier picks another."""
+		if not self.pos_profile:
+			self.pos_profile = frappe.db.get_single_value("Books POS Settings", "pos_profile")
 
 	def set_balance_details(self):
 		"""A new shift lists every mode of payment, as the POS takes them all."""
@@ -79,8 +88,8 @@ class BooksPOSOpeningEntry(Document):
 
 	def before_submit(self):
 		lock_pos_settings()
-		if open_shift_name():
-			frappe.throw(_("A POS shift is already open."))
+		if open_shift_name(self.owner):
+			frappe.throw(_("{0} already has an open POS shift.").format(get_fullname(self.owner)))
 
 	def on_submit(self):
 		total = cash_total(self.opening_cash)
@@ -108,6 +117,13 @@ class BooksPOSOpeningEntry(Document):
 
 @frappe.whitelist()
 def get_open_shift() -> str | None:
-	"""Return the name of the open POS shift, if there is one."""
+	"""Return the name of the user's open POS shift, if there is one."""
 	frappe.has_permission("Books POS Opening Entry", "read", throw=True)
 	return open_shift_name()
+
+
+@frappe.whitelist()
+def get_pos_profile() -> str | None:
+	"""Return the POS profile the user's sales use."""
+	frappe.has_permission("Books POS Profile", "read", throw=True)
+	return pos_profile()

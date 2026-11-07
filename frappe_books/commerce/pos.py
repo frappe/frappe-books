@@ -13,11 +13,20 @@ from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.dates import posting_datetime
 
 
-def open_shift_name():
-	"""Return the submitted opening shift that has no submitted closing shift."""
+def open_shift_name(user=None):
+	"""Return the user's submitted opening shift that has no submitted closing shift."""
+	return _open_shift(user or frappe.session.user)
+
+
+def any_open_shift():
+	"""Return an open shift of any user."""
+	return _open_shift()
+
+
+def _open_shift(user=None):
 	opening = frappe.qb.DocType("Books POS Opening Entry")
 	closing = frappe.qb.DocType("Books POS Closing Entry")
-	names = (
+	query = (
 		frappe.qb.from_(opening)
 		.left_join(closing)
 		.on((closing.pos_opening_entry == opening.name) & (closing.docstatus == 1))
@@ -25,13 +34,23 @@ def open_shift_name():
 		.where((opening.docstatus == 1) & closing.name.isnull())
 		.orderby(opening.period_start_date, order=Order.desc)
 		.limit(1)
-	).run(pluck=True)
+	)
+	if user:
+		query = query.where(opening.owner == user)
+	names = query.run(pluck=True)
 	return names[0] if names else None
+
+
+def pos_profile():
+	"""Return the POS profile of the user's open shift, else that of POS Settings."""
+	shift = open_shift_name()
+	profile = shift and frappe.db.get_value("Books POS Opening Entry", shift, "pos_profile")
+	return profile or frappe.db.get_single_value("Books POS Settings", "pos_profile")
 
 
 def pos_customer():
 	"""Return the customer of the POS profile in use, else the Books Defaults POS customer."""
-	profile = frappe.db.get_single_value("Books POS Settings", "pos_profile")
+	profile = pos_profile()
 	customer = profile and frappe.db.get_value("Books POS Profile", profile, "customer")
 	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
 
@@ -89,8 +108,8 @@ def lock_pos_settings():
 	return settings
 
 
-def transacted_amounts(from_date, to_date):
-	"""Sum the payments of the POS invoices dated from `from_date` to `to_date`, by payment method."""
+def transacted_amounts(from_date, to_date, user):
+	"""Sum the user's payments of the POS invoices dated from `from_date` to `to_date`, by payment method."""
 	invoices = _pos_invoices(get_datetime(from_date), get_datetime(to_date))
 	if not invoices:
 		return {}
@@ -103,7 +122,7 @@ def transacted_amounts(from_date, to_date):
 		},
 		fields=["parent", "reference_name", "allocated_amount"],
 	)
-	methods = _submitted_payment_methods({reference.parent for reference in references})
+	methods = _submitted_payment_methods({reference.parent for reference in references}, user)
 	invoices = {invoice.name: invoice for invoice in invoices}
 	result = defaultdict(as_decimal)
 	for reference in references:
@@ -185,13 +204,13 @@ def _pos_invoices(from_datetime, to_datetime):
 	]
 
 
-def _submitted_payment_methods(names):
+def _submitted_payment_methods(names, user):
 	if not names:
 		return {}
 	return dict(
 		frappe.get_all(
 			"Books Payment Entry",
-			filters={"name": ["in", sorted(names)], "docstatus": 1},
+			filters={"name": ["in", sorted(names)], "docstatus": 1, "owner": user},
 			fields=["name", "mode_of_payment"],
 			as_list=True,
 		)

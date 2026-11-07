@@ -688,7 +688,8 @@ function getOrderedFields(schema: Schema): Field[] {
 
 /**
  * An editable copy of the field. Child rows are checked on save, so none is
- * required here; a document's name groups its rows, so it is.
+ * required here; a document's name groups its rows, so it is. The server fills
+ * a required field's default, so a file need not give it.
  */
 function getTemplateField(
   field: Field,
@@ -698,7 +699,10 @@ function getTemplateField(
   return {
     ...field,
     readOnly: false,
-    required: !schema.isChild && (field.required || field.fieldname === 'name'),
+    required:
+      !schema.isChild &&
+      ((!!field.required && (field.default ?? '') === '') ||
+        field.fieldname === 'name'),
     schemaName: schema.name,
     schemaLabel: schema.label,
     fieldKey: `${schema.name}.${field.fieldname}`,

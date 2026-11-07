@@ -137,6 +137,21 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertIn(books_format(300, "Currency", invoice.currency), html)
 				self.assertNotIn(books_format(270, "Currency", invoice.currency), html)
 
+	def test_a_quote_to_a_lead_prints_the_lead_as_its_party(self):
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Print Lead")}).insert()
+		quote = frappe.get_doc(
+			{
+				"doctype": "Books Quotation",
+				"quotation_to": "Books Lead",
+				"party_name": lead.name,
+				"items": [{"item_code": self.item.name, "qty": 1, "price_list_rate": 10}],
+			}
+		).insert()
+		html = get_print(quote.doctype, quote.name, print_format="Business - Quotation")
+
+		self.assertIn("<th>Lead</th>", html)
+		self.assertNotIn("<th>Customer</th>", html)
+
 	def test_invoice_prints_the_hsn_code_with_its_leading_zero(self):
 		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
 		invoice = make_invoice(

@@ -173,10 +173,11 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
 
   assert.deepEqual(getLayout(quote).Main.Default, [
     'naming_series',
+    'quotation_to',
     'party_name',
     'transaction_date',
-    'quotation_to',
   ]);
+  assert.equal(quote.fieldMap.party_name.label, 'Party');
   const type = quote.fieldMap.quotation_to;
   assert.equal(type.fieldtype, 'Select');
   assert.deepEqual(

@@ -762,9 +762,9 @@ function isCompanyTable(field: Field, schema: Schema): boolean {
   );
 }
 
-/** Whether a file must give the field. */
+/** Whether a file must give the field: a required field the server has no default for. */
 function isFilledByUser(field: Field): boolean {
-  return !!field.required;
+  return !!field.required && (field.default ?? '') === '';
 }
 
 /**

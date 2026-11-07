@@ -122,7 +122,6 @@ def _create_serial_numbers(item, serial_numbers):
 					"doctype": "Books Serial No",
 					"serial_no": serial_number,
 					"item_code": item,
-					"status": "Active",
 				}
 			).insert(ignore_permissions=True)
 

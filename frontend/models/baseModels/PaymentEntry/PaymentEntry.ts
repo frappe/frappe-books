@@ -111,6 +111,12 @@ export class PaymentEntry extends FrappeDoc {
       this.isTransfer || (!this.canEdit && this.write_off.isZero()),
   };
 
+  /** The invoice of the first reference, which the server types the payment by. */
+  get firstInvoice(): string | undefined {
+    const [row] = (this.references ?? []) as FrappeDoc[];
+    return (row?.reference_name as string | undefined) || undefined;
+  }
+
   get isTransfer(): boolean {
     return this.payment_type === PaymentTypeEnum.InternalTransfer;
   }
@@ -160,9 +166,15 @@ export class PaymentEntry extends FrappeDoc {
       this.leaveToServer([getPaymentAccountField(this.payment_type as string)]);
     }
 
-    // Books' server totals the references.
+    // Books' server totals the references and types the payment by the first invoice;
+    // without one it has nothing to type it by, so the type stays.
     if (changed === 'references') {
-      this.leaveToServer(['paid_amount', 'payment_type']);
+      this.leaveToServer(['paid_amount']);
+      if (this.firstInvoice) {
+        this.leaveToServer(['payment_type']);
+      } else {
+        this._serverFilled.delete('payment_type');
+      }
     }
 
     await super.change(arg);

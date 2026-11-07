@@ -1,5 +1,5 @@
 import { t } from 'fyo';
-import { FiltersMap } from 'fyo/model/types';
+import { ChangeArg, FiltersMap } from 'fyo/model/types';
 import type { Filter } from 'src/frappe/api';
 import { FrappeDoc } from 'src/frappe/document';
 import { getModel, toSchemaName } from 'src/frappe/registry';
@@ -42,6 +42,15 @@ export class PaymentEntryReference extends FrappeDoc {
     ],
     reference_name: ['total_amount', 'outstanding_amount', 'allocated_amount'],
   };
+
+  /** An invoice picked from its type's list keeps that type, though the server filled it. */
+  override async change(arg: ChangeArg) {
+    if (arg.changed === 'reference_name' && this.reference_name) {
+      this._serverFilled.delete('reference_doctype');
+    }
+
+    await super.change(arg);
+  }
 
   static filters: FiltersMap = {
     reference_name: (doc) => {

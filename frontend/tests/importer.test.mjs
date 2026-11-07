@@ -242,6 +242,14 @@ test('the import file puts each document’s rows together, its values on the fi
   assert.equal(importer.getRowName(2), 'A');
 });
 
+test('a failed row without a name is named by its row number', () => {
+  const importer = new Importer('Address', fyo);
+  importer.assignedTemplateFields = ['Address.address_line1'];
+  importer.valueMatrix = [[{ value: '1 Road' }], [{ value: '2 Road' }]];
+
+  assert.equal(importer.getRowName(1), 'Row 2');
+});
+
 test('a template without a name column imports a document per row, as Frappe names addresses', () => {
   const importer = new Importer('Address', fyo);
   importer.assignedTemplateFields = [

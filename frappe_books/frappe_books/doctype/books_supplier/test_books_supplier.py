@@ -21,14 +21,14 @@ class IntegrationTestBooksSupplier(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "must be of type Payable,"):
 			make_supplier(receivable.name)
 
-	def test_supplier_defaults_to_creditors(self):
-		if not frappe.db.exists("Books Account", "Creditors"):
-			make_account("Creditors", root_type="Liability", account_type="Payable", account_name="Creditors")
+	def test_supplier_defaults_to_the_company_payable(self):
+		payable = make_account("Company Payable", root_type="Liability", account_type="Payable")
+		set_company_value("default_payable_account", payable.name)
 		supplier = frappe.get_doc(
 			{"doctype": "Books Supplier", "supplier_name": unique_name("Supplier")}
 		).insert()
 
-		self.assertEqual(supplier.accounts[0].account, "Creditors")
+		self.assertEqual(supplier.accounts[0].account, payable.name)
 
 	def test_supplier_outstanding_follows_its_purchase_invoices(self):
 		payable = make_account("Supplier Payable", root_type="Liability", account_type="Payable")

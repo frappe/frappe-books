@@ -51,7 +51,7 @@ test('the Item form shows the fields, labels, placeholders and sections it showe
     'batch_number_series | Batch Number Series |  | Inventory',
     'has_serial_no | Has Serial No |  | Inventory',
     'serial_no_series | Serial Number Series |  | Inventory',
-    'uoms | UOM Conversions |  | Inventory',
+    'uoms | UOM Conversions |  | UOM Conversions',
     'barcodes | Barcodes |  | Barcodes',
   ]);
   assert.deepEqual(getSchema('UOMConversionDetail').tableFields, [

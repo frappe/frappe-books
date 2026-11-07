@@ -7,6 +7,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import add_to_date, add_years, getdate, now_datetime, nowdate
 
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_delivery_note.test_books_delivery_note import seed_stock
 from frappe_books.reports import gst
 from frappe_books.reports.filters import get_default_filters
 from frappe_books.reports.financial_statements import TRIAL_BALANCE_KEYS
@@ -321,6 +322,15 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		self.assertEqual(
 			_run("Books Stock Ledger", item_code=self.item, voucher_type="Books Delivery Note"), []
 		)
+
+	def test_stock_ledger_filters_by_serial_number(self):
+		item = make_item(self.income.name, self.received.name, is_stock_item=1, has_serial_no=1).name
+		serial_numbers = [unique_name("SER"), unique_name("SER")]
+		seed_stock(item, quantity=2, rate=10, serial_number="\n".join(serial_numbers))
+
+		rows = _run("Books Stock Ledger", serial_no=serial_numbers[0])
+
+		self.assertEqual([(row["item_code"], row["serial_no"]) for row in rows], [(item, serial_numbers[0])])
 
 	def test_stock_ledger_groups_rows_and_numbers_them_in_order(self):
 		other = self._item()

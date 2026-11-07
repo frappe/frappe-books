@@ -21,3 +21,7 @@ class BooksSerialNo(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Serial No"
+
+	def validate(self):
+		# Stock postings set the status; a save keeps the stored one.
+		self.status = "Inactive" if self.is_new() else self.get_db_value("status")

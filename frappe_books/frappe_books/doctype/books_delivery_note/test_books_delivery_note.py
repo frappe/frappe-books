@@ -196,7 +196,9 @@ class IntegrationTestBooksDeliveryNote(IntegrationTestCase):
 
 		again = self._make_delivery_note(item, quantity=1, rate=100, items=[invoice_row(invoice, 1)])
 
-		self.assertRaisesRegex(frappe.ValidationError, "left to transfer", again.submit)
+		self.assertRaisesRegex(
+			frappe.ValidationError, f"has only 0 of {item.name} left to transfer", again.submit
+		)
 
 	def test_return_delivery_note_marks_original_returned_until_cancelled(self):
 		item, _cogs, _stock = self._tracked_item()

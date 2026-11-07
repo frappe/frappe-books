@@ -4,12 +4,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.party import PartyDocumentMixin
 from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.company import company_value
 from frappe_books.dates import posting_datetime
 from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults
-from frappe_books.inventory import invoice_transfer, stock_posting
+from frappe_books.inventory import entry_costs, invoice_transfer, stock_posting
 from frappe_books.inventory.returns import update_returned_percent, validate_transfer_return
 from frappe_books.inventory.stock import (
 	create_series_batches,
@@ -39,7 +40,7 @@ class StockTransactionController(SeriesNamingMixin, Document):
 
 	def transfer_rows(self) -> list[dict]:
 		"""Return each row as the item, stock quantity, rate per stock unit, batch and serial numbers it moves
-		between warehouses."""
+		between warehouses; the warehouses give the direction, so a return's quantity is positive too."""
 		raise NotImplementedError
 
 	def posting_datetime(self):
@@ -70,7 +71,8 @@ class StockEntryController(StockTransactionController):
 		"""Fill row warehouses, defaults and the total, without writing anything."""
 		set_purpose_warehouses(self)
 		start_row_quantities(self.items)
-		self.total_amount = populate_stock_rows(self.items)
+		populate_stock_rows(self.items)
+		self.total_amount = entry_costs.total_amount(self.items)
 
 	@frappe.whitelist()
 	def preview(self):
@@ -148,7 +150,11 @@ class StockTransferController(StatusMixin, PartyDocumentMixin, StockTransactionC
 				s_warehouse, t_warehouse = None, row.warehouse
 			if self.return_against:
 				s_warehouse, t_warehouse = t_warehouse, s_warehouse
-			rows.append(_transfer_row(row, s_warehouse, t_warehouse, row.stock_qty, row.stock_uom_rate))
+			rows.append(
+				_transfer_row(
+					row, s_warehouse, t_warehouse, abs(as_decimal(row.stock_qty)), row.stock_uom_rate
+				)
+			)
 		return rows
 
 	@frappe.whitelist()

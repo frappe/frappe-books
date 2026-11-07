@@ -117,8 +117,9 @@ def get_ledger_data(filters) -> list[dict]:
 	]
 	if filters.get("voucher_type") and filters["voucher_type"] != "All":
 		conditions.append(["voucher_type", "=", filters["voucher_type"]])
-	if filters.get("voucher_no"):
-		conditions.append(["voucher_no", "=", filters["voucher_no"]])
+	for field in ("voucher_no", "serial_no"):
+		if filters.get(field):
+			conditions.append([field, "=", filters[field]])
 	direction = "asc" if filters.get("ascending") else "desc"
 	fields = [*LEDGER_FIELDS, *_value_fields(LEDGER_VALUE_FIELDS)]
 	entries = frappe.get_list(

@@ -25,8 +25,19 @@ type AccountingFeature =
 /** A Books feature switch, by its settings fieldname. */
 export type Feature = (typeof INVENTORY_FEATURES)[number] | AccountingFeature;
 
+/** Switches that work only while another is on; the server clears them with it. */
+const NEEDED_FEATURES: Partial<Record<Feature, Feature>> = {
+  enable_pricing_rule: 'enable_discounts_and_margin',
+  enable_coupon_code: 'enable_pricing_rule',
+};
+
 /** Whether a feature is on, as the Books settings switch it. */
 export function isFeatureOn(singles: SinglesMap, feature: Feature): boolean {
+  const needed = NEEDED_FEATURES[feature];
+  if (needed && !isFeatureOn(singles, needed)) {
+    return false;
+  }
+
   const settings = (INVENTORY_FEATURES as readonly string[]).includes(feature)
     ? singles.InventorySettings
     : singles.AccountingSettings;

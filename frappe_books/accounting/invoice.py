@@ -204,8 +204,10 @@ class PostingInvoiceController(InvoiceController):
 		# The submit makes the payment, so it needs no right to make payments.
 		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
 		payment.flags.ignore_permissions = True
-		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
+		# No one enters a bank reference or clearance for an automatic payment: it refers to
+		# the invoice and clears as it is made.
 		payment.reference_no = self.name
+		payment.clearance_date = payment.posting_date
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)

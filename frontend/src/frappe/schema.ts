@@ -117,6 +117,8 @@ export interface SchemaContext {
   /** The user's roles, which decide the permission levels they can read and write. */
   roles: string[];
   placements: Placements;
+  /** A row's table's permission level, which Frappe asks of the row's fields too. */
+  tableLevel?: number;
 }
 
 // Fields every Books document has that the server sets, e.g. the one company it belongs to.
@@ -210,7 +212,7 @@ function getDocFields(
 ): Field[] {
   const fieldContext: FieldContext = {
     schemaNames: context.schemaNames,
-    levels: getPermlevels(meta, context.roles),
+    levels: getPermlevels(meta, context.roles, context.tableLevel),
     namingField: getNamingField(meta),
     fields: presentation.fields ?? {},
     states: getStates(meta),
@@ -482,8 +484,16 @@ function getStates(meta: DocTypeMeta): Record<string, string> | undefined {
   );
 }
 
-/** The permission levels the user's roles can read and write; level 0 is the document's own. */
-function getPermlevels(meta: DocTypeMeta, roles: string[]): Permlevels {
+/**
+ * The permission levels the user's roles can read and write; level 0 is the
+ * document's own. A row's fields need its table's level too: Frappe strips a
+ * table the user cannot read and resets one they cannot write.
+ */
+function getPermlevels(
+  meta: DocTypeMeta,
+  roles: string[],
+  tableLevel = 0
+): Permlevels {
   const levels: Permlevels = { read: new Set([0]), write: new Set([0]) };
   for (const perm of meta.permissions ?? []) {
     if (!roles.includes(perm.role)) {
@@ -500,5 +510,8 @@ function getPermlevels(meta: DocTypeMeta, roles: string[]): Permlevels {
     }
   }
 
-  return levels;
+  return {
+    read: levels.read.has(tableLevel) ? levels.read : new Set(),
+    write: levels.write.has(tableLevel) ? levels.write : new Set(),
+  };
 }

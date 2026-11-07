@@ -167,7 +167,23 @@ function buildDocType(
     booksMeta.placements[meta.name]
   );
   docType.tables = getTables(meta, byName, Model, booksMeta);
+  setCompanyRowAccess(docType);
   return docType;
+}
+
+/** A field kept in a company row is as hidden and read only as the row field it shows. */
+function setCompanyRowAccess({ schema, tables }: FrappeDocType) {
+  for (const field of schema.fields) {
+    const rowField =
+      field.companyTable &&
+      tables[field.companyTable]?.schema.fields.find(
+        ({ fieldname }) => fieldname === field.fieldname
+      );
+    if (rowField) {
+      field.hidden ||= rowField.hidden;
+      field.readOnly ||= rowField.readOnly;
+    }
+  }
 }
 
 function getTables(
@@ -189,7 +205,8 @@ function getTables(
         { ...child, permissions: meta.permissions },
         name,
         RowModel,
-        booksMeta.placements[child.name]
+        booksMeta.placements[child.name],
+        field.permlevel
       );
     }
   }
@@ -201,7 +218,8 @@ function toDocType(
   meta: DocTypeMeta,
   schemaName: string,
   Model: FrappeModel,
-  placements: Placements = {}
+  placements: Placements = {},
+  tableLevel?: number
 ): FrappeDocType {
   // Rows without a model of their own are labelled by their doctype.
   const presentation: Presentation = {
@@ -212,6 +230,7 @@ function toDocType(
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],
     placements,
+    tableLevel,
   });
   const languageMap = TranslationString.prototype.languageMap;
   if (languageMap) {

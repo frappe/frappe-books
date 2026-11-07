@@ -64,18 +64,39 @@ export function findSidebarEntry(
   route: SidebarRoute,
   previous?: SidebarEntry
 ): SidebarEntry | undefined {
-  const path = getSidebarPath(route);
-  const exactPath = decodeURI(path);
-  const entries = groups.flatMap((group) =>
-    (group.items ?? [group]).map((item) => ({ group, item }))
-  );
-  const matching = entries.filter(({ item }) =>
-    matchesSidebarPath(path, item.route)
-  );
+  const exactPath = decodeURI(getSidebarPath(route));
+  const entries = getEntries(groups);
+  const matching = getMatchingEntries(groups, route);
 
   return (
     entries.find(({ item }) => decodeURI(item.route) === exactPath) ??
     matching.find(({ item }) => item === previous?.item) ??
     matching[0]
+  );
+}
+
+/** The filtered lists of the route's doctype, e.g. Sales and Purchase Payment. */
+export function getFilteredLists(
+  groups: SidebarRoot[],
+  route: SidebarRoute
+): SidebarEntry[] {
+  return getMatchingEntries(groups, route).filter(
+    ({ item }) => item.filters?.length
+  );
+}
+
+function getEntries(groups: SidebarRoot[]): SidebarEntry[] {
+  return groups.flatMap((group) =>
+    (group.items ?? [group]).map((item) => ({ group, item }))
+  );
+}
+
+function getMatchingEntries(
+  groups: SidebarRoot[],
+  route: SidebarRoute
+): SidebarEntry[] {
+  const path = getSidebarPath(route);
+  return getEntries(groups).filter(({ item }) =>
+    matchesSidebarPath(path, item.route)
   );
 }

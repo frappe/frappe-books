@@ -4,6 +4,7 @@ import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getLinkLabel } from 'src/frappe/link';
 import { getDoctypeLabel } from 'src/frappe/registry';
 import { getIsNullOrUndef } from 'utils';
@@ -149,11 +150,18 @@ export abstract class Report extends Observable<RawValue> {
 
   async setReportData(_filter?: string, _force?: boolean): Promise<void> {
     this.loading = true;
-    const { columns, rows } = await this.runReport();
-    this.columns = columns;
-    this.reportData = rows.map((row) =>
-      isBlankRow(row) ? this.getEmptyRow() : this.getReportRow(row)
-    );
+    try {
+      const { columns, rows } = await this.runReport();
+      this.columns = columns;
+      this.reportData = rows.map((row) =>
+        isBlankRow(row) ? this.getEmptyRow() : this.getReportRow(row)
+      );
+    } catch (error) {
+      // The figures of the previous filters would pass for these.
+      this.reportData = [];
+      // The dialog stays open until dismissed; the report is done loading.
+      void handleErrorWithDialog(error, undefined, true);
+    }
     this.loading = false;
   }
 

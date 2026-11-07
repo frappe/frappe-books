@@ -103,8 +103,11 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serial_numbers = [unique_name("SN") for _ in range(2)]
 		invoice.items[0].serial_no = "\n".join(serial_numbers)
+		invoice.save()
 
-		self.assertRaisesRegex(frappe.ValidationError, "is not in stock", invoice.save)
+		self.assertRaisesRegex(
+			frappe.ValidationError, f"{serial_numbers[0]} is not available", invoice.submit
+		)
 
 	def test_invoice_rows_follow_the_serial_number_rules(self):
 		invoice, item = self._sales_invoice()
@@ -118,20 +121,26 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		).submit()
 		plain_invoice, plain_item = self._sales_invoice()
 
-		for rows_invoice, serial_numbers, message in (
+		cases = [
 			(invoice, kept, "Need 2 Serial Numbers"),
-			(invoice, f"{kept}\n{shipped}", f"{shipped} is not in stock"),
+			(invoice, f"{kept}\n{shipped}", f"{shipped} has already left stock"),
 			(plain_invoice, f"{kept}\n{other}", f"Item {plain_item} does not use serial numbers"),
-		):
+		]
+		for rows_invoice, serial_numbers, message in cases:
 			with self.subTest(message=message):
-				rows_invoice.items[0].serial_no = serial_numbers
-				self.assertRaisesRegex(frappe.ValidationError, message, rows_invoice.save)
+				self.assertRaisesRegex(
+					frappe.ValidationError, message, save_serial_numbers, rows_invoice, serial_numbers
+				)
 
 		frappe.db.set_value("Books Item", plain_item, "has_serial_no", 1)
-		self.assertRaisesRegex(frappe.ValidationError, "belongs to another item", plain_invoice.save)
-
-		invoice.items[0].serial_no = f"{kept}\n{other}"
-		invoice.save()
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"belongs to another item",
+			save_serial_numbers,
+			plain_invoice,
+			f"{kept}\n{other}",
+		)
+		save_serial_numbers(invoice, f"{kept}\n{other}")
 
 	def test_sales_invoice_creates_and_cancels_delivery_note(self):
 		invoice, item = self._sales_invoice(make_auto_stock_transfer=1)
@@ -482,3 +491,10 @@ def made_transfer(invoice):
 	link_field = SOURCE_LINK_FIELDS[doctype][0]
 	names = frappe.get_all(f"{doctype} Item", filters={link_field: invoice.name}, pluck="parent")
 	return frappe.get_doc(doctype, {"name": ["in", names], "docstatus": 1})
+
+
+def save_serial_numbers(invoice, serial_numbers):
+	"""Save the invoice's first row with the serial numbers, from a fresh copy as a form would."""
+	invoice = frappe.get_doc(invoice.doctype, invoice.name)
+	invoice.items[0].serial_no = serial_numbers
+	invoice.save()

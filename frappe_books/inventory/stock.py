@@ -43,16 +43,18 @@ def validate_listed_serial_numbers(rows):
 		_validate_serial_numbers(listed)
 
 
-def validate_serial_numbers_in_stock(rows):
-	serial_numbers = set(_all_serial_numbers(rows))
+def validate_serial_numbers_not_gone(rows):
+	"""Reject serial numbers that already left stock: delivered or consumed."""
+	serial_numbers = sorted(set(_all_serial_numbers(rows)))
 	if not serial_numbers:
 		return
-	in_stock = frappe.get_all(
-		"Books Serial No", filters={"name": ["in", sorted(serial_numbers)], "status": "Active"}, pluck="name"
+	gone = frappe.get_all(
+		"Books Serial No",
+		filters={"name": ["in", serial_numbers], "status": ["in", ["Delivered", "Consumed"]]},
+		pluck="name",
 	)
-	missing = sorted(serial_numbers - set(in_stock))
-	if missing:
-		frappe.throw(_("Serial number {0} is not in stock.").format(", ".join(missing)))
+	if gone:
+		frappe.throw(_("Serial number {0} has already left stock.").format(", ".join(sorted(gone))))
 
 
 def create_series_batches(rows):

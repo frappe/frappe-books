@@ -37,7 +37,7 @@ from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import (
 	validate_batches,
 	validate_listed_serial_numbers,
-	validate_serial_numbers_in_stock,
+	validate_serial_numbers_not_gone,
 )
 from frappe_books.inventory.units import populate_units
 from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
@@ -186,10 +186,13 @@ class PostingInvoiceController(InvoiceController):
 		self.validate_serial_numbers()
 
 	def validate_serial_numbers(self):
-		"""Check the rows' serial numbers as a transfer would; a sale's not yet shipped must be in stock."""
+		"""Check the rows' serial numbers as a transfer would; a sale cannot list ones that already left stock.
+
+		Serial numbers not yet received pass: a sale may be invoiced before its stock arrives.
+		"""
 		validate_listed_serial_numbers(self.items)
 		if self.transaction_type == "sales" and not self.return_against:
-			validate_serial_numbers_in_stock([row for row in self.items if not row.get("delivery_note")])
+			validate_serial_numbers_not_gone([row for row in self.items if not row.get("delivery_note")])
 
 	def create_batches(self):
 		"""Create the batches the rows need before they are checked; purchases create series batches."""

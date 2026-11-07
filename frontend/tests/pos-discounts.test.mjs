@@ -16,6 +16,7 @@ const {
   isCouponOffered,
   isLoyaltyOffered,
   isPriceListOffered,
+  redeemLoyaltyPoints,
 } = posDiscounts;
 
 /** Held sales as the server saved them, and the points their customers can redeem. */
@@ -29,6 +30,15 @@ const points = { Asha: 40, Ravi: 0 };
 const coupons = [{ name: 'Diwali Offer', coupon_code: 'DIWALIOF' }];
 
 await loadFrappeModels(frappeModels, ({ path, body }) => {
+  if (path.endsWith('run_doc_method')) {
+    // Each redeemed point pays 1, on a sale of 30.
+    const { document } = body;
+    const loyalty_amount = document.redeem_loyalty_points
+      ? document.loyalty_points
+      : 0;
+    return { docs: [{ ...document, base_grand_total: 30, loyalty_amount }] };
+  }
+
   if (
     path.endsWith('frappe.client.get_list') &&
     body.doctype === 'Books Coupon Code'
@@ -142,4 +152,19 @@ test('loyalty also needs points to redeem on a sale, not a return', () => {
 test('a typed coupon code finds its coupon; a picked coupon name stays', async () => {
   assert.equal(await getCouponName('DIWALIOF'), 'Diwali Offer');
   assert.equal(await getCouponName('Diwali Offer'), 'Diwali Offer');
+});
+
+test('a redemption above the sale total or the points left is refused', async () => {
+  const sale = makeSale();
+  await assert.rejects(
+    redeemLoyaltyPoints(sale, 50),
+    /has only 40 available loyalty points/
+  );
+  await assert.rejects(
+    redeemLoyaltyPoints(sale, 35),
+    /cannot exceed the invoice total/
+  );
+
+  await redeemLoyaltyPoints(sale, 30);
+  assert.equal(sale.loyalty_amount.float, 30);
 });

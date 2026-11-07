@@ -73,14 +73,18 @@ def get_data(filters) -> list[dict]:
 def _conditions(filters):
 	conditions = [
 		[fieldname, "=", filters[fieldname]]
-		for fieldname in ("party_type", "party", "voucher_no")
+		for fieldname in ("voucher_no", "party")
 		if filters.get(fieldname)
+	]
+	# A type of All filters nothing.
+	conditions += [
+		[fieldname, "=", filters[fieldname]]
+		for fieldname in ("voucher_type", "party_type")
+		if filters.get(fieldname) not in (None, "", "All")
 	]
 	if filters.get("account"):
 		# A group account shows the entries of the accounts under it.
 		conditions.append(["account", "descendants of (inclusive)", filters["account"]])
-	if filters.get("voucher_type") and filters["voucher_type"] != "All":
-		conditions.append(["voucher_type", "=", filters["voucher_type"]])
 	if not filters.get("is_cancelled"):
 		conditions.append(["is_cancelled", "=", 0])
 	return conditions

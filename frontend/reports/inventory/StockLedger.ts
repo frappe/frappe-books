@@ -120,6 +120,17 @@ export class StockLedger extends Report {
             },
           ] as Field[])
         : []),
+      ...(this.hasSerialNumbers
+        ? ([
+            {
+              fieldtype: 'Link',
+              target: 'SerialNumber',
+              placeholder: t`Serial Number`,
+              label: t`Serial Number`,
+              fieldname: 'serialNumber',
+            },
+          ] as Field[])
+        : []),
       {
         fieldtype: 'Date',
         placeholder: t`From Date`,

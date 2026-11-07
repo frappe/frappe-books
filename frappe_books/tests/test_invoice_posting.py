@@ -71,6 +71,20 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 							doctype, party, self.ledgers[doctype], self.item, account, **NO_FOLLOW_UPS
 						)
 
+	def test_a_number_too_large_to_store_names_its_row(self):
+		party = make_customer(self.ledgers["Books Sales Invoice"]).name
+		row = {"item_code": self.item, "qty": 10**12, "price_list_rate": 10**6}
+		with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* is too large"):
+			make_invoice(
+				"Books Sales Invoice",
+				party,
+				self.ledgers["Books Sales Invoice"],
+				self.item,
+				self.income,
+				items=[row],
+				**NO_FOLLOW_UPS,
+			)
+
 	def submit_invoice(self, doctype, is_return):
 		is_purchase = doctype == "Books Purchase Invoice"
 		party = (make_supplier if is_purchase else make_customer)(self.ledgers[doctype]).name

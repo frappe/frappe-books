@@ -8,10 +8,14 @@ from frappe.utils import now_datetime
 from frappe_books.accounting import settlement
 from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.accounting.payment import map_invoice_payment, validate_payment_details
+from frappe_books.accounting.payment import (
+	map_invoice_payment,
+	method_payment_account,
+	validate_payment_details,
+)
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
-from frappe_books.commerce.pos import counter_payment_account, counter_payment_amounts, open_shift_name
+from frappe_books.commerce.pos import counter_payment_amounts, open_shift_name
 from frappe_books.inventory.availability import validate_pos_stock
 from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
@@ -200,7 +204,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		payment.update(
 			{
 				"payment_method": row.payment_method,
-				"payment_account": counter_payment_account(row.payment_method),
+				"payment_account": method_payment_account(row.payment_method, self),
 				"amount": amount,
 				"reference_id": row.reference_id,
 				"clearance_date": row.clearance_date,

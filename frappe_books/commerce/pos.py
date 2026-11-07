@@ -46,11 +46,14 @@ def is_cash_method(payment_method):
 	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
 
 
-def counter_payment_account(payment_method):
-	"""Cash goes through the counter; other methods use their own account."""
-	if is_cash_method(payment_method):
-		return counter_cash_account()
-	return frappe.get_cached_value("Books Payment Method", payment_method, "account")
+def takes_counter_cash(invoices, payment_method):
+	"""Cash for POS invoices goes through the counter while a shift is open, which closing it reconciles."""
+	return (
+		any(invoice.get("is_pos") for invoice in invoices)
+		and bool(payment_method)
+		and is_cash_method(payment_method)
+		and bool(open_shift_name())
+	)
 
 
 def counter_payment_amounts(rows, due):

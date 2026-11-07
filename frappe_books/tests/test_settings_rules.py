@@ -88,6 +88,15 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 					settings.set(fieldname, 0)
 					self.assertRaisesRegex(frappe.ValidationError, "cannot be disabled", settings.save)
 
+	def test_coupon_code_turns_off_with_pricing_rule(self):
+		settings = _accounting_settings(
+			enable_discounts_and_margin=1, enable_pricing_rule=1, enable_coupon_code=1
+		)
+		settings.enable_pricing_rule = 0
+		settings.save()
+
+		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "enable_coupon_code"))
+
 	def test_only_the_setup_changes_setup_complete(self):
 		for before in (1, 0):
 			with self.subTest(before=before):

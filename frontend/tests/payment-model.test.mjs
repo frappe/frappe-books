@@ -151,6 +151,37 @@ test('a new party type leaves the payment type and accounts to the server', asyn
   assert.equal('paid_from' in previews[0], false);
 });
 
+test('a new reference keeps the payment type until it names an invoice of the type it showed', async () => {
+  const previews = [];
+  stubFrappe(({ body }) => {
+    previews.push(body.document);
+    const document = structuredClone(body.document);
+    document.party_type ??= 'Books Supplier';
+    for (const row of document.references ?? []) {
+      row.reference_doctype ??= 'Books Purchase Invoice';
+    }
+    return { docs: [document] };
+  });
+  const payment = newFrappeDoc('PaymentEntry', {
+    payment_type: 'Pay',
+    party: 'Acme',
+  });
+
+  await payment.append('references', {});
+  await payment.whenFilled();
+  assert.equal(previews.at(-1).payment_type, 'Pay');
+  const [row] = payment.references;
+  assert.equal(row.reference_doctype, 'Books Purchase Invoice');
+
+  await row.set('reference_name', 'PINV-1');
+  await payment.whenFilled();
+  assert.equal('payment_type' in previews.at(-1), false);
+  assert.equal(
+    previews.at(-1).references[0].reference_doctype,
+    'Books Purchase Invoice'
+  );
+});
+
 test("a reference's allocation is filled again for the invoice it now names", async () => {
   const previews = [];
   stubFrappe(({ body }) => {

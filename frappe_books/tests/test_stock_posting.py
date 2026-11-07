@@ -47,6 +47,24 @@ class IntegrationTestStockPosting(IntegrationTestCase):
 		self.assertEqual(account_balance(shipment, cogs.name), 30)
 		self.assertEqual([stock_value_change(returned), account_balance(returned, cogs.name)], [30, -30])
 
+	def test_return_takes_back_the_unrounded_shipment_cost(self):
+		cogs = make_account("COGS", root_type="Expense", account_type="Cost of Goods Sold")
+		received = make_account("Received", root_type="Liability")
+		set_inventory_accounts(make_account("Stock", account_type="Stock").name, received.name, cogs.name)
+		item = make_item(make_account("Income", root_type="Income").name, received.name, track_item=1).name
+		now = now_datetime()
+		for rate in (33, 33, 34):
+			seed_stock(item, quantity=1, rate=rate, date=add_to_date(now, hours=-4))
+		shipment = _ship(item, "Stores", 3, add_to_date(now, hours=-2))
+		returned = _ship(item, "Stores", -3, add_to_date(now, hours=-1), return_against=shipment)
+		self.assertEqual(stock_value_change(returned), 100)
+
+		make_receipt(item, quantity=1, rate=1, date=add_to_date(now, hours=-5))
+
+		# The shipment now takes 1 + 33 + 33 = 67, at 22.333... each.
+		self.assertEqual(account_balance(shipment, cogs.name), 67)
+		self.assertEqual(stock_value_change(returned), 67)
+
 
 def _move_to(item, location, quantity, date):
 	row = {"item": item, "from_location": "Stores", "to_location": location, "quantity": quantity, "rate": 1}

@@ -63,6 +63,16 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(service.hsn_code, "998877")
 		self.assertEqual((product.income_account, product.expense_account), ("Sales", received.name))
 
+	def test_a_sales_group_is_no_default_income_account(self):
+		# The U.A.E chart has a "Sales" group, which no item can sell into.
+		self.make_default_sources()
+		frappe.db.set_value("Books Account", "Sales", "is_group", 1)
+
+		item = frappe.new_doc("Books Item", item_name=unique_name("Item"))
+		item.preview()
+
+		self.assertFalse(item.income_account)
+
 	def test_accounts_follow_the_item_tracking(self):
 		income = make_account("Item Sales", root_type="Income")
 		expense = make_account("Item Expense", root_type="Expense")

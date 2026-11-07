@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting import ledger
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal
 from frappe_books.inventory import valuation
 from frappe_books.inventory.stock import parse_serial_numbers
 
@@ -78,7 +78,7 @@ def _create_entries(transaction, rows):
 
 def _create_location_entries(transaction, row, quantity, serial_number):
 	restated = set()
-	rate = rounded(row["rate"])
+	rate = as_decimal(row["rate"])
 	if row.get("from_location"):
 		entry, taken = _create_entry(transaction, row, row["from_location"], -quantity, serial_number, rate)
 		restated |= taken
@@ -234,7 +234,6 @@ def _revalue_returns(references):
 	costs = valuation.outgoing_rates("Books Shipment", list(set(returns.values())))
 	entries = valuation.transaction_entries("Books Shipment", list(returns))
 	rates = {
-		entry.name: rounded(costs[returns[entry.reference_name], entry.item, entry.batch or ""])
-		for entry in entries
+		entry.name: costs[returns[entry.reference_name], entry.item, entry.batch or ""] for entry in entries
 	}
 	return valuation.revalue_entries(entries, rates)

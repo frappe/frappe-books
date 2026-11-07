@@ -89,6 +89,8 @@ test('features and totals show the fields that go with them', () => {
       enable_discounts_and_margin: true,
       enable_inventory: true,
       enable_price_list: true,
+      // Coupons work through pricing rules.
+      enable_pricing_rule: true,
       enable_coupon_code: true,
     },
     defaults: {

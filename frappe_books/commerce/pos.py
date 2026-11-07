@@ -5,9 +5,8 @@ from collections import defaultdict
 import frappe
 from frappe import _
 from frappe.query_builder import Order
-from frappe.utils import getdate
+from frappe.utils import get_datetime, getdate
 
-from frappe_books.accounting import settlement
 from frappe_books.accounting.money import as_decimal, rounded
 
 
@@ -78,29 +77,21 @@ def lock_pos_settings():
 
 
 def transacted_amounts(from_date, to_date):
-	invoices = frappe.get_all(
-		"Books Sales Invoice",
-		filters={"is_pos": 1, "docstatus": 1, "date": ["between", [from_date, to_date]]},
-		fields=["name", "return_against"],
-	)
-	if not invoices:
-		return {}
-	references = frappe.get_all(
-		"Books Payment For",
-		filters={
-			"parenttype": "Books Payment",
-			"reference_type": "Books Sales Invoice",
-			"reference_name": ["in", [invoice.name for invoice in invoices]],
-		},
-		fields=["parent", "reference_name", "amount"],
-	)
-	methods = _submitted_payment_methods({reference.parent for reference in references})
-	invoices = {invoice.name: invoice for invoice in invoices}
+	"""Sum the submitted POS payments made from `from_date` to `to_date`, by payment method; refunds count against."""
+	payment = frappe.qb.DocType("Books Payment")
+	payments = (
+		frappe.qb.from_(payment)
+		.select(payment.payment_method, payment.payment_type, payment.amount_paid)
+		.where(
+			(payment.docstatus == 1)
+			& payment.creation[get_datetime(from_date) : get_datetime(to_date)]
+			& payment.name.isin(_pos_payment_names())
+		)
+	).run(as_dict=True)
 	result = defaultdict(as_decimal)
-	for reference in references:
-		method = methods.get(reference.parent)
-		if method:
-			result[method] += settlement.signed(invoices[reference.reference_name], reference.amount)
+	for row in payments:
+		sign = -1 if row.payment_type == "Pay" else 1
+		result[row.payment_method] += sign * as_decimal(row.amount_paid)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 
@@ -153,14 +144,18 @@ def cancel_cash_journal(name):
 	journal.cancel()
 
 
-def _submitted_payment_methods(names):
-	if not names:
-		return {}
-	return dict(
-		frappe.get_all(
-			"Books Payment",
-			filters={"name": ["in", sorted(names)], "docstatus": 1},
-			fields=["name", "payment_method"],
-			as_list=True,
+def _pos_payment_names():
+	"""A subquery of the payments that settle POS invoices."""
+	reference = frappe.qb.DocType("Books Payment For")
+	invoice = frappe.qb.DocType("Books Sales Invoice")
+	return (
+		frappe.qb.from_(reference)
+		.join(invoice)
+		.on(reference.reference_name == invoice.name)
+		.select(reference.parent)
+		.where(
+			(reference.parenttype == "Books Payment")
+			& (reference.reference_type == "Books Sales Invoice")
+			& (invoice.is_pos == 1)
 		)
 	)

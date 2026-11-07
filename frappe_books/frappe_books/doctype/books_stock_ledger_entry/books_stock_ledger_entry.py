@@ -20,6 +20,7 @@ class BooksStockLedgerEntry(Document):
 		incoming_rate: DF.Currency
 		is_cancelled: DF.Check
 		item_code: DF.Link | None
+		outgoing_rate: DF.Currency
 		posting_date: DF.Date | None
 		posting_datetime: DF.Datetime | None
 		posting_time: DF.Time | None

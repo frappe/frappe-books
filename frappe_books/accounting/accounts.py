@@ -1,9 +1,11 @@
 import frappe
 from frappe import _
 
-from frappe_books.company import default_company
+from frappe_books.company import company_value, default_company
 
 PARTY_ACCOUNT_TYPES = {"Books Customer": "Receivable", "Books Supplier": "Payable"}
+# The Books Company field that holds the default ledger of each party account type
+COMPANY_PARTY_ACCOUNTS = {"Receivable": "default_receivable_account", "Payable": "default_payable_account"}
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
 
 
@@ -50,6 +52,16 @@ def validate_changed_accounts(doc, rules):
 	for fieldname, types in rules.items():
 		if doc.has_value_changed(fieldname):
 			validate_account(doc, fieldname, **types)
+
+
+def company_party_account(account_type):
+	"""The company's default receivable or payable ledger."""
+	return company_value(COMPANY_PARTY_ACCOUNTS[account_type])
+
+
+def default_party_account(account_type):
+	"""The company's default receivable or payable ledger, else the newest of the type."""
+	return company_party_account(account_type) or latest_ledger_account(account_type)
 
 
 def latest_ledger_account(account_type):

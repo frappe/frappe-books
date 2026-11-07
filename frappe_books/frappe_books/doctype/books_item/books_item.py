@@ -163,9 +163,11 @@ class BooksItem(Document):
 
 
 def _default_income_account(item_type):
-	"""Products sell into Sales and services into Service, when the chart has them."""
-	account = "Sales" if item_type == "Product" else "Service"
-	return account if frappe.db.exists("Books Account", account) else None
+	"""Services sell into the chart's Service ledger when it has one, else items into the company's
+	default income account."""
+	if item_type == "Service" and frappe.db.exists("Books Account", {"name": "Service", "is_group": 0}):
+		return "Service"
+	return company_value("default_income_account")
 
 
 def _default_expense_account(is_stock_item):

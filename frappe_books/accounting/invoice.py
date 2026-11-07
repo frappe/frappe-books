@@ -6,7 +6,7 @@ from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns, settlement
-from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.accounts import default_party_account, validate_account
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.party import PartyDocumentMixin, party_account
@@ -412,11 +412,11 @@ def _populate_pos_defaults(invoice):
 
 
 def _party_account(invoice, account):
-	"""The party's ledger if it suits the invoice, else the newest that does."""
+	"""The party's ledger if it suits the invoice, else the company's default one."""
 	account_type = invoice.party_account_type
 	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
 		return account
-	return latest_ledger_account(account_type)
+	return default_party_account(account_type)
 
 
 def _party_defaults(invoice):

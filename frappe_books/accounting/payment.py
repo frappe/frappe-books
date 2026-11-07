@@ -12,6 +12,7 @@ from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import (
 	PARTY_ACCOUNT_TYPES,
 	PAYMENT_ACCOUNT_TYPES,
+	default_party_account,
 	latest_ledger_account,
 	mode_of_payment_account,
 	validate_account,
@@ -278,12 +279,12 @@ def _default_payment_type(party_type, invoice):
 
 
 def _default_party_account(party_account, invoice, payment_type):
-	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
+	"""The party's ledger, else the invoice's, else the company's default payable or receivable one."""
 	if party_account:
 		return party_account
 	if invoice:
 		return invoice.account
-	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
+	return default_party_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
 def _default_payment_account(mode_of_payment, invoice):

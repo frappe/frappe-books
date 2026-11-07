@@ -120,6 +120,11 @@ test('custom field names still reject another row and built-in fields', async ()
     form.custom_fields[1].set('fieldname', 'myNote'),
     /Fieldname myNote already used for Custom Field 1/
   );
+  // Both would share the Custom Field custom_books_mynote.
+  await assert.rejects(
+    form.custom_fields[1].set('fieldname', 'mynote'),
+    /Fieldname mynote already used for Custom Field 1/
+  );
 });
 
 test('a row links to other forms and references select fields of the form', async () => {

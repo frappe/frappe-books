@@ -15,7 +15,7 @@ from frappe_books.accounting.taxes import calculate_taxes, set_taxes
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.company import company_value
-from frappe_books.currency import get_exchange_rate
+from frappe_books.currency import exchange_rate
 from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults, item_tax_templates
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
@@ -434,7 +434,7 @@ def _populate_currency(invoice, party_currency):
 	if invoice.currency == company:
 		invoice.conversion_rate = 1
 	elif not invoice.get("conversion_rate"):
-		invoice.conversion_rate = get_exchange_rate(invoice.currency, company, invoice.document_date)
+		invoice.conversion_rate = exchange_rate(invoice.currency, company, invoice.document_date)
 
 
 def _populate_row(invoice, row, item, rates):

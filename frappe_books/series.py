@@ -33,10 +33,7 @@ class SeriesNamingMixin:
 	def autoname(self):
 		self.set_number_series()
 		series = frappe.get_doc("Books Number Series", self.naming_series)
-		if series.reference_type != NUMBER_SERIES[self.doctype][1]:
-			frappe.throw(
-				_("Number series {0} is not for {1} documents.").format(series.name, _(self.doctype))
-			)
+		validate_series_type(series, self.doctype)
 		self.name = make_autoname(series.pattern)
 
 	def set_number_series(self):
@@ -48,6 +45,12 @@ def default_series(doctype):
 	"""The doctype's series from Books Defaults, else its standard prefix."""
 	prefix, _, defaults_field = NUMBER_SERIES[doctype]
 	return (defaults_field and frappe.db.get_single_value("Books Defaults", defaults_field)) or prefix
+
+
+def validate_series_type(series, doctype):
+	"""A Books Number Series numbers only the documents of its reference type."""
+	if series.reference_type != NUMBER_SERIES[doctype][1]:
+		frappe.throw(_("Number series {0} is not for {1} documents.").format(series.name, _(doctype)))
 
 
 def series_pattern(prefix, digits):

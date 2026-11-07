@@ -1,12 +1,19 @@
 <template>
   <div class="flex flex-col w-full md:h-full">
     <PageHeader :title="t`Print ${title}`">
-      <FrappeButton variant="solid" @click="print()">
+      <FrappeButton v-if="canOpen" variant="solid" @click="print()">
         {{ t`Print` }}
       </FrappeButton>
     </PageHeader>
 
+    <EmptyState
+      v-if="!canOpen"
+      class="flex-1"
+      icon="lucide-lock"
+      :title="t`You don't have access to this report`"
+    />
     <div
+      v-else
       class="md:grid md:min-h-0 md:flex-1 md:grid-cols-[auto_var(--w-quick-edit)] md:grid-rows-[minmax(0,1fr)]"
     >
       <!-- Report Print Display Area -->
@@ -174,7 +181,7 @@
       </FrappeScrollArea>
     </div>
 
-    <MobileFooter v-if="isMobile">
+    <MobileFooter v-if="isMobile && canOpen">
       <FrappeButton
         class="flex-1"
         size="lg"
@@ -199,12 +206,14 @@ import { OptionField } from 'schemas/types';
 import Check from 'src/components/Controls/Check.vue';
 import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getReport } from 'src/utils/misc';
 import { constructPDFDocument, printDocument } from 'src/utils/printDocument';
 import { canSharePDF, getReportPDF } from 'src/utils/printFormatApi';
 import { showSidebar } from 'src/utils/refs';
+import { canOpen } from 'src/utils/sidebarConfig';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { PropType, StyleValue, defineComponent } from 'vue';
@@ -216,6 +225,7 @@ const CELL_BORDER = '1px solid #e2e2e2';
 export default defineComponent({
   components: {
     PageHeader,
+    EmptyState,
     FrappeButton,
     FrappeScrollArea,
     Check,
@@ -254,6 +264,9 @@ export default defineComponent({
     },
     title(): string {
       return getReports()[this.reportName]?.title ?? this.t`Report`;
+    },
+    canOpen(): boolean {
+      return canOpen(`/report/${this.reportName}`);
     },
     printSizeDf(): OptionField {
       return {
@@ -303,6 +316,10 @@ export default defineComponent({
     },
   },
   async mounted() {
+    if (!this.canOpen) {
+      return;
+    }
+
     this.report = await getReport(this.reportName);
     this.limit = this.report.reportData.length;
     this.columnSelection = this.report.columns.map(() => true);

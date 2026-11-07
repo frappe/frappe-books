@@ -4,7 +4,7 @@
       <template #mobile-title>
         <MobileReportSwitcher :title="title" />
       </template>
-      <template #mobile>
+      <template v-if="canOpen" #mobile>
         <FrappeButton
           variant="ghost"
           size="md"
@@ -22,6 +22,7 @@
         {{ group.group }}
       </DropdownWithActions>
       <FrappeButton
+        v-if="canOpen"
         ref="printButton"
         icon="lucide-printer"
         :label="t`Open report print view`"
@@ -30,7 +31,13 @@
       />
     </PageHeader>
 
-    <template v-if="isMobile">
+    <EmptyState
+      v-if="!canOpen"
+      class="flex-1"
+      icon="lucide-lock"
+      :title="t`You don't have access to this report`"
+    />
+    <template v-else-if="isMobile">
       <MobileReport
         v-if="report"
         :report="report as Report"
@@ -67,6 +74,7 @@ import { DocValue } from 'fyo/core/types';
 import { getReports, type ReportName } from 'reports';
 import { Report } from 'reports/Report';
 import DropdownWithActions from 'src/components/DropdownWithActions.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import ListReport from 'src/components/Report/ListReport.vue';
 import ReportFilters from 'src/components/Report/ReportFilters.vue';
@@ -82,6 +90,7 @@ import { shortcutsKey } from 'src/utils/injectionKeys';
 import { docsPathMap, showReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { ActionGroup } from 'src/utils/types';
+import { canOpen } from 'src/utils/sidebarConfig';
 import { routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { PropType, computed, defineComponent, inject } from 'vue';
@@ -92,6 +101,7 @@ export default defineComponent({
     ListReport,
     ReportFilters,
     DropdownWithActions,
+    EmptyState,
     FrappeButton,
     MobileReport,
     MobileReportFilters,
@@ -128,6 +138,9 @@ export default defineComponent({
     title() {
       return getReports()[this.reportClassName]?.title ?? t`Report`;
     },
+    canOpen(): boolean {
+      return canOpen(`/report/${this.reportClassName}`);
+    },
     groupedActions() {
       const actions = this.report?.getActions() ?? [];
       const actionsMap = actions.reduce(
@@ -155,6 +168,10 @@ export default defineComponent({
   async activated() {
     docsPathRef.value =
       docsPathMap[this.reportClassName] ?? docsPathMap.Reports!;
+    if (!this.canOpen) {
+      return;
+    }
+
     await this.setReportData();
 
     this.shortcuts?.pmod.set(this.reportClassName, ['KeyP'], async () => {

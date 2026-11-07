@@ -232,6 +232,18 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
 		)
 
+	def test_preview_suggests_the_fiscal_year_that_holds_today(self):
+		for today, country, year in (
+			("2026-05-15", "Australia", ("2025-07-01", "2026-06-30")),
+			("2026-07-01", "Australia", ("2026-07-01", "2027-06-30")),
+			("2026-09-01", "Thailand", ("2025-10-01", "2026-09-30")),
+			("2027-03-01", "South Africa", ("2027-03-01", "2028-02-29")),
+		):
+			with self.subTest(today=today, country=country), self.freeze_time(today):
+				wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": country})
+				wizard.preview()
+				self.assertEqual((str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), year)
+
 	def test_preview_suggests_the_currency_from_frappe_country_data(self):
 		# Books' own copy had Croatia's old kuna, which is no Frappe Currency.
 		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Croatia"})

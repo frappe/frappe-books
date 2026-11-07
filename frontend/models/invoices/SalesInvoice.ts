@@ -1,5 +1,6 @@
 import { Fyo } from 'fyo';
 import { Action, HiddenMap, ListViewSettings } from 'fyo/model/types';
+import { DocPermission, hasDocTypePermission } from 'fyo/utils/permissions';
 import { getDocStatusListColumn, getInvoiceActions } from 'models/helpers';
 import { getInsufficientItems } from 'models/inventory/insufficientStock';
 import { ModelNameEnum } from 'models/types';
@@ -74,7 +75,20 @@ export class SalesInvoice extends Invoice {
       !this.fyo.singles.AccountingSettings?.enable_pricing_rule,
   };
 
-  /** The server ships no short stock, so a Yes submits without the shipment. */
+  /** A cashier makes sales only through the POS, so a new POS sale needs only the right to create sales. */
+  override can(permission: DocPermission): boolean {
+    if (permission === 'create' && this.notInserted && this.is_pos) {
+      return hasDocTypePermission(
+        this.fyo.store.permissions,
+        SalesInvoice.doctype,
+        'create'
+      );
+    }
+
+    return super.can(permission);
+  }
+
+    /** The server ships no short stock, so a Yes submits without the shipment. */
   override async getSubmitWarning(): Promise<SubmitWarning | undefined> {
     if (!this.make_auto_stock_transfer) {
       return undefined;

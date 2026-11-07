@@ -145,6 +145,14 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 			[series, "PAY-", "PRLE-"],
 		)
 
+	def test_a_default_number_series_must_number_its_document_type(self):
+		defaults = frappe.get_single("Books Defaults")
+		defaults.sales_invoice_number_series = make_number_series("PurchaseInvoice")
+		self.assertRaisesRegex(frappe.ValidationError, "is not for Books Sales Invoice", defaults.save)
+
+		defaults.sales_invoice_number_series = make_number_series("SalesInvoice")
+		defaults.save()
+
 
 def _accounting_settings(**values):
 	frappe.db.set_single_value("Books Accounting Settings", {**COMPANY, **values})

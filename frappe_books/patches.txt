@@ -11,6 +11,7 @@ frappe_books.patches.revoke_manager_print_format_write
 frappe_books.patches.type_swiss_trade_accounts
 frappe_books.patches.set_default_party_accounts
 frappe_books.patches.clear_dependent_switches
+frappe_books.patches.set_pos_shift_details
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

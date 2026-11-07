@@ -579,7 +579,7 @@ export const previousForms = {
     ],
     Quotation: [
       'naming_series | Number Series',
-      'party_name | Customer',
+      'party_name | Party',
       'transaction_date | Date',
       'selling_price_list | Price List',
       'taxes_and_charges | Sales Taxes and Charges Template',

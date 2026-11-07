@@ -85,6 +85,7 @@ export class SalesInvoice extends Invoice {
   override hidden: HiddenMap = {
     ...this.hidden,
     ...this.postingHidden,
+    stock_not_transferred: () => this.isInventoryOff,
     coupon_code: () => !this.fyo.isFeatureOn('enable_coupon_code'),
     pricing_rules: () => !this.fyo.isFeatureOn('enable_pricing_rule'),
     redeem_loyalty_points: () =>

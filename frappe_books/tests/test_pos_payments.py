@@ -12,6 +12,7 @@ from frappe_books.frappe_books.doctype.books_pos_closing_entry.test_books_pos_cl
 	close_shift,
 )
 from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
+	open_shift,
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
@@ -290,7 +291,11 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 	def make_cashier(self):
 		# A cashier cannot pick the Debit To account, so a POS sale takes this one, as set up.
 		frappe.db.set_single_value("Books POS Settings", "default_account", self.receivable.name)
-		return ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		cashier = ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		with self.set_user(cashier):
+			# A cashier sells in their own shift.
+			open_shift(0)
+		return cashier
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

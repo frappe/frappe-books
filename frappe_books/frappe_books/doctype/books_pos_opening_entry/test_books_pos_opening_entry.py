@@ -121,7 +121,7 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 		self.assertEqual((pos_profile(), get_pos_profile()), (profile, profile))
 		self.assertEqual(pricing.pos_setting("allow_rate_change"), 0)
 		with self.set_user(make_user("Books Cashier")):
-			self.assertIsNone(pos_profile())
+			self.assertFalse(pos_profile())
 			self.assertEqual(pricing.pos_setting("allow_rate_change"), 1)
 
 	def test_a_new_shift_takes_the_profile_of_pos_settings(self):

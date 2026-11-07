@@ -36,6 +36,16 @@ test('import columns report duplicates and missing required fields', async () =>
   );
 });
 
+test('a required field the server has a default for is not required in a file', () => {
+  const series = new Importer('NumberSeries', fyo);
+  const start = series.templateFieldsMap.get('NumberSeries.start');
+  assert.equal(start.required, false);
+
+  const invoice = new Importer('SalesInvoice', fyo);
+  const date = invoice.templateFieldsMap.get('SalesInvoice.posting_date');
+  assert.equal(date.required, false);
+});
+
 test('child table fields are never required in an import template', async () => {
   const importer = new Importer('SalesInvoice', fyo);
   const childFields = [...importer.templateFieldsMap.values()].filter(

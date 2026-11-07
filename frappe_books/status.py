@@ -23,11 +23,19 @@ def get_status(doc) -> str:
 		return "Cancelled"
 	if doc.get("return_against"):
 		return "Return"
+	if doc.doctype in INVOICE_DOCTYPES:
+		return _invoice_status(doc)
 	if doc.get("is_returned"):
 		return "Return Issued"
-	if doc.doctype in INVOICE_DOCTYPES:
-		return _payment_status(doc)
 	return "Submitted"
+
+
+def _invoice_status(invoice) -> str:
+	"""A fully returned invoice, or a settled one with a return, shows the return; else what it owes."""
+	settled = not as_decimal(invoice.outstanding_amount)
+	if invoice.is_fully_returned or (invoice.is_returned and settled):
+		return "Return Issued"
+	return _payment_status(invoice)
 
 
 def _payment_status(invoice) -> str:

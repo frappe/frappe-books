@@ -58,7 +58,16 @@ export function getFilterFields(
     filteredFields.unshift(storedStatusField);
   }
 
-  return filteredFields;
+  return withoutNamingFieldTwin(filteredFields);
+}
+
+/** A DocType named by a field labels its name like that field; list the value once. */
+function withoutNamingFieldTwin(fields: Field[]): Field[] {
+  const name = fields.find((field) => field.meta && field.fieldname === 'name');
+  const hasTwin =
+    !!name?.label &&
+    fields.some((field) => field !== name && field.label === name.label);
+  return hasTwin ? fields.filter((field) => field !== name) : fields;
 }
 
 /** Books' Submitted and Cancelled, by the docstatus values that set them. */

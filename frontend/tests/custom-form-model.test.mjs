@@ -166,6 +166,15 @@ test('a Table field targets only child tables', async () => {
   assert.ok(targets('Table').includes('Books Sales Invoice Item'));
   assert.equal(targets('Table').includes('Books Customer'), false);
   assert.ok(targets('Link').includes('Books Customer'));
+  assert.equal(targets('Link').includes('Books Sales Invoice Item'), false);
+});
+
+test('custom fields target only Books doctypes, as the server allows', async () => {
+  const [row] = (await newForm()).custom_fields;
+  const targets = CustomField.lists.target(row).map(({ value }) => value);
+  for (const doctype of ['Currency', 'Country', 'Address', 'Print Format']) {
+    assert.equal(targets.includes(doctype), false, doctype);
+  }
 });
 
 test('editing a row previews its name from the server', async () => {

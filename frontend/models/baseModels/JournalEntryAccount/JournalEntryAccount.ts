@@ -10,6 +10,17 @@ export class JournalEntryAccount extends FrappeDoc {
       account: { groupBy: 'root_type', create: false },
       party_type: { options: PARTY_TYPE_OPTIONS },
     },
+    // A phone row names the side of each amount.
+    mobileTableFields: [
+      'account',
+      'party',
+      'debit_in_account_currency',
+      'credit_in_account_currency',
+    ],
+    mobileLabelledFields: [
+      'debit_in_account_currency',
+      'credit_in_account_currency',
+    ],
   };
 
   static filters: FiltersMap = {

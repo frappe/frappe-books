@@ -76,7 +76,10 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		self.assertEqual(stock_quantity(self.item.name, "Stores"), 6)
 
 	def test_negative_quantity_is_rejected(self):
-		for movement_type, location in (("MaterialReceipt", "to_location"), ("MaterialIssue", "from_location")):
+		for movement_type, location in (
+			("MaterialReceipt", "to_location"),
+			("MaterialIssue", "from_location"),
+		):
 			with self.subTest(movement_type=movement_type):
 				row = {"item": self.item.name, location: "Stores", "quantity": -3, "rate": 10}
 				movement = frappe.get_doc(movement_values(movement_type, [row]))
@@ -116,6 +119,19 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		receipt = frappe.get_doc(movement_values("MaterialReceipt", [row, row]))
 
 		self.assertRaisesRegex(frappe.ValidationError, "more than once", receipt.insert)
+
+	def test_serial_number_cannot_leave_before_it_arrives(self):
+		item, late, early = self._serial_item(), unique_name("SER"), unique_name("SER")
+		now = now_datetime()
+		self._receive_serial(item, late)
+		self._receive_serial(item, early, add_to_date(now, hours=-2))
+		row = {"item": item, "from_location": "Stores", "quantity": 1, "rate": 5, "serial_number": late}
+		issue = frappe.get_doc(
+			{**movement_values("MaterialIssue", [row]), "date": add_to_date(now, hours=-1)}
+		)
+		issue.insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "not available", issue.submit)
 
 	def test_receipt_cannot_be_cancelled_once_its_stock_is_used(self):
 		receipt = self._receive(10)
@@ -184,19 +200,18 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 			frappe.ValidationError, "already in stock", self._receive_serial, item, serial_number
 		)
 
-	def _receive_serial(self, item, serial_number):
-		receipt = make_movement(
-			"MaterialReceipt",
-			[
-				{
-					"item": item,
-					"to_location": "Stores",
-					"quantity": 1,
-					"rate": 5,
-					"serial_number": serial_number,
-				}
-			],
+	def _receive_serial(self, item, serial_number, date=None):
+		row = {
+			"item": item,
+			"to_location": "Stores",
+			"quantity": 1,
+			"rate": 5,
+			"serial_number": serial_number,
+		}
+		receipt = frappe.get_doc(
+			{**movement_values("MaterialReceipt", [row]), "date": date or now_datetime()}
 		)
+		receipt.insert()
 		receipt.submit()
 		return receipt
 

@@ -92,9 +92,11 @@ class IntegrationTestBooksPOSOpeningEntry(IntegrationTestCase):
 
 	def test_a_user_can_have_only_one_open_shift(self):
 		open_shift(0)
+		drafts = frappe.db.count("Books POS Opening Entry", {"docstatus": 0})
 
 		with self.assertRaisesRegex(frappe.ValidationError, "already has an open POS shift"):
 			open_shift(0)
+		self.assertEqual(frappe.db.count("Books POS Opening Entry", {"docstatus": 0}), drafts)
 
 	def test_each_cashier_opens_their_own_shift(self):
 		mine = open_shift(0)

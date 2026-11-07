@@ -64,7 +64,10 @@ export function getListColumns(
   return shown;
 }
 
-/** Fixed tracks for dates, numbers and badges; text shares what is left. */
+/**
+ * Fixed tracks for dates, numbers and badges; text shares what is left but
+ * keeps room to name the row, and a narrower list scrolls sideways.
+ */
 export function getColumnTrack(column: ListColumn): string {
   if ((column as ColumnConfig).badge) {
     return '7rem';
@@ -75,7 +78,7 @@ export function getColumnTrack(column: ListColumn): string {
   if (isNumeric(column.fieldtype)) {
     return '9rem';
   }
-  return 'minmax(0, 1fr)';
+  return 'minmax(8rem, 1fr)';
 }
 
 export function isField(column: ListColumn): column is Field {

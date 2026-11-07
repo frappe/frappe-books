@@ -10,7 +10,6 @@ from frappe.utils import get_datetime, getdate
 from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import mode_of_payment_account
 from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.dates import posting_datetime
 
 
 def open_shift_name(user=None):
@@ -109,28 +108,23 @@ def lock_pos_settings():
 
 
 def transacted_amounts(from_date, to_date, user):
-	"""Sum the user's payments of the POS invoices dated from `from_date` to `to_date`, by payment method."""
-	invoices = _pos_invoices(get_datetime(from_date), get_datetime(to_date))
-	if not invoices:
-		return {}
-	references = frappe.get_all(
-		"Books Payment Entry Reference",
-		filters={
-			"parenttype": "Books Payment Entry",
-			"reference_doctype": "Books Sales Invoice",
-			"reference_name": ["in", [invoice.name for invoice in invoices]],
-		},
-		fields=["parent", "reference_name", "allocated_amount"],
+	"""Sum the user's submitted POS payments made from `from_date` to `to_date`, by payment method; refunds count against."""
+	payment = frappe.qb.DocType("Books Payment Entry")
+	payments = (
+		frappe.qb.from_(payment)
+		.select(payment.mode_of_payment, payment.payment_type, payment.paid_amount)
+		.where(
+			(payment.docstatus == 1)
+			& (payment.owner == user)
+			& payment.creation[get_datetime(from_date) : get_datetime(to_date)]
+			& payment.name.isin(_pos_payment_names())
+		)
+		.run(as_dict=True)
 	)
-	methods = _submitted_payment_methods({reference.parent for reference in references}, user)
-	invoices = {invoice.name: invoice for invoice in invoices}
 	result = defaultdict(as_decimal)
-	for reference in references:
-		method = methods.get(reference.parent)
-		if method:
-			result[method] += settlement.signed(
-				invoices[reference.reference_name], reference.allocated_amount
-			)
+	for row in payments:
+		sign = -1 if row.payment_type == "Pay" else 1
+		result[row.mode_of_payment] += sign * as_decimal(row.paid_amount)
 	return {method: rounded(amount) for method, amount in result.items()}
 
 
@@ -187,31 +181,18 @@ def cancel_cash_journal(name):
 	journal.cancel()
 
 
-def _pos_invoices(from_datetime, to_datetime):
-	invoices = frappe.get_all(
-		"Books Sales Invoice",
-		filters={
-			"is_pos": 1,
-			"docstatus": 1,
-			"posting_date": ["between", [from_datetime.date(), to_datetime.date()]],
-		},
-		fields=["name", "return_against", "posting_date", "posting_time"],
-	)
-	return [
-		invoice
-		for invoice in invoices
-		if from_datetime <= posting_datetime(invoice.posting_date, invoice.posting_time) <= to_datetime
-	]
-
-
-def _submitted_payment_methods(names, user):
-	if not names:
-		return {}
-	return dict(
-		frappe.get_all(
-			"Books Payment Entry",
-			filters={"name": ["in", sorted(names)], "docstatus": 1, "owner": user},
-			fields=["name", "mode_of_payment"],
-			as_list=True,
+def _pos_payment_names():
+	"""A subquery of the payments that settle POS invoices."""
+	reference = frappe.qb.DocType("Books Payment Entry Reference")
+	invoice = frappe.qb.DocType("Books Sales Invoice")
+	return (
+		frappe.qb.from_(reference)
+		.join(invoice)
+		.on(reference.reference_name == invoice.name)
+		.select(reference.parent)
+		.where(
+			(reference.parenttype == "Books Payment Entry")
+			& (reference.reference_doctype == "Books Sales Invoice")
+			& (invoice.is_pos == 1)
 		)
 	)

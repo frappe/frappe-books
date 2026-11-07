@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
+from frappe.utils import getdate
 from requests.exceptions import ConnectionError
 
 from frappe_books.accounting.money import company_currency
@@ -45,8 +46,25 @@ class IntegrationTestExchangeRate(IntegrationTestCase):
 		item = make_item(income.name, make_account("FX Expense", root_type="Expense").name)
 		party = make_customer(receivable.name, default_currency=foreign_currency())
 
-		with patch("frappe_books.accounting.invoice.get_exchange_rate", return_value=80) as rate:
+		with patch("frappe_books.accounting.invoice.exchange_rate", return_value=80) as rate:
 			invoice = make_invoice("Books Sales Invoice", party.name, receivable.name, item.name, income.name)
 
 		self.assertEqual(invoice.conversion_rate, 80)
 		rate.assert_called_with(invoice.currency, company_currency(), invoice.posting_date)
+
+	def test_invoice_dated_by_a_date_object_fetches_its_rate(self):
+		# Data Import sets dates as date objects.
+		receivable = make_account("FX Receivable", account_type="Receivable")
+		income = make_account("FX Sales", root_type="Income", account_type="Income Account")
+		item = make_item(income.name, make_account("FX Expense", root_type="Expense").name)
+		currency = foreign_currency()
+		party = make_customer(receivable.name, default_currency=currency)
+		date = getdate()
+		frappe.cache.delete_value(f"books_exchange_rate:{date}:{currency}:{company_currency()}")
+
+		with patch(REQUEST, return_value={"rates": {company_currency(): 80}}):
+			invoice = make_invoice(
+				"Books Sales Invoice", party.name, receivable.name, item.name, income.name, posting_date=date
+			)
+
+		self.assertEqual(invoice.conversion_rate, 80)

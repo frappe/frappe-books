@@ -211,6 +211,34 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual(len(counter_payments(invoice)), 1)
 		self.assertEqual(len(counter_payments(refund)), 1)
 
+	def test_a_cashier_sells_and_takes_returns_only_through_the_pos(self):
+		credit_sale = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			make_auto_payment=0,
+		)
+		credit_sale.submit()
+		message = "only through the Point of Sale"
+
+		with self.set_user(self.make_cashier()):
+			self.assertRaisesRegex(
+				frappe.PermissionError,
+				message,
+				make_invoice,
+				"Books Sales Invoice",
+				self.party.name,
+				self.receivable.name,
+				self.item.name,
+				self.income.name,
+			)
+			refund = map_return(credit_sale.doctype, credit_sale.name)
+			# A return is a POS sale only when its original is.
+			refund.is_pos = 1
+			self.assertRaisesRegex(frappe.PermissionError, message, refund.insert)
+
 	def test_a_cashier_reads_only_the_payments_of_their_own_sales(self):
 		cashier = self.make_cashier()
 		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])

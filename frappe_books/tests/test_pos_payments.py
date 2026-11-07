@@ -199,6 +199,18 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "Open a POS shift"):
 			pay_pos_invoice(invoice.name, [{"payment_method": "Cash", "amount": 180}])
 
+	def test_pos_cash_takes_the_counter_only_in_the_payers_own_shift(self):
+		invoice = self.make_pos_invoice()
+		invoice.submit()
+		drawer = make_account("POS Drawer Cash", account_type="Cash").name
+		frappe.db.set_value("Books Payment Method", "Cash", "account", drawer)
+
+		# Another user's open shift does not count.
+		with self.set_user(ensure_user("pos-shiftless@example.com", "Books User")):
+			self.assertEqual(make_payment(invoice.name).payment_account, drawer)
+			with self.assertRaisesRegex(frappe.ValidationError, "Open a POS shift"):
+				pay_pos_invoice(invoice.name, [{"payment_method": "Cash", "amount": 180}])
+
 	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
 		with self.set_user(self.make_cashier()):
 			invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])

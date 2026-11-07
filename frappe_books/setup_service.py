@@ -109,10 +109,11 @@ def _update_accounting_settings(wizard):
 			"bank_name": wizard.bank_name,
 			"year_start_date": wizard.fiscal_year_start,
 			"year_end_date": wizard.fiscal_year_end,
-			"setup_complete": 1,
 		}
 	)
 	settings.save(ignore_permissions=True)
+	# The settings refuse to change it, so it stays set once the setup is done.
+	frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 1)
 
 
 def _update_print_settings(wizard):

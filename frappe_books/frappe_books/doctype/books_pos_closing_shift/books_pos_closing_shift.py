@@ -93,6 +93,9 @@ class BooksPosClosingShift(Document):
 	def preview(self):
 		"""Fill the closing amounts a save would store, with the counted cash as the cash methods' amounts, without saving."""
 		check_preview_permission(self)
+		if not (self.opening_shift or open_shift_name()):
+			# Without a shift of their own, the user picks the one to close.
+			return
 		self.set_opening_shift()
 		self.set_closing_amounts()
 		self.split_counted_cash()

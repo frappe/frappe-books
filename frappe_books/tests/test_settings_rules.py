@@ -160,6 +160,43 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		defaults.sales_invoice_number_series = make_number_series("SalesInvoice")
 		defaults.save()
 
+	def test_settings_refuse_values_books_cannot_use(self):
+		weighted = {
+			"cash_account": make_account("POS Cash", account_type="Cash").name,
+			"weight_enabled_barcode": 1,
+			"check_digits": 21,
+			"item_code_digits": 5,
+			"item_weight_digits": 5,
+		}
+		for doctype, values, error in (
+			("Books System Settings", {"date_format": "qq/zz"}, "not a date format"),
+			("Books System Settings", {"internal_precision": 50}, "cannot be more than"),
+			("Books Print Settings", {"email": "bad"}, "not a valid Email"),
+			("Books Print Settings", {"phone": "abc!!"}, "not a valid Phone"),
+			("Books Print Settings", {"color": "notacolor"}, "must be a colour"),
+			("Books Defaults", {"pay_button_colour": "red"}, "must be a colour"),
+			("Books Pos Settings", {**weighted, "check_digits": -5}, "cannot be negative"),
+			("Books Pos Settings", {**weighted, "item_code_digits": 0}, "needs"),
+			("Books Pos Settings", {**weighted, "item_weight_digits": 100}, "at most"),
+		):
+			with self.subTest(doctype=doctype, values=values):
+				settings = frappe.get_single(doctype)
+				settings.update(values)
+				self.assertRaisesRegex(frappe.ValidationError, error, settings.save)
+
+	def test_a_weighted_barcode_takes_a_prefix_code_and_weight(self):
+		settings = frappe.get_single("Books Pos Settings")
+		settings.update(
+			{
+				"cash_account": make_account("POS Cash", account_type="Cash").name,
+				"weight_enabled_barcode": 1,
+				"check_digits": 21,
+				"item_code_digits": 5,
+				"item_weight_digits": 5,
+			}
+		)
+		settings.save()
+
 
 def _accounting_settings(**values):
 	frappe.db.set_single_value("Books Accounting Settings", {**COMPANY, **values})

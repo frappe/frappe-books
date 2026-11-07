@@ -346,6 +346,7 @@ class IntegrationTestStockReports(IntegrationTestCase):
 		)
 
 	def test_stock_ledger_filters_by_serial_number(self):
+		frappe.db.set_single_value("Books Inventory Settings", "enable_serial_number", 1)
 		item = make_item(self.income.name, self.received.name, is_stock_item=1, has_serial_no=1).name
 		serial_numbers = [unique_name("SER"), unique_name("SER")]
 		seed_stock(item, quantity=2, rate=10, serial_number="\n".join(serial_numbers))

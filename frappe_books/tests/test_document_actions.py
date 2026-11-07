@@ -213,12 +213,15 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 	def test_return_offers_only_what_is_not_yet_returned(self):
+		received = make_account("Action Received", root_type="Liability")
+		serial_item = make_item(self.income.name, received.name, is_stock_item=1, has_serial_no=1)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,
 			self.receivable.name,
-			self.item.name,
+			serial_item.name,
 			self.income.name,
+			make_auto_stock_transfer=0,
 		)
 		invoice.items[0].update({"discount_percentage": 0, "discount_amount": 0, "serial_no": "S-1\nS-2"})
 		other_item = make_item(self.income.name, self.expense.name)
@@ -227,6 +230,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		partial = map_return(invoice.doctype, invoice.name)
 		partial.items[0].update({"qty": -1, "serial_no": "S-1"})
 		partial.remove(partial.items[1])
+		partial.make_auto_stock_transfer = 0
 		partial.insert().submit()
 
 		remaining = map_return(invoice.doctype, invoice.name)

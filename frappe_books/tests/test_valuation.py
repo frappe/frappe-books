@@ -38,6 +38,16 @@ class UnitTestFifoState(UnitTestCase):
 
 		self.assertEqual(state_values(state), (Decimal("-0.01"), 0, 0, []))
 
+	def test_fixed_outgoing_rate_takes_the_stock_at_that_rate(self):
+		state = next_state(fifo_state(6, 80, [["4", "10"], ["2", "20"]]), -1, 99, CENT, outgoing_rate=20)
+
+		self.assertEqual(state_values(state), (-20, 5, 60, [["4", "10"], ["1", "20"]]))
+
+	def test_fixed_outgoing_rate_without_such_stock_merges_the_layers(self):
+		state = next_state(fifo_state(6, 80, [["4", "10"], ["2", "20"]]), -2, 99, CENT, outgoing_rate=25)
+
+		self.assertEqual(state_values(state), (-50, 4, 30, [["4", "7.5"]]))
+
 	def test_value_is_rounded_half_up_to_the_currency_unit(self):
 		self.assertEqual(next_state(None, 3, "3.335", CENT)["value_change"], Decimal("10.01"))
 		self.assertEqual(next_state(None, 3, "3.335", Decimal(1))["value_change"], Decimal(10))

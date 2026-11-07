@@ -209,6 +209,19 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		self.assertEqual([row.quantity for row in remaining.items], [-1, -1])
 		self.assertEqual(remaining.items[0].serial_number, "S-2")
 
+	def test_a_return_credits_an_item_at_most_at_what_it_was_sold_for(self):
+		invoice = self._paid_invoice(make_auto_payment=0)
+		for values in ({"rate": 300}, {"item_discount_percent": 0}):
+			with self.subTest(values=values):
+				credit_note = map_return(invoice.doctype, invoice.name)
+				credit_note.items[0].update({"quantity": -1, **values})
+				with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* cannot be returned at more"):
+					credit_note.insert()
+
+		credit_note = map_return(invoice.doctype, invoice.name)
+		credit_note.items[0].quantity = -1
+		self.assertEqual(credit_note.insert().grand_total, -90)
+
 	def test_return_keeps_the_item_discounts(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
 		invoice = make_invoice(

@@ -89,7 +89,6 @@ import {
 import { isEqual } from 'lodash';
 import { isNumeric } from 'src/utils';
 import { languageDirectionKey } from 'src/utils/injectionKeys';
-import { getFormRoute, routeTo } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
 import Paginator from '../Paginator.vue';
 import ReportColumnHeader from './ReportColumnHeader.vue';
@@ -114,6 +113,8 @@ export default defineComponent({
   props: {
     report: Report,
   },
+  // The page opens the row's document; the router imports the page.
+  emits: ['openDocument'],
   setup() {
     return {
       languageDirection: inject(languageDirectionKey),
@@ -190,7 +191,7 @@ export default defineComponent({
 
       const reference = getRowReference(this.report, row);
       return reference
-        ? () => routeTo(getFormRoute(reference.schemaName, reference.name))
+        ? () => this.$emit('openDocument', reference)
         : undefined;
     },
     onRowClick(clickedRow, r) {

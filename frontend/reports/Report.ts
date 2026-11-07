@@ -151,9 +151,7 @@ export abstract class Report extends Observable<RawValue> {
     }
 
     // Clearing works for every field type, including checks.
-    value = getIsNullOrUndef(value)
-      ? null
-      : toFrappeValue(value, field, this.fyo);
+    value = getIsNullOrUndef(value) ? null : this.toFilterValue(value, field);
     const prevValue = this[key];
     if (prevValue === value) {
       return;
@@ -169,6 +167,15 @@ export abstract class Report extends Observable<RawValue> {
     if (callPostSet) {
       await this.updateData(key);
     }
+  }
+
+  /** The value the server reads, raised to the field's minimum, as the server requires. */
+  toFilterValue(value: DocValue, field: Field): DocValue {
+    const filterValue = toFrappeValue(value, field, this.fyo);
+    const minvalue = 'minvalue' in field ? field.minvalue : undefined;
+    return typeof filterValue === 'number' && minvalue !== undefined
+      ? Math.max(filterValue, minvalue)
+      : filterValue;
   }
 
   /** A dynamic link names a document of the type it references, so a new type clears it. */

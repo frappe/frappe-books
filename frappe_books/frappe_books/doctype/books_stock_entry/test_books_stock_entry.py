@@ -140,6 +140,18 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 
 		self.assertRaisesRegex(frappe.ValidationError, "not available", receipt.cancel)
 
+	def test_serial_number_cannot_leave_before_it_arrives(self):
+		item, late, early = self._serial_item(), unique_name("SER"), unique_name("SER")
+		now = now_datetime()
+		self._receive_serial(item, late)
+		self._receive_serial(item, early, add_to_date(now, hours=-2))
+		row = {"item_code": item, "s_warehouse": "Stores", "qty": 1, "basic_rate": 5, "serial_no": late}
+		issue = frappe.get_doc(
+			{**movement_values("Material Issue", [row]), **posting_values(add_to_date(now, hours=-1))}
+		).insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "not available", issue.submit)
+
 	def test_batch_is_rejected_for_an_item_without_batches(self):
 		batch = frappe.get_doc(
 			{"doctype": "Books Batch", "batch_id": unique_name("BATCH"), "item": self.item.name}
@@ -200,19 +212,17 @@ class IntegrationTestBooksStockEntry(IntegrationTestCase):
 		issue.cancel()
 		self.assertEqual(frappe.db.get_value("Books Serial No", serial_number, "status"), "Active")
 
-	def _receive_serial(self, item, serial_number):
-		receipt = make_movement(
-			"Material Receipt",
-			[
-				{
-					"item_code": item,
-					"t_warehouse": "Stores",
-					"qty": 1,
-					"basic_rate": 5,
-					"serial_no": serial_number,
-				}
-			],
-		)
+	def _receive_serial(self, item, serial_number, date=None):
+		row = {
+			"item_code": item,
+			"t_warehouse": "Stores",
+			"qty": 1,
+			"basic_rate": 5,
+			"serial_no": serial_number,
+		}
+		receipt = frappe.get_doc(
+			{**movement_values("Material Receipt", [row]), **posting_values(date or now_datetime())}
+		).insert()
 		receipt.submit()
 		return receipt
 

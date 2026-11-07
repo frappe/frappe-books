@@ -138,7 +138,6 @@ import FormControl from 'src/components/Controls/FormControl.vue';
 import Table from 'src/components/Controls/Table.vue';
 import { isCalculating } from 'src/frappe/calculated';
 import { fyo } from 'src/initFyo';
-import { isNumeric } from 'src/utils';
 import { focusOrSelectFormControl } from 'src/utils/ui';
 import { defineComponent, PropType } from 'vue';
 
@@ -172,7 +171,9 @@ export default defineComponent({
       return (
         this.fields.length > 1 &&
         this.fields.every(
-          (field) => isNumeric(field) && this.doc.getFieldState(field).readOnly
+          (field) =>
+            field.fieldtype === 'Currency' &&
+            this.doc.getFieldState(field).readOnly
         )
       );
     },

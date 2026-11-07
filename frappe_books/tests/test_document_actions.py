@@ -171,6 +171,22 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(invoice.db_get("is_returned"), 0)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
+	def test_an_invoice_is_saved_as_not_returned_whatever_it_is_sent(self):
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			is_returned=1,
+			is_fully_returned=1,
+		)
+		invoice.items[0].item_discount_percent = 0
+		invoice.save().submit()
+
+		self.assertEqual((invoice.db_get("is_returned"), invoice.db_get("is_fully_returned")), (0, 0))
+		self.assertEqual(len(map_return(invoice.doctype, invoice.name).items), 1)
+
 	def test_return_offers_only_what_is_not_yet_returned(self):
 		invoice = make_invoice(
 			"Books Sales Invoice",

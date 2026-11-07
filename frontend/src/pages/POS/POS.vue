@@ -45,6 +45,7 @@
       :search-term="itemSearchTerm"
       :total-quantity="totalQuantity"
       :disable-pay="disablePayButton"
+      :profile="posProfile as POSProfile"
       @search="handleItemSearch"
       @add-item="addItem"
       @set-customer="setCustomer"

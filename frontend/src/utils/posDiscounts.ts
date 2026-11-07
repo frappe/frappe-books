@@ -3,10 +3,12 @@ import { ValidationError } from 'fyo/utils/errors';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
 
-/** Whether the POS offers coupons on the sale: the feature is on and its totals can still change. */
+/** Whether the POS offers coupons on the sale: the feature is on and its totals can still change; a return keeps its original's prices. */
 export function isCouponOffered(sale: SalesInvoice): boolean {
   return (
-    !!fyo.singles.AccountingSettings?.enable_coupon_code && !sale.isSubmitted
+    !!fyo.singles.AccountingSettings?.enable_coupon_code &&
+    !sale.isSubmitted &&
+    !sale.isReturn
   );
 }
 

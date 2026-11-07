@@ -41,6 +41,7 @@ from frappe_books.tests.test_units import make_uom
 
 MANAGER = "books-print-manager@example.com"
 USER = "books-print-user@example.com"
+SYSTEM_MANAGER = "books-print-system-manager@example.com"
 
 
 class IntegrationTestPrinting(IntegrationTestCase):
@@ -311,7 +312,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def test_preview_renders_unsaved_html_for_a_document(self):
 		invoice = self.make_invoice()
 
-		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+		with self.set_user(ensure_user(SYSTEM_MANAGER, "System Manager")):
 			preview = preview_print_format(
 				invoice.doctype,
 				invoice.name,
@@ -322,16 +323,16 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertIn(f"<p>{invoice.name} {self.party.name}</p>", preview["html"])
 		self.assertIn("@page { size: 8cm 22cm; }", preview["style"])
 
-	def test_preview_needs_print_format_and_document_rights(self):
+	def test_only_print_format_writers_preview_templates(self):
 		invoice = self.make_invoice()
-		log = frappe.get_doc({"doctype": "Error Log", "error": "Print preview test"}).insert()
+		# Template Jinja reads any table, so a Books Manager must not run it.
+		html = '<p>{{ frappe.db.sql("select name from tabUser") }}</p>'
 
-		with self.set_user(ensure_user(USER, "Books User")):
-			self.assertRaises(
-				frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, "<p></p>"
-			)
-		with self.set_user(ensure_user(MANAGER, "Books Manager")):
-			self.assertRaises(frappe.PermissionError, preview_print_format, log.doctype, log.name, "<p></p>")
+		for user, role in ((USER, "Books User"), (MANAGER, "Books Manager")):
+			with self.subTest(role=role), self.set_user(ensure_user(user, role)):
+				self.assertRaises(
+					frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, html
+				)
 
 	def test_preview_reports_the_template_error_line(self):
 		invoice = self.make_invoice()

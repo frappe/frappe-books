@@ -21,7 +21,7 @@
       </div>
       <SetupWizard
         v-else-if="needsSetup"
-        @setup-complete="completeSetup"
+        @setup-complete="reload"
         @setup-canceled="leaveBooks"
       />
       <MobileDesk v-else-if="isMobile" />
@@ -32,7 +32,6 @@
 </template>
 
 <script lang="ts">
-import type { FrappeDoc } from 'src/frappe/document';
 import { frappeModels, getRegionalFrappeModels } from 'models';
 import type { Company } from 'models/baseModels/Company/Company';
 import type { SystemSettings } from 'models/baseModels/SystemSettings/SystemSettings';
@@ -70,7 +69,7 @@ import {
   Spinner as FrappeSpinner,
   useColorScheme,
 } from 'frappe-ui';
-import { call, redirectToLogin } from './api';
+import { redirectToLogin } from './api';
 
 export default defineComponent({
   name: 'WebApp',
@@ -166,11 +165,7 @@ export default defineComponent({
       }
       this.loading = false;
     },
-    async completeSetup(wizard: FrappeDoc) {
-      await wizard.sync();
-      await call(
-        'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
-      );
+    reload() {
       window.location.reload();
     },
     leaveBooks() {

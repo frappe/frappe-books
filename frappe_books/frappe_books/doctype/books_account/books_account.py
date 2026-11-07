@@ -7,6 +7,19 @@ from frappe.utils.nestedset import NestedSet, NestedSetChildExistsError
 
 from frappe_books.permissions import check_preview_permission
 
+# Account types that hold balances, which a profit and loss root would post to the wrong side
+BALANCE_SHEET_TYPES = (
+	"Receivable",
+	"Payable",
+	"Bank",
+	"Cash",
+	"Stock",
+	"Stock Received But Not Billed",
+	"Fixed Asset",
+	"Accumulated Depreciation",
+)
+BALANCE_SHEET_ROOTS = ("Asset", "Liability", "Equity")
+
 
 class BooksAccount(NestedSet):
 	# begin: auto-generated types
@@ -85,6 +98,7 @@ class BooksAccount(NestedSet):
 		if not self.is_group and not self.parent_account:
 			frappe.throw(_("Only group accounts can be root accounts. Select a parent group."))
 		self.validate_account_type_change()
+		self.validate_account_type_root()
 
 	def validate_account_type_change(self):
 		"""An account type left empty at insert can be set later, but never changed."""
@@ -93,6 +107,15 @@ class BooksAccount(NestedSet):
 			frappe.throw(
 				_("Value cannot be changed for {0}").format(self.meta.get_label("account_type")),
 				frappe.CannotChangeConstantError,
+			)
+
+	def validate_account_type_root(self):
+		"""Charts may put payables under assets, but no balance account under income or expenses."""
+		if self.account_type in BALANCE_SHEET_TYPES and self.root_type not in BALANCE_SHEET_ROOTS:
+			frappe.throw(
+				_("{0} accounts must be under an Asset, Liability or Equity root, not {1}.").format(
+					_(self.account_type), _(self.root_type)
+				)
 			)
 
 	def on_trash(self):

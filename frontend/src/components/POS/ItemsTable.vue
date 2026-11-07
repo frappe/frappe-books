@@ -1,14 +1,18 @@
 <template>
   <div class="flex min-h-0 flex-1 flex-col px-5 pb-5 pt-1">
+    <!-- A tablet's narrow pane drops the Unit column so the item keeps its name. -->
     <FrappeList
-      :columns="['minmax(0, 1fr)', '6rem', '7rem', '6.5rem', '1rem']"
+      :columns="{
+        base: ['minmax(6rem, 1fr)', '7rem', '6.5rem', '1rem'],
+        lg: ['minmax(8rem, 1fr)', '6rem', '7rem', '6.5rem', '1rem'],
+      }"
       :row-height="40"
       divider="full"
       class="flex min-h-0 flex-1 flex-col list-gap-3 list-row-px-2.5"
     >
       <FrappeListHeader>
         <FrappeListHeaderCell>{{ t`Item` }}</FrappeListHeaderCell>
-        <FrappeListHeaderCell>{{ t`Unit` }}</FrappeListHeaderCell>
+        <FrappeListHeaderCell class="max-lg:hidden">{{ t`Unit` }}</FrappeListHeaderCell>
         <FrappeListHeaderCell class="justify-end">{{ t`Stock` }}</FrappeListHeaderCell>
         <FrappeListHeaderCell class="justify-end">{{ t`Rate` }}</FrappeListHeaderCell>
         <FrappeListHeaderCell />
@@ -27,7 +31,7 @@
                   {{ row.name }}
                 </span>
               </FrappeListCell>
-              <FrappeListCell>
+              <FrappeListCell class="max-lg:hidden">
                 <span class="truncate text-sm text-ink-gray-6">{{ row.unit }}</span>
               </FrappeListCell>
               <FrappeListCell class="justify-end">

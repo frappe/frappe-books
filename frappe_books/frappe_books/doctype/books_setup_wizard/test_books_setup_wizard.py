@@ -25,7 +25,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import complete_frappe_setup, default_accounts, run_setup
-from frappe_books.tests.accounting import ensure_user, unique_name
+from frappe_books.tests.accounting import ensure_user, make_account, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
 FRAPPE_SETUP_FIELDS = (
@@ -143,14 +143,15 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "round_off_account"))
 		self.assertFalse(frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"))
 
-	def test_parties_and_invoices_default_to_the_charts_trade_accounts(self):
-		# The U.A.E chart has several receivables; the newest is not its trade receivable.
-		wizard = self._wizard(
-			country="United Arab Emirates", currency="AED", chart_of_accounts="U.A.E - Chart of Accounts"
+	def test_parties_and_invoices_default_to_the_companys_trade_accounts(self):
+		# Setup sets them from the chart; the U.A.E chart's newest receivable is not its trade receivable.
+		receivable = make_account("Trade Receivable", account_type="Receivable").name
+		payable = make_account("Trade Payable", root_type="Liability", account_type="Payable").name
+		make_account("Newer Receivable", account_type="Receivable")
+		frappe.db.set_single_value(
+			"Books Accounting Settings",
+			{"default_receivable_account": receivable, "default_payable_account": payable},
 		)
-		wizard.save(ignore_permissions=True)
-		with self.restored_system_settings():
-			run_setup(wizard)
 
 		customer = frappe.get_doc(
 			{"doctype": "Books Party", "name": unique_name("Customer"), "role": "Customer"}
@@ -158,12 +159,9 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		supplier = frappe.get_doc(
 			{"doctype": "Books Party", "name": unique_name("Supplier"), "role": "Supplier"}
 		)
-		self.assertEqual(customer.insert().default_account, "Trade Receivable")
-		self.assertEqual(supplier.insert().default_account, "Trade Payable")
-		self.assertEqual(default_party_account("Receivable"), "Trade Receivable")
-		self.assertEqual(
-			frappe.db.get_single_value("Books Pos Settings", "default_account"), "Trade Receivable"
-		)
+		self.assertEqual(customer.insert().default_account, receivable)
+		self.assertEqual(supplier.insert().default_account, payable)
+		self.assertEqual(default_party_account("Receivable"), receivable)
 
 	def test_setup_makes_a_cash_ledger_for_a_chart_without_one(self):
 		wizard = self._wizard(

@@ -218,7 +218,7 @@ test('a submitted invoice from Held offers only its payment', async ({
   );
   await expect(page.getByRole('heading', { name: 'Payment' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Submit only' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Submit unpaid' })).toHaveCount(0);
 });
 
 test('a submitted invoice offers nothing that changes its totals', async ({

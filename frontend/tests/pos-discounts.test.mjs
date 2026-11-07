@@ -125,11 +125,17 @@ test('each gate follows its own feature', () => {
 test('loyalty also needs points to redeem on a sale, not a return', () => {
   const noPoints = makeSale({ available_loyalty_points: 0 });
   const noProgram = makeSale({ loyalty_program: null });
-  const refund = makeSale({ return_against: 'SINV-0900' });
 
-  for (const sale of [noPoints, noProgram, refund]) {
+  for (const sale of [noPoints, noProgram]) {
     assert.deepEqual(getGates(sale), [true, false]);
   }
+});
+
+test('a return keeps its original prices, so it takes no coupon or points', () => {
+  const refund = makeSale({ return_against: 'SINV-0900' });
+
+  assert.deepEqual(getGates(refund), [false, false]);
+  assert.deepEqual(getOffers(refund), [false, false]);
 });
 
 test('a redemption above the sale total or the points left is refused', async () => {

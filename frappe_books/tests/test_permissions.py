@@ -23,6 +23,7 @@ from frappe_books.tests.accounting import (
 	make_invoice,
 	make_item,
 	make_tax,
+	make_warehouse,
 	set_company_value,
 	unique_name,
 )
@@ -174,6 +175,37 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		self.assertEqual(invoice.debit_to, receivable.name)
 		self.assertIsNone(read_back["debit_to"])
 		self.assertIsNone(read_back["items"][0]["income_account"])
+
+	def test_books_user_sets_an_items_default_warehouse_but_not_its_accounts(self):
+		income = make_account("Warehouse Income", root_type="Income", account_type="Income Account")
+		other_income = make_account(
+			"Warehouse Other Income", root_type="Income", account_type="Income Account"
+		)
+		expense = make_account("Warehouse Expense", root_type="Expense", account_type="Expense Account")
+		warehouse = make_warehouse("Rights Warehouse").name
+		item = make_item(income.name, expense.name)
+
+		with self.set_user(BOOKS_USER):
+			edited = frappe.get_doc("Books Item", item.name)
+			edited.item_defaults[0].default_warehouse = warehouse
+			edited.item_defaults[0].income_account = other_income.name
+			edited.save()
+			new = frappe.get_doc(
+				{
+					"doctype": "Books Item",
+					"item_code": unique_name("Rights Item"),
+					"stock_uom": "Unit",
+					"item_defaults": [{"default_warehouse": warehouse, "income_account": other_income.name}],
+				}
+			).insert()
+
+		item.reload()
+		self.assertEqual(
+			[item.item_defaults[0].default_warehouse, item.item_defaults[0].income_account],
+			[warehouse, income.name],
+		)
+		self.assertEqual(new.item_defaults[0].default_warehouse, warehouse)
+		self.assertNotEqual(new.item_defaults[0].income_account, other_income.name)
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")

@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from frappe_books.commerce.pos import open_shift_name
+from frappe_books.commerce.pos import any_open_shift
 from frappe_books.settings import validate_one_way_switches
 
 ONE_WAY_SWITCHES = ("show_barcode_field", "enable_batches", "enable_serial_number", "enable_uom_conversions")
@@ -34,6 +34,6 @@ class BooksInventorySettings(Document):
 		if (
 			self.has_value_changed("enable_point_of_sale")
 			and not self.enable_point_of_sale
-			and open_shift_name()
+			and any_open_shift()
 		):
-			frappe.throw(_("Close the open POS shift before disabling Point of Sale."))
+			frappe.throw(_("Close the open POS shifts before disabling Point of Sale."))

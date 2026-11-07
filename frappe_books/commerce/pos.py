@@ -15,21 +15,29 @@ from frappe_books.dates import posting_datetime
 
 def open_shift_name(user=None):
 	"""Return the user's submitted opening shift that has no submitted closing shift."""
+	return _open_shift(user or frappe.session.user)
+
+
+def any_open_shift():
+	"""Return an open shift of any user."""
+	return _open_shift()
+
+
+def _open_shift(user=None):
 	opening = frappe.qb.DocType("Books POS Opening Entry")
 	closing = frappe.qb.DocType("Books POS Closing Entry")
-	names = (
+	query = (
 		frappe.qb.from_(opening)
 		.left_join(closing)
 		.on((closing.pos_opening_entry == opening.name) & (closing.docstatus == 1))
 		.select(opening.name)
-		.where(
-			(opening.docstatus == 1)
-			& (opening.owner == (user or frappe.session.user))
-			& closing.name.isnull()
-		)
+		.where((opening.docstatus == 1) & closing.name.isnull())
 		.orderby(opening.period_start_date, order=Order.desc)
 		.limit(1)
-	).run(pluck=True)
+	)
+	if user:
+		query = query.where(opening.owner == user)
+	names = query.run(pluck=True)
 	return names[0] if names else None
 
 

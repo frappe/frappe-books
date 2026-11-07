@@ -399,7 +399,6 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		self.assertEqual(stock_quantity(item.name, location.name), 5)
 
 	def _make_pos_invoice(self, use_profile, opening_quantity=5):
-		start_pos_shift()
 		receivable = make_account("POS Receivable", account_type="Receivable")
 		income = make_account("POS Sales", root_type="Income", account_type="Income Account")
 		cogs = make_account("POS COGS", root_type="Expense", account_type="Cost of Goods Sold")
@@ -423,6 +422,8 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile.name if profile else "")
 		frappe.db.set_single_value("Books Pos Settings", {"can_change_rate": 1, "can_edit_discount": 1})
 		frappe.db.set_single_value("Books Pos Settings", "inventory", "Stores" if profile else location.name)
+		# The shift sells with the profile POS Settings names when it opens.
+		start_pos_shift()
 		party = make_party(receivable.name)
 		item = make_item(income.name, received.name, track_item=1, rate=10)
 		make_movement(

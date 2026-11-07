@@ -68,6 +68,21 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		)
 		self.assertEqual(rows[-1], _row("closing", "Closing", 20, 0, 20))
 
+	def test_general_ledger_groups_by_reference_only_the_periods_documents(self):
+		_post("2044-12-31", self.cash.name, 100, 0)
+		voucher = unique_name("JV")
+		_post("2045-01-05", self.cash.name, 50, 0, voucher)
+
+		rows = self._ledger(account=self.cash.name, group_by="voucher_no")
+
+		self.assertFalse([row for row in rows if row.get("type") == "opening"])
+		self.assertEqual(
+			[(row["voucher_no"], row["balance"]) for row in rows if row.get("type") == "entry"],
+			[(voucher, Decimal(50))],
+		)
+		self.assertEqual(len([row for row in rows if row.get("type") == "total"]), 1)
+		self.assertEqual(rows[-1], _row("closing", "Closing", 50, 0, 150))
+
 	def test_general_ledger_filters_and_shows_documents_by_doctype(self):
 		_post("2045-01-05", self.cash.name, 50, 0)
 		_post("2045-01-06", self.cash.name, 30, 0, voucher_type="Books Payment Entry")
@@ -78,6 +93,13 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 		self.assertEqual(
 			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment Entry", Decimal(30))]
 		)
+
+	def test_general_ledger_party_type_all_shows_every_entry(self):
+		_post("2045-01-05", self.cash.name, 50, 0)
+
+		rows = self._ledger(account=self.cash.name, party_type="All", voucher_type="All")
+
+		self.assertEqual([row["debit"] for row in rows if row.get("type") == "entry"], [Decimal(50)])
 
 	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):
 		_post("2044-12-31", self.cash.name, 100, 0)

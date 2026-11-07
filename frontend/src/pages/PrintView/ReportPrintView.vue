@@ -1,12 +1,19 @@
 <template>
   <div class="flex flex-col w-full md:h-full">
     <PageHeader :title="t`Print ${title}`">
-      <FrappeButton variant="solid" @click="print()">
+      <FrappeButton v-if="canOpen" variant="solid" @click="print()">
         {{ t`Print` }}
       </FrappeButton>
     </PageHeader>
 
+    <EmptyState
+      v-if="!canOpen"
+      class="flex-1"
+      icon="lucide-lock"
+      :title="t`You don't have access to this report`"
+    />
     <div
+      v-else
       class="md:grid md:min-h-0 md:flex-1 md:grid-cols-[auto_var(--w-quick-edit)] md:grid-rows-[minmax(0,1fr)]"
     >
       <!-- Report Print Display Area -->
@@ -30,6 +37,18 @@
                 </td>
                 <td style="padding: 0.5rem; text-align: right; color: #7c7c7c">
                   {{ title }}
+                </td>
+              </tr>
+              <tr v-if="printedFilters">
+                <td
+                  colspan="2"
+                  style="
+                    padding: 0 0.5rem 0.5rem;
+                    font-size: 0.75rem;
+                    color: #7c7c7c;
+                  "
+                >
+                  {{ printedFilters }}
                 </td>
               </tr>
             </table>
@@ -58,7 +77,7 @@
                   <td
                     v-for="(cell, c) of row"
                     :key="cell.idx"
-                    :style="getCellStyle(c, cell.idx)"
+                    :style="[getCellStyle(c, cell.idx), cell.style]"
                   >
                     {{ cell.value }}
                   </td>
@@ -174,7 +193,7 @@
       </FrappeScrollArea>
     </div>
 
-    <MobileFooter v-if="isMobile">
+    <MobileFooter v-if="isMobile && canOpen">
       <FrappeButton
         class="flex-1"
         size="lg"
@@ -199,23 +218,27 @@ import { OptionField } from 'schemas/types';
 import Check from 'src/components/Controls/Check.vue';
 import Int from 'src/components/Controls/Int.vue';
 import Select from 'src/components/Controls/Select.vue';
+import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import MobileFooter from 'src/mobile/MobileFooter.vue';
 import { getReport } from 'src/utils/misc';
 import { constructPDFDocument, printDocument } from 'src/utils/printDocument';
 import { canSharePDF, getReportPDF } from 'src/utils/printFormatApi';
 import { showSidebar } from 'src/utils/refs';
+import { canOpen } from 'src/utils/sidebarConfig';
 import { paperSizeMap, printSizes } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { PropType, StyleValue, defineComponent } from 'vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { usePDFShare } from './pdfShare';
+import { getCellTypeStyle, getPrintedFilters } from './reportPrint';
 
 const CELL_BORDER = '1px solid #e2e2e2';
 
 export default defineComponent({
   components: {
     PageHeader,
+    EmptyState,
     FrappeButton,
     FrappeScrollArea,
     Check,
@@ -255,6 +278,9 @@ export default defineComponent({
     title(): string {
       return getReports()[this.reportName]?.title ?? this.t`Report`;
     },
+    canOpen(): boolean {
+      return canOpen(`/report/${this.reportName}`);
+    },
     printSizeDf(): OptionField {
       return {
         label: 'Print Size',
@@ -270,20 +296,25 @@ export default defineComponent({
         .map((column, idx) => ({ label: column.label, idx }))
         .filter(({ idx }) => this.columnSelection[idx]);
     },
-    rows(): { value: string; idx: number }[][] {
+    printedFilters(): string {
+      return this.report ? getPrintedFilters(this.report as Report) : '';
+    },
+    rows(): { value: string; idx: number; style: StyleValue }[][] {
       if (!this.report) {
         return [];
       }
 
       const start = Math.max(this.start - 1, 0);
       const end = Math.min(start + this.limit, this.report.reportData.length);
-      return this.report.reportData
-        .slice(start, end)
-        .map((row) =>
-          row.cells
-            .map((cell, idx) => ({ value: cell.value, idx }))
-            .filter(({ idx }) => this.columnSelection[idx])
-        );
+      return this.report.reportData.slice(start, end).map((row) =>
+        row.cells
+          .map((cell, idx) => ({
+            value: cell.value,
+            idx,
+            style: getCellTypeStyle(cell, row),
+          }))
+          .filter(({ idx }) => this.columnSelection[idx])
+      );
     },
     size(): { width: number; height: number } {
       const size = paperSizeMap[this.printSize];
@@ -303,6 +334,10 @@ export default defineComponent({
     },
   },
   async mounted() {
+    if (!this.canOpen) {
+      return;
+    }
+
     this.report = await getReport(this.reportName);
     this.limit = this.report.reportData.length;
     this.columnSelection = this.report.columns.map(() => true);

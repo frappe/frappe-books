@@ -11,7 +11,7 @@ class IntegrationTestBooksItemTaxTemplate(IntegrationTestCase):
 	def test_tax_rows_take_ledger_accounts_only(self):
 		group = root_group("Liability")
 		ledger = make_account("Output Tax", root_type="Liability", account_type="Tax").name
-		self.assertRaisesRegex(frappe.ValidationError, "Group account", make_tax, group)
+		self.assertRaisesRegex(frappe.ValidationError, "cannot be the group account", make_tax, group)
 
 		tax = make_tax(ledger)
 		tax.taxes[0].payment_account = group

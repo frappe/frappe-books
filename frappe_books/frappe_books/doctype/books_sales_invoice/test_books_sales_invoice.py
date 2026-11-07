@@ -283,7 +283,11 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 		invoice.submit()
 		credit_note = frappe.copy_doc(invoice)
 		credit_note.update({"docstatus": 0, "return_against": invoice.name})
-		credit_note.items[0].update({"qty": -2, "discount_percentage": 0, "discount_amount": 0})
+		credit_note.items[0].qty = -2
+		# Each row is credited at its sold rate; an extra charge given back takes the total past the bill.
+		credit_note.append(
+			"taxes", {"charge_type": "Actual", "account_head": self.discount.name, "tax_amount": -50}
+		)
 
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()

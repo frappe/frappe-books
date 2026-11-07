@@ -190,6 +190,14 @@ test('a failed row without a name is named by its row number', () => {
   assert.equal(importer.getRowName(1), 'Row 2');
 });
 
+test('a required field the server has a default for is not required in a file', () => {
+  const series = new Importer('NumberSeries', fyo);
+  assert.equal(series.templateFieldsMap.get('NumberSeries.start').required, false);
+
+  const invoice = new Importer('SalesInvoice', fyo);
+  assert.equal(invoice.templateFieldsMap.get('SalesInvoice.date').required, false);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

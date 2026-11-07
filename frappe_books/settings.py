@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import cstr
+from frappe.utils import add_days, add_years, cstr, getdate
 
 # Countries Books ships regional schemas for, by Frappe Country code
 REGIONAL_CODES = {"in", "ch"}
@@ -58,6 +58,17 @@ def validate_one_way_switches(doc, fieldnames):
 	for fieldname in fieldnames:
 		if before and before.get(fieldname) and not doc.get(fieldname):
 			frappe.throw(_("{0} cannot be disabled once enabled.").format(_(doc.meta.get_label(fieldname))))
+
+
+def validate_fiscal_year(start, end):
+	"""A fiscal year ends after it starts, at most a year later, as ERPNext's Fiscal Year does."""
+	if not start or not end:
+		return
+	start, end = getdate(start), getdate(end)
+	if end <= start:
+		frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
+	if end > add_days(add_years(start, 1), -1):
+		frappe.throw(_("A fiscal year cannot be longer than one year."))
 
 
 def company_country() -> str | None:

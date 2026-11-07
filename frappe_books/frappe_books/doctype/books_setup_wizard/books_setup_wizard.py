@@ -11,6 +11,7 @@ from frappe.utils import add_days, add_years, getdate, momentjs
 
 from frappe_books.coa import chart_options
 from frappe_books.permissions import check_preview_permission
+from frappe_books.settings import validate_fiscal_year
 from frappe_books.setup_service import get_books_country_info, run_setup
 
 
@@ -66,8 +67,7 @@ class BooksSetupWizard(Document):
 			self.fiscal_year_end = add_days(add_years(self.fiscal_year_start, 1), -1)
 
 	def validate(self):
-		if getdate(self.fiscal_year_end) <= getdate(self.fiscal_year_start):
-			frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
+		validate_fiscal_year(self.fiscal_year_start, self.fiscal_year_end)
 		if self.time_zone and self.time_zone not in momentjs.get_all_timezones():
 			frappe.throw(_("{0} is not a valid time zone.").format(self.time_zone))
 

@@ -9,7 +9,7 @@ from frappe.utils import cint
 from frappe_books.accounting.accounts import validate_changed_accounts
 from frappe_books.coa import ensure_discount_account
 from frappe_books.regional import validate_gstin
-from frappe_books.settings import company_country, validate_one_way_switches
+from frappe_books.settings import company_country, validate_fiscal_year, validate_one_way_switches
 
 POINT_OF_SALE_FEATURES = (
 	"enable_batches",
@@ -99,6 +99,7 @@ class BooksAccountingSettings(Document):
 	def validate(self):
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		self.validate_setup_complete()
+		validate_fiscal_year(self.fiscal_year_start, self.fiscal_year_end)
 		validate_changed_accounts(self, ACCOUNT_TYPES)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)

@@ -11,7 +11,7 @@ from frappe.utils import flt, getdate
 
 from frappe_books.accounting.accounts import latest_ledger_account, validate_row_accounts
 from frappe_books.company import company_value, default_company
-from frappe_books.permissions import check_preview_permission
+from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, item_series_pattern, validate_pattern
 from frappe_books.settings import require_features
@@ -64,6 +64,10 @@ class BooksItem(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item"
+
+	def before_insert(self):
+		# The accounts of a new item's defaults are the server's to fill for users who cannot write them.
+		reset_new_rows_above_permlevel(self)
 
 	def before_validate(self):
 		# Named by its code, an item is titled by it too unless it has a name of its own.

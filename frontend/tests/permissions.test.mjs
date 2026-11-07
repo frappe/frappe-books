@@ -7,8 +7,12 @@ import {
 import {
   fyo,
   getDocType,
+  getExportFields,
+  getExportTableFields,
   getImportableSchemaNames,
+  getListColumns,
   getModel,
+  getSchema,
   getSidebarConfig,
   loadDocPermissions,
   loadSaved,
@@ -334,6 +338,56 @@ test("a row's field levels follow its parent's permissions", async () => {
     window.frappe.boot.user.roles = ['Books Manager'];
     await loadFrappeModels();
   }
+});
+
+/** Runs `check` with the doctypes loaded for a user of `role`. */
+async function asRole(role, check) {
+  window.frappe.boot.user.roles = [role];
+  try {
+    await loadFrappeModels();
+    check();
+  } finally {
+    window.frappe.boot.user.roles = ['Books Manager'];
+    await loadFrappeModels();
+  }
+}
+
+const shownFields = (schemaName, fieldnames) =>
+  getSchema(schemaName)
+    .fields.filter((field) => fieldnames.includes(field.fieldname))
+    .filter((field) => !field.hidden && !field.readOnly)
+    .map(({ fieldname }) => fieldname);
+
+test("a company-row field follows its table's and row field's levels", async () => {
+  const itemFields = ['income_account', 'expense_account', 'default_warehouse'];
+  await asRole('Books User', () => {
+    assert.deepEqual(shownFields('Item', itemFields), ['default_warehouse']);
+    assert.deepEqual(shownFields('Customer', ['account']), []);
+  });
+  await asRole('Books Manager', () => {
+    assert.deepEqual(shownFields('Item', itemFields).sort(), itemFields.sort());
+    assert.deepEqual(shownFields('Customer', ['account']), ['account']);
+  });
+});
+
+test('lists and exports leave out the fields the user cannot read', async () => {
+  const fieldnames = (fields) => fields.map(({ fieldname }) => fieldname);
+  await asRole('Books User', () => {
+    const columns = getListColumns(
+      'StockLedgerEntry',
+      getModel('StockLedgerEntry').getListViewSettings()
+    );
+    const items = getExportTableFields('SalesInvoice').find(
+      ({ fieldname }) => fieldname === 'items'
+    );
+
+    assert.ok(!fieldnames(columns).includes('incoming_rate'));
+    assert.ok(
+      !fieldnames(getExportFields('SalesInvoice')).includes('debit_to')
+    );
+    assert.ok(fieldnames(items.fields).includes('item_code'));
+    assert.ok(!fieldnames(items.fields).includes('income_account'));
+  });
 });
 
 test('the palette offers the Setup pages only to users who can use them', () => {

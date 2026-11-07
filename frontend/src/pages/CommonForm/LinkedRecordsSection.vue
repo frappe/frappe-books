@@ -82,7 +82,7 @@
               :columns="tracks"
               :row-height="48"
               divider="full"
-              class="text-base text-ink-gray-8 list-gap-4 list-row-px-3"
+              class="min-w-min text-base text-ink-gray-8 list-gap-4 list-row-px-3"
             >
               <FrappeListHeader v-if="rows.length">
                 <FrappeListHeaderCell

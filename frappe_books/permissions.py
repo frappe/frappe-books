@@ -23,3 +23,14 @@ def sells_only_at_pos(user=None) -> bool:
 	"""Books Cashiers sell, and take returns, only through the POS."""
 	roles = frappe.get_roles(user)
 	return "Books Cashier" in roles and not any(role in roles for role in SELLING_ROLES)
+
+
+def reset_new_rows_above_permlevel(doc) -> None:
+	"""Reset row values on levels the user cannot write, as Frappe does on save but not on insert."""
+	if doc.flags.ignore_permissions or frappe.session.user == "Administrator":
+		return
+	has_access_to = doc.get_permlevel_access()
+	for table in doc.meta.get_table_fields():
+		fields = frappe.get_meta(table.options).get_high_permlevel_fields()
+		for row in doc.get(table.fieldname) if fields else []:
+			row.reset_values_if_no_permlevel_access(has_access_to, fields)

@@ -115,8 +115,7 @@
    "fieldname": "item_defaults",
    "fieldtype": "Table",
    "label": "Item Defaults",
-   "options": "Books Item Default",
-   "permlevel": 1
+   "options": "Books Item Default"
   },
   {
    "fieldname": "taxes_section_break",

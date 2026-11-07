@@ -187,7 +187,9 @@ class IntegrationTestBooksShipment(IntegrationTestCase):
 
 		again = self._make_shipment(item, quantity=1, rate=100, back_reference=invoice.name)
 
-		self.assertRaisesRegex(frappe.ValidationError, "left to transfer", again.submit)
+		self.assertRaisesRegex(
+			frappe.ValidationError, f"has only 0 of {item.name} left to transfer", again.submit
+		)
 
 	def test_return_shipment_marks_original_returned_until_cancelled(self):
 		item, _cogs, _stock = self._tracked_item()

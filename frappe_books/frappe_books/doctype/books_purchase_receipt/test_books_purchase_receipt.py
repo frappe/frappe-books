@@ -90,7 +90,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		make_receipt(item.name, quantity=5, rate=10)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
 
-		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
+		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2 in"):
 			make_receipt(item.name, quantity=-3, rate=10, return_against=receipt.name)
 
 	def test_invoice_and_return_are_mapped_from_a_receipt(self):

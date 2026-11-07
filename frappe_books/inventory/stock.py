@@ -32,6 +32,29 @@ def validate_batches(rows):
 		_validate_batch(row, items[row["item_code"]], batch_items)
 
 
+def validate_listed_serial_numbers(rows):
+	"""Check the serial numbers rows list: of their item, one per stock unit, none twice. Rows without any pass."""
+	listed = [
+		{"item_code": row.item_code, "serial_no": row.serial_no, "stock_qty": row.stock_qty}
+		for row in rows
+		if row.item_code and row.serial_no
+	]
+	if listed:
+		_validate_serial_numbers(listed)
+
+
+def validate_serial_numbers_in_stock(rows):
+	serial_numbers = set(_all_serial_numbers(rows))
+	if not serial_numbers:
+		return
+	in_stock = frappe.get_all(
+		"Books Serial No", filters={"name": ["in", sorted(serial_numbers)], "status": "Active"}, pluck="name"
+	)
+	missing = sorted(serial_numbers - set(in_stock))
+	if missing:
+		frappe.throw(_("Serial number {0} is not in stock.").format(", ".join(missing)))
+
+
 def create_series_batches(rows):
 	"""Give rows of batch items without a batch a new batch named from the item's batch series.
 

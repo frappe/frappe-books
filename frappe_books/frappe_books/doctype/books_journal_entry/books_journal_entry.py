@@ -10,6 +10,7 @@ from frappe_books.accounting.ledger import (
 	LedgerPosting,
 	delete_entries,
 	reverse_entries,
+	throw_unbalanced,
 	validate_leaf_accounts,
 )
 from frappe_books.accounting.money import as_decimal
@@ -76,9 +77,7 @@ class BooksJournalEntry(SeriesNamingMixin, Document):
 		if self.total_debit == 0:
 			frappe.throw(_("Journal entry total must be greater than zero."))
 		if self.total_debit != self.total_credit:
-			frappe.throw(
-				_("Total debit {0} must equal total credit {1}.").format(self.total_debit, self.total_credit)
-			)
+			throw_unbalanced(self.total_debit, self.total_credit)
 
 	def on_submit(self):
 		posting = LedgerPosting(self)

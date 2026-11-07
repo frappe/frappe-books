@@ -4,6 +4,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 import frappe
 from frappe import _
+from frappe.utils import fmt_money
 
 from frappe_books.currency import smallest_unit
 
@@ -35,3 +36,8 @@ def company_currency() -> str:
 def plain_number(value) -> str:
 	"""Write a number without trailing zeros or an exponent, e.g. 2 or 2.5."""
 	return format(as_decimal(value).normalize(), "f")
+
+
+def format_money(value, currency=None) -> str:
+	"""Write an amount as the company shows money, e.g. ₹ 1,000.00."""
+	return fmt_money(value, currency=currency or company_currency())

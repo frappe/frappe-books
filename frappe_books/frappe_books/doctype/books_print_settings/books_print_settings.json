@@ -48,12 +48,14 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
+   "options": "Email",
    "placeholder": "john@doe.com"
   },
   {
    "fieldname": "phone",
    "fieldtype": "Data",
    "label": "Phone",
+   "options": "Phone",
    "placeholder": "9888900000"
   },
   {
@@ -124,7 +126,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 15:18:16.733986",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Print Settings",

@@ -4,6 +4,7 @@
 from frappe.model.document import Document
 
 from frappe_books.printing import validate_print_format
+from frappe_books.settings import validate_colors
 
 
 class BooksPOSProfile(Document):
@@ -35,3 +36,4 @@ class BooksPOSProfile(Document):
 
 	def validate(self):
 		validate_print_format(self.print_format, "Books Sales Invoice")
+		validate_colors(self)

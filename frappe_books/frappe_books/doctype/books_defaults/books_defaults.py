@@ -8,6 +8,7 @@ from frappe.model.document import Document
 from frappe_books.accounting.accounts import PAYMENT_ACCOUNT_TYPES, validate_changed_accounts
 from frappe_books.printing import default_print_format, update_default_print_formats, validate_print_format
 from frappe_books.series import NUMBER_SERIES, validate_series_type
+from frappe_books.settings import validate_colors
 
 ACCOUNT_TYPES = {
 	"sales_payment_account": {"account_types": PAYMENT_ACCOUNT_TYPES},
@@ -92,6 +93,7 @@ class BooksDefaults(Document):
 		validate_changed_accounts(self, ACCOUNT_TYPES)
 		validate_print_format(self.pos_print_template, "Books Sales Invoice")
 		self.validate_number_series()
+		validate_colors(self)
 
 	def validate_number_series(self):
 		"""Each default series must number its document type, else every new document of it fails."""

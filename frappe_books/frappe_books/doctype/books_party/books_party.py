@@ -8,6 +8,8 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.accounts import validate_party_account
 from frappe_books.accounting.money import company_currency
+from frappe_books.accounting.settlement import party_outstanding
+from frappe_books.commerce.loyalty import get_available_points
 from frappe_books.regional import validate_gstin
 from frappe_books.settings import require_features
 
@@ -42,6 +44,13 @@ class BooksParty(Document):
 	def before_validate(self):
 		self.default_account = self.default_account or _default_account(self.role)
 		self.currency = self.currency or company_currency()
+		self.set_balances()
+
+	def set_balances(self):
+		"""What the party owes and its points come from its invoices and point entries, whatever a save sends."""
+		is_new = self.is_new()
+		self.outstanding_amount = 0 if is_new else party_outstanding(self.name, self.role)
+		self.loyalty_points = 0 if is_new else get_available_points(self.name)
 
 	def validate(self):
 		require_features(self, {"loyalty_program": "enable_loyalty_program"})

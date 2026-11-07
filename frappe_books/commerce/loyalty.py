@@ -53,22 +53,22 @@ def _validate_redemption(invoice):
 		frappe.throw(_("Loyalty redemption cannot exceed the invoice total."))
 
 
-def set_return_redemption(invoice, total):
+def set_return_redemption(invoice):
 	"""Give a return its share of the points its original invoice redeemed, by its grand total, as
 	negative points."""
 	original = frappe.db.get_value(
 		invoice.doctype,
 		invoice.return_against,
-		["redeem_loyalty_points", "loyalty_points", "loyalty_program", "grand_total"],
+		["redeem_loyalty_points", "loyalty_points", "loyalty_program", "base_grand_total"],
 		as_dict=True,
 	)
 	if not original:
 		return
 	invoice.redeem_loyalty_points = original.redeem_loyalty_points
 	invoice.loyalty_points = 0
-	if not (original.redeem_loyalty_points and as_decimal(original.grand_total)):
+	if not (original.redeem_loyalty_points and as_decimal(original.base_grand_total)):
 		return
-	share = abs(as_decimal(total)) / as_decimal(original.grand_total)
+	share = _base_total(invoice) / _base_total(original)
 	unrestored = original.loyalty_points - _restored_points(invoice)
 	invoice.loyalty_points = -min(int(_whole(original.loyalty_points * share)), unrestored)
 
@@ -163,11 +163,13 @@ def expire_programs_and_points():
 
 
 def _earn_points(invoice, program):
-	tier = _tier_for_total(program, invoice.grand_total)
+	"""Earn on the company-currency total, which the tiers and redemptions are in."""
+	total = _base_total(invoice)
+	tier = _tier_for_total(program, total)
 	if not tier:
 		return
 	# As ERPNext: the factor is what one point costs, and part points are dropped.
-	points = abs(as_decimal(invoice.grand_total)) / as_decimal(tier.collection_factor or 1)
+	points = total / as_decimal(tier.collection_factor or 1)
 	duration = program.expiry_duration
 	expiry_date = add_days(getdate(invoice.posting_date), duration) if duration else None
 	_insert_entry(invoice, int(points), expiry_date, tier.tier_name)
@@ -231,10 +233,10 @@ def _take_back_points(invoice):
 		["loyalty_points", "expiry_date"],
 		as_dict=True,
 	)
-	original_total = frappe.db.get_value("Books Sales Invoice", invoice.return_against, "grand_total")
+	original_total = frappe.db.get_value("Books Sales Invoice", invoice.return_against, "base_grand_total")
 	if not earned or not original_total:
 		return
-	ratio = min(Decimal(1), abs(as_decimal(invoice.grand_total) / as_decimal(original_total)))
+	ratio = min(Decimal(1), _base_total(invoice) / abs(as_decimal(original_total)))
 	taken_back = -_returned_points(invoice)
 	points = min(int(_whole(as_decimal(earned.loyalty_points) * ratio)), earned.loyalty_points - taken_back)
 	if points:
@@ -275,7 +277,7 @@ def _insert_entry(invoice, points, expiry_date, tier=None):
 			"invoice_type": invoice.doctype,
 			"invoice": invoice.name,
 			"loyalty_points": points,
-			"purchase_amount": invoice.grand_total,
+			"purchase_amount": invoice.base_grand_total,
 			"expiry_date": expiry_date,
 			"posting_date": getdate(invoice.posting_date),
 		}
@@ -315,10 +317,12 @@ def _whole(value):
 	return as_decimal(value).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
 
 
+def _base_total(invoice):
+	return abs(as_decimal(invoice.base_grand_total))
+
+
 def _tier_for_total(program, total):
-	eligible = [
-		row for row in program.collection_rules if as_decimal(row.min_spent) <= abs(as_decimal(total))
-	]
+	eligible = [row for row in program.collection_rules if as_decimal(row.min_spent) <= total]
 	return max(eligible, key=lambda row: as_decimal(row.min_spent), default=None)
 
 

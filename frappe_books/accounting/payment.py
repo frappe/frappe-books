@@ -22,7 +22,7 @@ from frappe_books.accounting.accounts import (
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal, validate_number_sizes
 from frappe_books.accounting.party import party_account
-from frappe_books.commerce.pos import counter_cash_account, is_cash_method
+from frappe_books.commerce.pos import counter_cash_account, open_shift_name, takes_counter_cash
 from frappe_books.company import company_value
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
@@ -112,7 +112,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 			account = _default_party_account(self.get_party_account(), invoice, self.payment_type)
 			self.set(fieldname, self.get(fieldname) or account)
 		fieldname = payment_account_field(self.payment_type)
-		self.set(fieldname, self.get(fieldname) or _default_payment_account(self.mode_of_payment, invoice))
+		self.set(
+			fieldname, self.get(fieldname) or mode_payment_account(self.mode_of_payment, invoice, self.owner)
+		)
 
 	def get_party_account(self):
 		if self.party_type in PARTY_ACCOUNT_TYPES and self.party:
@@ -213,15 +215,21 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		validate_account(self, "paid_to", PAYMENT_ACCOUNT_TYPES)
 
 	def validate_counter_account(self, invoices):
-		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
-		if not any(invoice.get("is_pos") for invoice in invoices):
+		"""The counter takes the cash for POS invoices paid during the payer's open shift, and only that."""
+		if self.payment_type == INTERNAL_TRANSFER:
 			return
-		if not is_cash_method(self.mode_of_payment):
-			return
-		counter = counter_cash_account()
-		if self.get(payment_account_field(self.payment_type)) != counter:
+		account = self.get(payment_account_field(self.payment_type))
+		if takes_counter_cash(invoices, self.mode_of_payment, self.owner):
+			counter = counter_cash_account()
+			if account != counter:
+				frappe.throw(
+					_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+				)
+		elif _is_counter_only(account, self.mode_of_payment):
 			frappe.throw(
-				_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+				_(
+					"Only cash for POS invoices, paid during your open POS shift, goes to the counter cash account {0}."
+				).format(account)
 			)
 
 	def on_submit(self):
@@ -299,17 +307,23 @@ def _default_party_account(party_account, invoice, payment_type):
 	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
-def _default_payment_account(mode_of_payment, invoice):
-	"""POS cash goes to the counter, other payments to the mode's account, else the newest ledger
-	of the mode's kind."""
+def mode_payment_account(mode_of_payment, invoice=None, payer=None):
+	"""POS cash goes to the counter during the payer's open shift, other payments to the mode's account,
+	else the newest ledger of the mode's kind."""
 	method_type = mode_of_payment and frappe.db.get_value("Books Mode of Payment", mode_of_payment, "type")
 	if not method_type:
 		return None
-	if method_type == "Cash" and invoice and invoice.get("is_pos"):
+	if invoice and takes_counter_cash([invoice], mode_of_payment, payer):
 		return counter_cash_account()
 	return mode_of_payment_account(mode_of_payment) or latest_ledger_account(
 		"Cash" if method_type == "Cash" else "Bank"
 	)
+
+
+def _is_counter_only(account, mode_of_payment):
+	"""Whether the account is the POS counter and not also the mode's own account, which a counter can be."""
+	counter = frappe.db.get_single_value("Books POS Settings", "cash_account")
+	return bool(counter) and account == counter and account != mode_of_payment_account(mode_of_payment)
 
 
 def _validate_allocations(payment):
@@ -483,7 +497,7 @@ def default_payment_account(invoice_doctype) -> str | None:
 
 
 def _settling_account(invoice):
-	if invoice.get("is_pos"):
+	if invoice.get("is_pos") and open_shift_name():
 		return counter_cash_account()
 	account = default_payment_account(invoice.doctype) or mode_of_payment_account("Cash")
 	if not account:

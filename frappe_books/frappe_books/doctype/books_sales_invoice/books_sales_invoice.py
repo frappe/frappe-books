@@ -10,20 +10,22 @@ from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.payment import (
 	map_invoice_payment,
+	mode_payment_account,
 	payment_account_field,
 	validate_payment_details,
 )
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import (
-	counter_payment_account,
 	counter_payment_amounts,
 	open_shift_name,
+	pos_profile,
 	validate_partial_payment,
 )
 from frappe_books.inventory.availability import validate_pos_stock
 from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
+from frappe_books.permissions import sells_only_at_pos
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -76,6 +78,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		outstanding_amount: DF.Currency
 		payments: DF.Table[BooksSalesInvoicePayment]
 		posting_date: DF.Date
+		pos_profile: DF.Link | None
 		posting_time: DF.Time | None
 		pricing_rules: DF.Table[BooksPricingRuleDetail]
 		redeem_loyalty_points: DF.Check
@@ -137,20 +140,31 @@ class BooksSalesInvoice(PostingInvoiceController):
 			fill_serial_numbers(self.items, default_location(self))
 
 	def before_validate(self):
+		if self.return_against:
+			# A return is a POS sale exactly when its original is.
+			self.is_pos = frappe.db.get_value(self.doctype, self.return_against, "is_pos")
 		if self.is_pos and self._action == "submit":
 			# A POS sale is dated when it is checked out.
 			self.posting_date, self.posting_time = nowdate(), nowtime()
 		super().before_validate()
 
 	def validate(self):
+		if not self.is_pos and sells_only_at_pos():
+			frappe.throw(_("Books Cashiers sell only through the Point of Sale."), frappe.PermissionError)
 		super().validate()
 		loyalty.validate_invoice_loyalty(self)
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
+			self.set_pos_profile()
 		if self.is_held_to_pos_limits():
 			self.validate_pos_permissions()
 		self.validate_payments()
+
+	def set_pos_profile(self):
+		"""Record the profile a POS sale is held to, so it prints the same for everyone; a return keeps its original's."""
+		if not self.return_against:
+			self.pos_profile = pos_profile()
 
 	def is_held_to_pos_limits(self):
 		"""POS sales keep the POS rates and discounts; with POS on, so do all sales of users who cannot change them."""
@@ -210,7 +224,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		payment.update(
 			{
 				"mode_of_payment": row.mode_of_payment,
-				payment_account_field(payment.payment_type): counter_payment_account(row.mode_of_payment),
+				payment_account_field(payment.payment_type): mode_payment_account(row.mode_of_payment, self),
 				"paid_amount": amount,
 				"reference_no": row.reference_no,
 				"clearance_date": row.clearance_date,
@@ -258,6 +272,8 @@ def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	doc.check_permission("submit")
 	if not (doc.is_pos and doc.docstatus == 1):
 		frappe.throw(_("Only submitted POS invoices can be paid at the counter."))
+	if not doc.return_against and not open_shift_name():
+		frappe.throw(_("Open a POS shift before taking payment for a POS invoice."))
 	return doc.pay_at_counter([frappe._dict(row) for row in payments])
 
 

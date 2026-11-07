@@ -1,5 +1,6 @@
 import { Fyo } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
+import { DocPermission, hasDocTypePermission } from 'fyo/utils/permissions';
 import {
   Action,
   FiltersMap,
@@ -93,6 +94,19 @@ export class SalesInvoice extends Invoice {
   /** Books counts the stock no transfer moved. */
   override get hasStockToTransfer(): boolean {
     return (this.stock_not_transferred ?? 0) > 0;
+  }
+
+  /** A cashier makes sales only through the POS, so a new POS sale needs only the right to create sales. */
+  override can(permission: DocPermission): boolean {
+    if (permission === 'create' && this.notInserted && this.is_pos) {
+      return hasDocTypePermission(
+        this.fyo.store.permissions,
+        SalesInvoice.doctype,
+        'create'
+      );
+    }
+
+    return super.can(permission);
   }
 
   override applyPreview(previewed: DocValueMap) {

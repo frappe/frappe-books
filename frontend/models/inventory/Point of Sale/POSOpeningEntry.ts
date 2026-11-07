@@ -1,4 +1,6 @@
+import { t } from 'fyo';
 import { ListViewSettings } from 'fyo/model/types';
+import { getDocStatusListColumn } from 'models/helpers';
 import type { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 
@@ -62,7 +64,15 @@ export class POSOpeningEntry extends FrappeDoc {
   }
 
   static getListViewSettings(): ListViewSettings {
-    return { columns: ['name', 'period_start_date'] };
+    return {
+      columns: [
+        'name',
+        getDocStatusListColumn(),
+        { label: t`Cashier`, fieldname: 'owner', fieldtype: 'Data' },
+        'pos_profile',
+        'period_start_date',
+      ],
+    };
   }
 }
 

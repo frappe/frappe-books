@@ -208,7 +208,9 @@
           v-if="!sinvDoc.isSubmitted"
           class="flex-1"
           size="lg"
-          :label="t`Submit only`"
+          :label="
+            sinvDoc.isReturn ? t`Submit without refund` : t`Submit unpaid`
+          "
           @click="$emit('submit')"
         />
       </div>

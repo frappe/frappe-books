@@ -106,6 +106,7 @@
     <MobilePOSCart
       :open="sheet === 'cart'"
       :disable-pay="disablePay"
+      :profile="profile"
       @update:open="(open: boolean) => (sheet = open ? 'cart' : null)"
       @set-customer="(customer: string) => $emit('setCustomer', customer)"
       @edit="editRow"
@@ -127,6 +128,7 @@ import {
   Icon as FrappeIcon,
   TextInput as FrappeTextInput,
 } from 'frappe-ui';
+import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { POSItem } from 'src/components/POS/types';
@@ -155,6 +157,7 @@ const props = defineProps<{
   searchTerm: string;
   totalQuantity: number;
   disablePay: boolean;
+  profile: POSProfile | null;
 }>();
 
 const emit = defineEmits<{

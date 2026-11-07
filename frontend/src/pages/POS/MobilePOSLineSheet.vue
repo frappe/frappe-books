@@ -101,9 +101,9 @@ import {
   POSRowField,
   setPOSRowValue,
 } from 'src/utils/posCart';
-import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
+import { posPermissionsKey } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
-import { inject, onMounted, ref, type Ref } from 'vue';
+import { inject, type Ref } from 'vue';
 
 /** Edits a cart line's rate and discount, and shows its batch stock. */
 const props = defineProps<{ row: SalesInvoiceItem | null }>();
@@ -111,14 +111,7 @@ const emit = defineEmits<{ close: [] }>();
 const batchQuantity = usePOSBatchQuantity(() => props.row);
 
 const isDiscountingEnabled = inject('isDiscountingEnabled') as Ref<boolean>;
-const permissions = ref<POSPermissions>({
-  canChangeRate: false,
-  canEditDiscount: false,
-});
-
-onMounted(async () => {
-  permissions.value = await getPOSPermissions();
-});
+const permissions = inject(posPermissionsKey)!;
 
 async function setValue(field: POSRowField, value: number | Money) {
   try {

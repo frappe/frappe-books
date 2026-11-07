@@ -7,6 +7,14 @@
     @closemodal="handleDismiss"
   >
     <template v-if="isMobile && posShiftDoc">
+      <FormControl
+        v-if="profileDf"
+        :df="profileDf"
+        :value="posShiftDoc.pos_profile"
+        :show-label="true"
+        :border="true"
+        @change="setProfile"
+      />
       <MobileCashCount :heading="t`Opening cash`" :rows="openingCash" />
       <FormControl
         v-for="row in enteredAmounts"
@@ -24,6 +32,15 @@
       <MobileDetailList :details="openingAmountDetails" />
     </template>
     <div v-else-if="posShiftDoc" class="flex flex-col gap-5">
+      <FormControl
+        v-if="profileDf"
+        class="w-1/2"
+        :df="profileDf"
+        :value="posShiftDoc.pos_profile"
+        :show-label="true"
+        :border="true"
+        @change="setProfile"
+      />
       <div class="grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-6">
         <CashCountTable :heading="t`Cash in drawer`" :rows="openingCash" />
 
@@ -107,6 +124,7 @@ import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import MobileDetailList, { type Detail } from 'src/mobile/MobileDetailList.vue';
 import { ModelNameEnum } from 'models/types';
+import type { Field } from 'schemas/types';
 import { Money } from 'pesa';
 import {
   CashCountRow,
@@ -114,6 +132,7 @@ import {
   OpeningBalance,
 } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { newFrappeDoc } from 'src/frappe/documents';
+import { getField } from 'src/frappe/registry';
 import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -154,6 +173,9 @@ export default defineComponent({
     };
   },
   computed: {
+    profileDf(): Field | undefined {
+      return getField(ModelNameEnum.POSOpeningEntry, 'pos_profile');
+    },
     openingCash(): CashCountRow[] {
       return (this.posShiftDoc?.opening_cash ?? []) as CashCountRow[];
     },
@@ -193,6 +215,9 @@ export default defineComponent({
     },
     isCounted(row: OpeningBalance): boolean {
       return this.isCashMethod(row.mode_of_payment);
+    },
+    async setProfile(profile: string) {
+      await this.posShiftDoc?.set('pos_profile', profile);
     },
     async setOpeningAmount(row: OpeningBalance, amount: Money) {
       await row.set('opening_amount', amount);

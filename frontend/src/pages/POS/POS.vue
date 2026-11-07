@@ -269,7 +269,9 @@ import {
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
+  getPOSPermissions,
   getPOSProfile,
+  posPermissionsKey,
   validateIsPosSettingsSet,
 } from 'src/utils/posSetup';
 import { usePOSShift } from 'src/utils/posShift';
@@ -315,6 +317,9 @@ export default defineComponent({
       sinvDoc: computed(() => this.sinvDoc),
       appliedCoupon: computed(() => this.sinvDoc.coupon_code),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
+      [posPermissionsKey]: computed(() =>
+        getPOSPermissions(this.posProfile as POSProfile | null)
+      ),
       [posCheckoutKey]: this.posCheckout,
     };
   },

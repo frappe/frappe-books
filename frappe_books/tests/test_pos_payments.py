@@ -154,7 +154,9 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		)
 		self.assertEqual(invoice.reload().status, "Paid")
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
-		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Bank": 100, "Cash": 80})
+		self.assertEqual(
+			transacted_amounts(sold_at, now_datetime(), frappe.session.user), {"Bank": 100, "Cash": 80}
+		)
 
 	def test_split_tenders_that_pay_in_full_need_no_partial_payments(self):
 		frappe.db.set_single_value("Books Accounting Settings", "enable_partial_payment", 0)
@@ -230,7 +232,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		payment = frappe.get_doc("Books Payment Entry", counter_payments(refund)[0])
 		self.assertEqual((payment.payment_type, payment.paid_from), ("Pay", self.counter))
 		sold_at = posting_datetime(invoice.posting_date, invoice.posting_time)
-		self.assertEqual(transacted_amounts(sold_at, now_datetime()), {"Cash": 0})
+		self.assertEqual(transacted_amounts(sold_at, now_datetime(), frappe.session.user), {"Cash": 0})
 
 	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
 		with self.set_user(self.make_cashier()):

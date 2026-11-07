@@ -21,7 +21,12 @@
         />
       </template>
       <template v-if="shiftSubtitle" #left>
-        <FrappeBadge theme="green" :label="shiftSubtitle" />
+        <!-- A tablet's header keeps its room for the title and actions. -->
+        <FrappeBadge
+          theme="green"
+          :label="shiftSubtitle"
+          class="max-lg:hidden"
+        />
       </template>
       <POSHeaderActions
         :profile="posProfile as POSProfile"

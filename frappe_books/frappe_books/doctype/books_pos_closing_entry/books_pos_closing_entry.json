@@ -34,7 +34,6 @@
    "fieldtype": "Link",
    "label": "POS Opening Entry",
    "options": "Books POS Opening Entry",
-   "read_only": 1,
    "reqd": 1,
    "search_index": 1
   },

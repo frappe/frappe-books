@@ -1,8 +1,7 @@
-import { ListViewSettings } from 'fyo/model/types';
+import { FiltersMap, ListViewSettings } from 'fyo/model/types';
 import { getDocStatusListColumn } from 'models/helpers';
 import type { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
-import { withoutCreate } from 'src/frappe/schema';
 import { CashCount } from './POSOpeningEntry';
 
 /** A mode of payment's counted amount against what the shift expects. */
@@ -46,7 +45,8 @@ export class POSClosingEntry extends FrappeDoc {
   static override doctype = 'Books POS Closing Entry';
   static override presentation = {
     label: 'POS Closing Entry',
-    fields: withoutCreate(['pos_opening_entry']),
+    // The shifts are grouped by cashier, as their names are random.
+    fields: { pos_opening_entry: { groupBy: 'owner', create: false } },
     fileFields: [
       'name',
       'period_end_date',
@@ -54,6 +54,10 @@ export class POSClosingEntry extends FrappeDoc {
       'payment_reconciliation',
       'pos_opening_entry',
     ],
+  };
+  // A manager may close any open shift; a cashier reads only their own.
+  static filters: FiltersMap = {
+    pos_opening_entry: () => [['status', '=', 'Open']],
   };
   static override rowModels = {
     closing_cash: ClosingCash,

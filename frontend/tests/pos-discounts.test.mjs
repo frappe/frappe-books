@@ -31,12 +31,15 @@ const coupons = [{ name: 'Diwali Offer', coupon_code: 'DIWALIOF' }];
 
 await loadFrappeModels(frappeModels, ({ path, body }) => {
   if (path.endsWith('run_doc_method')) {
-    // Each redeemed point pays 1, on a sale of 30.
+    // Each redeemed point pays 1, on a sale of 30; the server fills the follow-ups it was sent empty.
     const { document } = body;
     const loyalty_amount = document.redeem_loyalty_points
       ? document.loyalty_points
       : 0;
-    return { docs: [{ ...document, base_grand_total: 30, loyalty_amount }] };
+    const filled = { make_auto_payment: 0, make_auto_stock_transfer: 1 };
+    return {
+      docs: [{ ...document, ...filled, base_grand_total: 30, loyalty_amount }],
+    };
   }
 
   if (

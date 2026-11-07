@@ -59,12 +59,17 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
  * order, then its custom and meta fields; else all its fields.
  */
 export function getFileFields(schemaName: string): Field[] {
-  const { fields, fileFields } = getSchema(schemaName)!;
+  const schema = getSchema(schemaName)!;
+  // The server sends no values for fields the user cannot read.
+  const fields = schema.fields.filter((field) => !field.unreadable);
+  const { fileFields } = schema;
   if (!fileFields) {
     return fields;
   }
 
-  const listed = getFields(schemaName, fileFields);
+  const listed = getFields(schemaName, fileFields).filter(
+    (field) => !field.unreadable
+  );
   const rest = fields.filter(
     (field) => (field.isCustom || field.meta) && !listed.includes(field)
   );

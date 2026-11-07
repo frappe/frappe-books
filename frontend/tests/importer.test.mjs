@@ -381,3 +381,18 @@ test('fix failed keeps the failed rows and the file columns', async () => {
     'Customer.customer_name',
   ]);
 });
+
+test('a Check cell reads 1/0, Yes/No and True/False; other text is a cell error', () => {
+  const importer = new Importer('Account', fyo);
+  const column = importer.assignedTemplateFields.indexOf('Account.is_group');
+  assert.notEqual(column, -1);
+  const read = (text) => importer.getValueMatrixItem(column, text);
+
+  for (const text of ['1', 'Yes', 'TRUE', ' true ']) {
+    assert.deepEqual(read(text), { value: true, rawValue: text }, text);
+  }
+  for (const text of ['0', 'No', 'false']) {
+    assert.deepEqual(read(text), { value: false, rawValue: text }, text);
+  }
+  assert.equal(read('maybe').error, true);
+});

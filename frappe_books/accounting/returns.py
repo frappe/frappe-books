@@ -105,6 +105,7 @@ def validate_return(invoice):
 		frappe.throw(_("A return must use the same party as the original invoice."))
 	returns, returned_rows = _submitted_returns(original, exclude=invoice.name)
 	_validate_returned_rows(original, returned_rows, invoice.items)
+	_validate_returned_rates(invoice, original)
 	_validate_value(invoice, original, returns, len(returned_rows))
 
 
@@ -117,6 +118,32 @@ def _validate_returned_rows(original, returned_rows, rows):
 		original, [*returned_rows, *rows], _("Returns of {0} exceed the quantity of {1} in {2}.")
 	)
 	_validate_serial_numbers(original, returned_rows, rows)
+
+
+def _validate_returned_rates(invoice, original):
+	"""A return credits each item at most at the rate, net of discount, it was sold at, as ERPNext checks."""
+	if bool(invoice.discount_after_tax) != bool(original.discount_after_tax):
+		frappe.throw(_("A return must discount after tax when its original invoice does, and only then."))
+	sold = {}
+	for row in original.items:
+		sold[row.item_code] = max(sold.get(row.item_code, 0), _unit_value(original, row))
+	for row in invoice.items:
+		if row.item_code not in sold:
+			continue
+		# A rate is rounded per unit of its row, so another unit can differ by a smallest unit.
+		tolerance = currency_unit(invoice.get("currency")) / as_decimal(row.conversion_factor or 1)
+		if _unit_value(invoice, row) > sold[row.item_code] + tolerance:
+			frappe.throw(
+				_("Row #{0}: {1} cannot be returned at more than it was sold for in {2}.").format(
+					row.idx, row.item_code, original.name
+				)
+			)
+
+
+def _unit_value(invoice, row):
+	"""What a row charges per stock unit, net of its discount."""
+	discount = as_decimal(row.discount_amount) if invoice.discount_after_tax else 0
+	return (as_decimal(row.rate) - discount) / as_decimal(row.conversion_factor or 1)
 
 
 def _validate_value(invoice, original, returns, returned_row_count):

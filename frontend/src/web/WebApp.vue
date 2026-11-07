@@ -19,6 +19,17 @@
         />
         <FrappeSpinner v-else size="lg" />
       </div>
+      <div
+        v-else-if="needsSetup && !canSetUp"
+        class="h-full flex items-center justify-center bg-surface-gray-1 p-4"
+      >
+        <FrappeAlert
+          class="max-w-xl"
+          :title="t`Frappe Books is not set up yet`"
+          :description="t`Ask a System Manager to complete the setup.`"
+          :primary-action="{ label: t`Try again`, onClick: () => initialize() }"
+        />
+      </div>
       <SetupWizard
         v-else-if="needsSetup"
         @setup-complete="reload"
@@ -104,6 +115,8 @@ export default defineComponent({
     return {
       loading: true,
       needsSetup: false,
+      // Frappe's setup, which the wizard completes, is for System Managers.
+      canSetUp: false,
       startupError: '',
     };
   },
@@ -159,6 +172,7 @@ export default defineComponent({
         loadCompany(books.company),
       ]);
       this.needsSetup = !fyo.singles.AccountingSettings?.setup_complete;
+      this.canSetUp = fyo.can(ModelNameEnum.SetupWizard, 'write');
       if (!this.needsSetup) {
         this.searcher = new Search(fyo);
         this.searcher.initialize();

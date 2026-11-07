@@ -95,6 +95,17 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 				settings.setup_complete = int(not before)
 				self.assertRaisesRegex(frappe.ValidationError, "Only the setup wizard", settings.save)
 
+	def test_the_fiscal_year_ends_after_it_starts_within_a_year(self):
+		for end, error in (("2026-03-31", "must be after"), ("2027-04-01", "longer than one year")):
+			with self.subTest(end=end):
+				settings = _accounting_settings()
+				settings.fiscal_year_end = end
+				self.assertRaisesRegex(frappe.ValidationError, error, settings.save)
+
+		settings = _accounting_settings()
+		settings.fiscal_year_end = "2026-12-31"
+		settings.save()
+
 	def test_email_and_phone_values_must_be_valid(self):
 		invalid_values = [
 			("Books Party", {"role": "Customer", "email": "not-an-email"}, frappe.InvalidEmailAddressError),

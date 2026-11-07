@@ -15,11 +15,18 @@ const profile = {
   allow_rate_change: 1,
   allow_discount_change: 0,
 };
-const requests = await loadFrappeModels(frappeModels, ({ path }) =>
-  path.endsWith('/Books POS Profile/Counter 1')
+const POS_PROFILE =
+  'frappe_books.frappe_books.doctype.books_pos_opening_entry.books_pos_opening_entry.get_pos_profile';
+let profileName = null;
+const requests = await loadFrappeModels(frappeModels, ({ path }) => {
+  if (path === `/api/method/${POS_PROFILE}`) {
+    return { message: profileName };
+  }
+
+  return path.endsWith('/Books POS Profile/Counter 1')
     ? { data: profile }
-    : { data: [] }
-);
+    : { data: [] };
+});
 
 test('the POS profile form shows the fields and quick edit fields it showed', () => {
   assert.deepEqual(getLayout('POSProfile').slice(0, 4), [
@@ -51,19 +58,20 @@ test('the POS reads what its profile allows and lists, else POS Settings', async
     allow_discount_change: true,
     item_visibility: 'Inventory Items',
   };
-  assert.deepEqual(await posSetup.getPOSPermissions(), {
+  assert.deepEqual(posSetup.getPOSPermissions(), {
     canChangeRate: false,
     canEditDiscount: true,
   });
   assert.equal(posSetup.getItemVisibility(), 'Inventory Items');
   assert.equal(requests.length, 0);
 
-  fyo.singles.POSSettings.pos_profile = 'Counter 1';
-  assert.deepEqual(await posSetup.getPOSPermissions(), {
+  // The server names the profile of the user's shift.
+  profileName = 'Counter 1';
+  const profile = await posSetup.getPOSProfile();
+  assert.deepEqual(posSetup.getPOSPermissions(profile), {
     canChangeRate: true,
     canEditDiscount: false,
   });
-  const profile = await posSetup.getPOSProfile();
   assert.equal(posSetup.getItemVisibility(profile), 'Non-Inventory Items');
 });
 

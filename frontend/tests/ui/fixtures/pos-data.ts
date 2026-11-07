@@ -182,6 +182,7 @@ function answer(path: string, body: Row, params: Row): unknown {
     'frappe.desk.search.search_widget': () =>
       searchList(body.doctype, body.txt),
     get_open_shift: () => (shift.open ? openingShift.name : null),
+    get_pos_profile: () => null,
     get_stock_location: () => inventory,
     get_sale_shortfalls: () => [],
     get_loyalty_program_details_with_points: () => ({

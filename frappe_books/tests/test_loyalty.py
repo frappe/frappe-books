@@ -113,14 +113,21 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				self.assertEqual(self._loyalty_program(**values).status, status)
 
 	def test_usage_says_what_books_says_at_its_fields(self):
-		for values, message in (
-			({"used": -1}, "Used count cannot be negative"),
-			({"maximum_use": -1}, "Maximum use cannot be negative"),
-			({"maximum_use": 2, "used": 3}, "Used count cannot exceed maximum use limit"),
-		):
-			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
-				self._loyalty_program(**values)
-			self.assertEqual(str(raised.exception), message)
+		with self.assertRaises(frappe.ValidationError) as raised:
+			self._loyalty_program(maximum_use=-1)
+		self.assertEqual(str(raised.exception), "Maximum use cannot be negative")
+
+	def test_a_save_counts_the_redemptions_whatever_it_is_sent(self):
+		program = self._loyalty_program(used=5)
+		self.assertEqual(program.used, 0)
+		self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+
+		program.reload()
+		program.used = 0
+		program.save()
+
+		self.assertEqual(program.db_get("used"), 1)
 
 	def test_status_is_maxed_at_the_use_limit(self):
 		program = self._loyalty_program(maximum_use=1)

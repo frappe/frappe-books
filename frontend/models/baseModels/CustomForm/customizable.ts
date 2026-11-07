@@ -35,11 +35,15 @@ function getSettingsTables(): Set<string> {
   );
 }
 
-/** The doctypes a custom Link can link to; a custom Table holds rows of a child table. */
+/** The Books doctypes a custom Link can link to; a custom Table holds rows of a child table. */
 export function getTargets(
   fieldtype?: string
 ): { value: string; label: string }[] {
-  return getForms(({ schema }) => fieldtype !== 'Table' || !!schema.isChild);
+  return getForms(
+    ({ meta, schema }) =>
+      meta.module === 'Frappe Books' &&
+      !!schema.isChild === (fieldtype === 'Table')
+  );
 }
 
 function getForms(filter: (docType: FrappeDocType) => boolean) {

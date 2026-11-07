@@ -95,6 +95,13 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 				settings.setup_complete = int(not before)
 				self.assertRaisesRegex(frappe.ValidationError, "Only the setup wizard", settings.save)
 
+	def test_coupon_code_turns_off_with_pricing_rule(self):
+		settings = _accounting_settings(enable_discounting=1, enable_pricing_rule=1, enable_coupon_code=1)
+		settings.enable_pricing_rule = 0
+		settings.save()
+
+		self.assertFalse(settings.enable_coupon_code)
+
 	def test_the_fiscal_year_ends_after_it_starts_within_a_year(self):
 		for end, error in (("2026-03-31", "must be after"), ("2027-04-01", "longer than one year")):
 			with self.subTest(end=end):

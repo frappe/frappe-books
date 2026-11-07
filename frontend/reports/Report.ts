@@ -91,9 +91,7 @@ export abstract class Report extends Observable<RawValue> {
     }
 
     // Clearing works for every field type, including checks.
-    value = getIsNullOrUndef(value)
-      ? null
-      : toFrappeValue(value, field, this.fyo);
+    value = getIsNullOrUndef(value) ? null : this.toFilterValue(value, field);
     const prevValue = this[key];
     if (prevValue === value) {
       return;
@@ -146,6 +144,15 @@ export abstract class Report extends Observable<RawValue> {
   /** Server columns replace these once the report data loads. */
   getColumns(): ColumnField[] | Promise<ColumnField[]> {
     return this.columns;
+  }
+
+  /** The value the server reads, raised to the field's minimum, as the server requires. */
+  toFilterValue(value: DocValue, field: Field): DocValue {
+    const filterValue = toFrappeValue(value, field, this.fyo);
+    const minvalue = 'minvalue' in field ? field.minvalue : undefined;
+    return typeof filterValue === 'number' && minvalue !== undefined
+      ? Math.max(filterValue, minvalue)
+      : filterValue;
   }
 
   async setReportData(_filter?: string, _force?: boolean): Promise<void> {

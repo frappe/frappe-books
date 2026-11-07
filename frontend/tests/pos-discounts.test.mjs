@@ -59,9 +59,16 @@ await loadFrappeModels(frappeModels, ({ path, body }) => {
   return held ? { data: toSavedSale(name, held) } : { data: [] };
 });
 
+// Coupons work only with pricing rules, which need discounts.
+const couponSwitches = {
+  enable_discounts_and_margin: true,
+  enable_pricing_rule: true,
+  enable_coupon_code: true,
+};
+
 beforeEach(() => {
   fyo.singles.AccountingSettings = {
-    enable_coupon_code: true,
+    ...couponSwitches,
     enable_loyalty_point_program: true,
   };
 });
@@ -135,7 +142,7 @@ test('another price list is offered while the sale can change', () => {
 });
 
 test('each gate follows its own feature', () => {
-  fyo.singles.AccountingSettings = { enable_coupon_code: true };
+  fyo.singles.AccountingSettings = { ...couponSwitches };
   assert.deepEqual(getGates(makeSale()), [true, false]);
 
   fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };

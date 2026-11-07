@@ -51,8 +51,13 @@ export class CustomField extends FrappeDoc {
         );
       }
 
+      // Rows share a Custom Field when their fieldnames differ only in case.
+      const column = getCustomFieldname(value as string);
       const other = this.parentdoc?.custom_fields?.find(
-        (row) => row.name !== this.name && row.fieldname === value
+        (row) =>
+          row.name !== this.name &&
+          !!row.fieldname &&
+          getCustomFieldname(row.fieldname) === column
       );
       if (other) {
         throw new ValueError(

@@ -49,6 +49,7 @@ class BooksPosOpeningShift(Document):
 		if self._action == "submit" or not self.opening_date:
 			# The shift opens when it is submitted, as its closing shift closes it.
 			self.opening_date = now_datetime()
+		self.validate_no_open_shift()
 		if cash_total(self.opening_cash) < 0:
 			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
@@ -71,6 +72,10 @@ class BooksPosOpeningShift(Document):
 
 	def before_submit(self):
 		lock_pos_settings()
+		self.validate_no_open_shift()
+
+	def validate_no_open_shift(self):
+		"""One shift is open at a time; a draft of another would only linger."""
 		if open_shift_name():
 			frappe.throw(_("A POS shift is already open."))
 

@@ -197,6 +197,7 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		cases = {
 			"needs a default": [{**FIELD, "is_required": 1}],
 			"already used for Custom Field 1": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"hostedbridgetestvalue already used": [FIELD, {**FIELD, "fieldname": FIELD["fieldname"].lower()}],
 			"already exists for Books UOM": [{**FIELD, "fieldname": "must_be_whole_number"}],
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
 			"needs a Target": [{**PARTY_FIELD, "target": None}],

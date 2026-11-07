@@ -677,6 +677,19 @@ export default defineComponent({
         await handleErrorWithDialog(error, doc as FrappeDoc);
       }
     },
+    /** A reload opens the saved template, not a new one under its draft name, however it was saved. */
+    replacePathAfterSync() {
+      const doc = this.doc;
+      if (!doc?.notInserted) {
+        return;
+      }
+
+      doc.once('afterSync', async () => {
+        await this.$router.replace(
+          `/template-builder/${encodeURIComponent(doc.name!)}`
+        );
+      });
+    },
     async setDoc() {
       if (this.doc) {
         return;
@@ -686,6 +699,7 @@ export default defineComponent({
         ModelNameEnum.PrintFormat,
         this.name,
       )) as PrintFormat;
+      this.replacePathAfterSync();
     },
     async setType(value: unknown) {
       if (typeof value !== 'string') {

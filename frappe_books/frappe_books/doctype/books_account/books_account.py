@@ -7,6 +7,22 @@ from frappe.utils.nestedset import NestedSet, NestedSetChildExistsError
 
 from frappe_books.permissions import check_preview_permission
 
+BALANCE_SHEET_ROOT_TYPES = ("Asset", "Liability", "Equity")
+# Money, parties, stock and assets are on the balance sheet; sales and costs in profit and loss.
+BALANCE_SHEET_ACCOUNT_TYPES = (
+	"Accumulated Depreciation",
+	"Bank",
+	"Cash",
+	"Equity",
+	"Fixed Asset",
+	"Payable",
+	"Receivable",
+	"Stock",
+	"Stock Received But Not Billed",
+	"Temporary",
+)
+PROFIT_AND_LOSS_ACCOUNT_TYPES = ("Cost of Goods Sold", "Expense Account", "Income Account")
+
 
 class BooksAccount(NestedSet):
 	# begin: auto-generated types
@@ -85,6 +101,21 @@ class BooksAccount(NestedSet):
 		if not self.is_group and not self.parent_account:
 			frappe.throw(_("Only group accounts can be root accounts. Select a parent group."))
 		self.validate_account_type_change()
+		self.validate_account_type_root()
+
+	def validate_account_type_root(self):
+		"""A balance sheet account type needs a balance sheet root type, a profit and loss one the others."""
+		is_balance_sheet = self.root_type in BALANCE_SHEET_ROOT_TYPES
+		if self.account_type in BALANCE_SHEET_ACCOUNT_TYPES and not is_balance_sheet:
+			frappe.throw(
+				_("Account Type {0} needs a root type of Asset, Liability or Equity.").format(
+					_(self.account_type)
+				)
+			)
+		if self.account_type in PROFIT_AND_LOSS_ACCOUNT_TYPES and is_balance_sheet:
+			frappe.throw(
+				_("Account Type {0} needs a root type of Income or Expense.").format(_(self.account_type))
+			)
 
 	def validate_account_type_change(self):
 		"""An account type left empty at insert can be set later, but never changed."""

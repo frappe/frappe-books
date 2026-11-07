@@ -325,6 +325,12 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.preview()
 		self.assertEqual([row.allocated_amount for row in payment.references], [100, 180])
 
+	def test_preview_takes_a_write_off_off_the_paid_amount(self):
+		set_company_value("write_off_account", make_account("Rules Write Off", root_type="Expense").name)
+		payment = self._payment(self.invoice, deductions=[{"amount": 10}])
+		payment.preview()
+		self.assertEqual((payment.paid_amount, payment.references[0].allocated_amount), (170, 180))
+
 	def test_a_payment_party_is_a_customer_or_a_supplier(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
 		payment = self._payment(self.invoice, party_type="Books Lead", party=lead.name)

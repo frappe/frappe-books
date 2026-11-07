@@ -52,6 +52,15 @@ class IntegrationTestSettlement(IntegrationTestCase):
 		self.assertEqual(invoice.db_get("outstanding_amount"), 0)
 		self.assertEqual(frappe.db.get_value("Books Party", self.party, "outstanding_amount"), 100)
 
+	def test_a_party_save_keeps_its_balances_from_its_invoices_and_points(self):
+		self.submit_invoice()
+		party = frappe.get_doc("Books Party", self.party)
+		party.update({"outstanding_amount": 99999, "loyalty_points": 5000})
+		party.save()
+
+		self.assertEqual(party.db_get("outstanding_amount"), 198)
+		self.assertEqual(party.db_get("loyalty_points"), 0)
+
 	def submit_invoice(self):
 		return make_invoice(
 			"Books Sales Invoice", self.party, self.receivable, self.item, self.income, make_auto_payment=0

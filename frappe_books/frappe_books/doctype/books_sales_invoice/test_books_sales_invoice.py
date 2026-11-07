@@ -226,17 +226,21 @@ class IntegrationTestBooksSalesInvoice(IntegrationTestCase):
 
 	def test_return_cannot_credit_more_than_was_billed(self):
 		item = make_item(self.income.name, self.expense.name)
+		# One unit sold at 100 and one at 50: each row is within the item's best rate, the total is not.
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,
 			self.receivable.name,
 			item.name,
 			self.income.name,
+			items=[{"item": item.name, "rate": rate, "quantity": 1} for rate in (100, 50)],
 		)
 		invoice.submit()
 		credit_note = frappe.copy_doc(invoice)
 		credit_note.update({"docstatus": 0, "return_against": invoice.name})
-		credit_note.items[0].update({"quantity": -2, "item_discount_percent": 0})
+		credit_note.items[1].rate = 100
+		for row in credit_note.items:
+			row.quantity = -1
 
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot exceed its value"):
 			credit_note.insert()

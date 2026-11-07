@@ -75,6 +75,14 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, re.escape(message), issue.submit)
 		self.assertEqual(stock_quantity(self.item.name, "Stores"), 6)
 
+	def test_negative_quantity_is_rejected(self):
+		for movement_type, location in (("MaterialReceipt", "to_location"), ("MaterialIssue", "from_location")):
+			with self.subTest(movement_type=movement_type):
+				row = {"item": self.item.name, location: "Stores", "quantity": -3, "rate": 10}
+				movement = frappe.get_doc(movement_values(movement_type, [row]))
+
+				self.assertRaisesRegex(frappe.ValidationError, "greater than zero", movement.insert)
+
 	def test_serial_number_cannot_repeat_in_a_row(self):
 		item = self._serial_item()
 		receipt = frappe.get_doc(

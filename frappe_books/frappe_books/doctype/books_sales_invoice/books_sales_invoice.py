@@ -25,6 +25,7 @@ from frappe_books.commerce.pos import (
 from frappe_books.inventory.availability import validate_pos_stock
 from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
+from frappe_books.permissions import sells_only_at_pos
 
 
 class BooksSalesInvoice(PostingInvoiceController):
@@ -139,12 +140,17 @@ class BooksSalesInvoice(PostingInvoiceController):
 			fill_serial_numbers(self.items, default_location(self))
 
 	def before_validate(self):
+		if self.return_against:
+			# A return is a POS sale exactly when its original is.
+			self.is_pos = frappe.db.get_value(self.doctype, self.return_against, "is_pos")
 		if self.is_pos and self._action == "submit":
 			# A POS sale is dated when it is checked out.
 			self.posting_date, self.posting_time = nowdate(), nowtime()
 		super().before_validate()
 
 	def validate(self):
+		if not self.is_pos and sells_only_at_pos():
+			frappe.throw(_("Books Cashiers sell only through the Point of Sale."), frappe.PermissionError)
 		super().validate()
 		loyalty.validate_invoice_loyalty(self)
 		if self.is_pos:

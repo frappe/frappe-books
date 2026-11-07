@@ -45,6 +45,7 @@
   "redeem_loyalty_points",
   "loyalty_points",
   "is_pos",
+  "pos_profile",
   "is_pricing_rule_applied",
   "payments_section_break",
   "payments",
@@ -327,6 +328,15 @@
    "label": "Is Pos"
   },
   {
+   "depends_on": "is_pos",
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "POS Profile",
+   "options": "Books Pos Profile",
+   "read_only": 1
+  },
+  {
    "default": "0",
    "fieldname": "is_pricing_rule_applied",
    "fieldtype": "Check",
@@ -401,7 +411,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Invoice",

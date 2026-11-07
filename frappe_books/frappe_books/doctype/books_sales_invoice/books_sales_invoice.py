@@ -15,7 +15,7 @@ from frappe_books.accounting.payment import (
 )
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
-from frappe_books.commerce.pos import counter_payment_amounts, open_shift_name
+from frappe_books.commerce.pos import counter_payment_amounts, open_shift_name, pos_profile
 from frappe_books.inventory.availability import validate_pos_stock
 from frappe_books.inventory.invoice_transfer import default_location, map_invoice_transfer
 from frappe_books.inventory.stock import fill_serial_numbers
@@ -74,6 +74,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		outstanding_amount: DF.Currency
 		party: DF.Link
 		payments: DF.Table[BooksSalesInvoicePayment]
+		pos_profile: DF.Link | None
 		price_list: DF.Link | None
 		pricing_rule_detail: DF.Table[BooksPricingRuleDetail]
 		quote: DF.Link | None
@@ -153,9 +154,17 @@ class BooksSalesInvoice(PostingInvoiceController):
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
+			self.set_pos_profile()
 		if self.is_held_to_pos_limits():
 			self.validate_pos_permissions()
 		self.validate_payments()
+
+	def set_pos_profile(self):
+		"""Record the profile a POS sale is held to, so it prints the same for everyone; a return keeps its original's."""
+		if self.return_against:
+			self.pos_profile = frappe.db.get_value(self.doctype, self.return_against, "pos_profile")
+		else:
+			self.pos_profile = pos_profile()
 
 	def is_held_to_pos_limits(self):
 		"""POS sales keep the POS rates and discounts; with POS on, so do all sales of users who cannot change them."""

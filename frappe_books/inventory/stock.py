@@ -180,7 +180,7 @@ def parse_serial_numbers(value):
 def _validate_row(transfer):
 	if not transfer.get("item_code"):
 		frappe.throw(_("Every stock row requires an item."))
-	if abs(as_decimal(transfer.get("stock_qty"))) <= 0:
+	if as_decimal(transfer.get("stock_qty")) <= 0:
 		frappe.throw(_("Quantity must be greater than zero."))
 	if as_decimal(transfer.get("rate")) < 0:
 		frappe.throw(_("Stock rate cannot be negative."))

@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.party import PartyDocumentMixin
 from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.company import company_value
@@ -39,7 +40,7 @@ class StockTransactionController(SeriesNamingMixin, Document):
 
 	def transfer_rows(self) -> list[dict]:
 		"""Return each row as the item, stock quantity, rate per stock unit, batch and serial numbers it moves
-		between warehouses."""
+		between warehouses; the warehouses give the direction, so a return's quantity is positive too."""
 		raise NotImplementedError
 
 	def posting_datetime(self):
@@ -148,7 +149,11 @@ class StockTransferController(StatusMixin, PartyDocumentMixin, StockTransactionC
 				s_warehouse, t_warehouse = None, row.warehouse
 			if self.return_against:
 				s_warehouse, t_warehouse = t_warehouse, s_warehouse
-			rows.append(_transfer_row(row, s_warehouse, t_warehouse, row.stock_qty, row.stock_uom_rate))
+			rows.append(
+				_transfer_row(
+					row, s_warehouse, t_warehouse, abs(as_decimal(row.stock_qty)), row.stock_uom_rate
+				)
+			)
 		return rows
 
 	@frappe.whitelist()

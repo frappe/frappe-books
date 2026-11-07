@@ -202,6 +202,11 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
 			"needs a Target": [{**PARTY_FIELD, "target": None}],
 			"needs a References": [{**REFERENCE_FIELD, "references": None}],
+			"cannot link to User": [{**PARTY_FIELD, "target": "User"}],
+			"cannot link to Books Sales Invoice Item": [
+				{**PARTY_FIELD, "target": "Books Sales Invoice Item"}
+			],
+			"cannot link to Books Party": [{**PARTY_FIELD, "fieldtype": "Table"}],
 		}
 		for message, fields in cases.items():
 			with self.subTest(message=message):

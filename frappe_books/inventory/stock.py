@@ -70,7 +70,7 @@ def validate_stock_available(transfers, date):
 	outgoing = [row for row in transfers if row.get("s_warehouse")]
 	incoming = [row for row in transfers if not row.get("s_warehouse")]
 	_validate_quantities_available(outgoing, date)
-	_validate_serial_numbers_available(outgoing)
+	_validate_serial_numbers_available(outgoing, date)
 	_validate_serial_numbers_not_in_stock(incoming)
 
 
@@ -279,7 +279,7 @@ def _key_totals(sle, keys, aggregate, condition):
 	return {(item, location, batch): as_decimal(value) for item, location, batch, value in rows}
 
 
-def _validate_serial_numbers_available(outgoing):
+def _validate_serial_numbers_available(outgoing, date):
 	wanted = [
 		(transfer["item_code"], transfer["s_warehouse"], serial_number)
 		for transfer in outgoing
@@ -287,17 +287,32 @@ def _validate_serial_numbers_available(outgoing):
 	]
 	if not wanted:
 		return
-	sle = frappe.qb.DocType(LEDGER)
-	rows = (
-		frappe.qb.from_(sle)
-		.select(sle.item_code, sle.warehouse, sle.serial_no, Sum(sle.actual_qty))
-		.where(sle.serial_no.isin(sorted({key[2] for key in wanted})))
-		.groupby(sle.item_code, sle.warehouse, sle.serial_no)
-	).run()
-	available = {(item, location, serial): as_decimal(quantity) for item, location, serial, quantity in rows}
+	available = _serial_numbers_available(sorted({key[2] for key in wanted}), date)
 	for key in wanted:
 		if available.get(key, 0) < 1:
 			frappe.throw(_("Serial number {0} is not available at the source.").format(key[2]))
+
+
+def _serial_numbers_available(serial_numbers, date):
+	"""Map each (item, warehouse, serial number) to its stock at the date, capped by its lowest later balance."""
+	sle = frappe.qb.DocType(LEDGER)
+	entries = (
+		frappe.qb.from_(sle)
+		.select(sle.item_code, sle.warehouse, sle.serial_no, sle.actual_qty, sle.posting_datetime)
+		.where(sle.serial_no.isin(serial_numbers))
+		.orderby(sle.posting_datetime)
+		.orderby(sle.name)
+	).run()
+	balances = defaultdict(as_decimal)
+	available = {}
+	for item, location, serial_number, quantity, posted in entries:
+		key = (item, location, serial_number)
+		balances[key] += as_decimal(quantity)
+		if posted <= date:
+			available[key] = balances[key]
+		else:
+			available[key] = min(available.get(key, as_decimal(0)), balances[key])
+	return available
 
 
 def _validate_serial_numbers_not_in_stock(incoming):

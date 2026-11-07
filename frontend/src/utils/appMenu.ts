@@ -1,5 +1,6 @@
 import { t } from 'fyo';
 import type { DropdownOptions } from 'frappe-ui';
+import { fyo } from 'src/initFyo';
 import { call } from 'src/web/api';
 import { docsPathRef } from './refs';
 import { deskTheme, setDeskTheme, type DeskTheme } from './theme';
@@ -16,10 +17,12 @@ export function getAppMenuItems(openShortcuts?: () => void): DropdownOptions {
       ]
     : [];
 
+  // The help group's heading names the Books version, for support.
+  const version = fyo.store.appVersion;
   return [
     {
-      group: t`Help`,
-      hideLabel: true,
+      group: version ? t`Frappe Books ${version}` : t`Help`,
+      hideLabel: !version,
       options: [
         {
           label: t`Documentation`,

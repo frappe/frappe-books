@@ -56,6 +56,18 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 				outstanding = Decimal(str(invoice.db_get("outstanding_amount")))
 				self.assertEqual(outstanding, Decimal("-198" if is_return else "198"))
 
+	def test_a_row_posts_only_to_the_kind_of_account_its_item_takes(self):
+		equity = make_account("Owner Capital", root_type="Equity").name
+		for doctype in ("Books Sales Invoice", "Books Purchase Invoice"):
+			for account in (equity, self.expense if doctype == "Books Sales Invoice" else self.income):
+				with self.subTest(doctype=doctype, account=account):
+					role = "Supplier" if doctype == "Books Purchase Invoice" else "Customer"
+					party = make_party(self.ledgers[doctype], role=role).name
+					with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* must be of type"):
+						make_invoice(
+							doctype, party, self.ledgers[doctype], self.item, account, **NO_FOLLOW_UPS
+						)
+
 	def test_a_number_too_large_to_store_names_its_row(self):
 		party = make_party(self.ledgers["Books Sales Invoice"]).name
 		row = {"item": self.item, "quantity": 10**12, "rate": 10**6}

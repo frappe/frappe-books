@@ -36,11 +36,7 @@
           :primary-action="{ label: t`Try again`, onClick: () => initialize() }"
         />
       </div>
-      <SetupWizard
-        v-else-if="needsSetup"
-        @setup-complete="reload"
-        @setup-canceled="leaveBooks"
-      />
+      <SetupWizard v-else-if="needsSetup" @setup-complete="reload" />
       <MobileDesk v-else-if="isMobile" />
       <Desk v-else class="flex-1" />
       <DialogSheet v-if="isMobile" />
@@ -176,9 +172,6 @@ export default defineComponent({
     },
     reload() {
       window.location.reload();
-    },
-    leaveBooks() {
-      window.location.href = '/app';
     },
   },
 });

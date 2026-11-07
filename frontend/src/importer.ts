@@ -328,9 +328,10 @@ export class Importer {
     return [...documents.values()];
   }
 
-  /** The name a grid row gives its document. */
+  /** The name a grid row gives its document, else the row's number, e.g. for an unnamed Address. */
   getRowName(index: number): string {
-    return String(this.valueMatrix[index]?.[this.getNameIndex()]?.value ?? '');
+    const name = this.valueMatrix[index]?.[this.getNameIndex()]?.value;
+    return name ? String(name) : this.fyo.t`Row ${index + 1}`;
   }
 
   /** The column of the field that names a document: its naming field, or its name. */

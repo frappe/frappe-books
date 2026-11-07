@@ -6,6 +6,7 @@ from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.commerce.pos import pos_profile
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
 from frappe_books.inventory.stock import parse_serial_numbers
 from frappe_books.status import store_status
@@ -434,11 +435,9 @@ def _location_field(invoice) -> str:
 
 
 def _pos_location() -> str | None:
-	settings = frappe.get_single("Books POS Settings")
-	profile_location = settings.pos_profile and frappe.db.get_value(
-		"Books POS Profile", settings.pos_profile, "warehouse"
-	)
-	return profile_location or settings.warehouse
+	profile = pos_profile()
+	profile_location = profile and frappe.db.get_value("Books POS Profile", profile, "warehouse")
+	return profile_location or frappe.db.get_single_value("Books POS Settings", "warehouse")
 
 
 def _stock_rows(invoice) -> list[dict]:

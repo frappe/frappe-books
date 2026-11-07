@@ -8,6 +8,7 @@ import {
   fyo,
   getMappedDoc,
   getModel,
+  getNewDocValues,
   getSchema,
   newFrappeDoc,
   routeFilters,
@@ -306,10 +307,15 @@ test('the payment lists show, filter and open by party type', () => {
     'posting_date',
     'paid_amount',
   ]);
+  // A transfer has no party; both lists show it.
   assert.deepEqual(routeFilters.SalesPayments, [
-    ['party_type', '=', 'Books Customer'],
+    ['party_type', 'in', ['Books Customer', '']],
   ]);
   assert.deepEqual(createFilters.PurchasePayments, { payment_type: 'Pay' });
+  assert.deepEqual(
+    getNewDocValues('PaymentEntry', routeFilters.PurchasePayments),
+    { party_type: 'Books Supplier' }
+  );
 
   const filters = getFilterFields(getSchema('PaymentEntry').fields, columns);
   const status = filters.find(({ fieldname }) => fieldname === 'status');

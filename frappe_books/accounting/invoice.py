@@ -6,7 +6,11 @@ from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns, settlement
-from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.accounts import (
+	latest_ledger_account,
+	validate_account,
+	validate_row_accounts,
+)
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
 from frappe_books.accounting.party import PartyDocumentMixin, party_account
@@ -16,7 +20,11 @@ from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.company import company_value
 from frappe_books.currency import get_exchange_rate
-from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults, item_tax_templates
+from frappe_books.frappe_books.doctype.books_item.books_item import (
+	company_item_defaults,
+	item_account_root_types,
+	item_tax_templates,
+)
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
@@ -332,10 +340,29 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	_validate_row_accounts(invoice)
 	_validate_total_sign(invoice)
 	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_row_accounts(invoice):
+	"""Rows post to the kinds of ledger their items' defaults may hold."""
+	fieldname = invoice.item_account_field
+	if not fieldname:
+		return
+	stock_items = set(
+		frappe.get_all(
+			"Books Item",
+			filters={"name": ["in", list({row.item_code for row in invoice.items})], "is_stock_item": 1},
+			pluck="name",
+		)
+	)
+	for is_stock_item in (True, False):
+		rows = [row for row in invoice.items if (row.item_code in stock_items) == is_stock_item]
+		root_types = item_account_root_types(fieldname, is_stock_item)
+		validate_row_accounts(rows, fieldname, root_types=root_types)
 
 
 def _validate_total_sign(invoice):

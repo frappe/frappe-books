@@ -4,8 +4,9 @@
 from decimal import Decimal
 
 import frappe
+from frappe.api.v2 import run_doc_method
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate, now_datetime
+from frappe.utils import add_days, getdate, now_datetime, set_request
 
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import any_open_shift, open_shift_name, pos_profile
@@ -95,6 +96,12 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 			self.assertEqual(get_open_shift(), theirs.name)
 
 		self.assertEqual(get_open_shift(), mine.name)
+
+	def test_a_cashier_previews_the_shift_they_open(self):
+		set_request(method="POST", path="/api/v2/method/run_doc_method")
+		with self.set_user(make_user("Books Cashier")):
+			# The POS sends the new shift as the client has it, without an owner.
+			run_doc_method("preview", {"doctype": "Books Pos Opening Shift", "__islocal": 1})
 
 	def test_a_cashier_reads_only_their_own_shifts(self):
 		mine = open_shift(0)

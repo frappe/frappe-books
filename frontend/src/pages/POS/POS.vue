@@ -250,6 +250,7 @@ import {
   canApplyCoupon,
   canRedeemLoyalty,
   isPriceListOffered,
+  redeemLoyaltyPoints,
 } from 'src/utils/posDiscounts';
 import {
   addToCart,
@@ -725,9 +726,11 @@ export default defineComponent({
       await this.setLoyaltyPoints(0);
     },
     async setLoyaltyPoints(value: number) {
-      await this.sinvDoc.set('loyalty_points', value);
-      await this.sinvDoc.set('redeem_loyalty_points', value > 0);
-      await this.previewInvoice();
+      try {
+        await redeemLoyaltyPoints(this.sinvDoc, value);
+      } catch (error) {
+        showToast({ type: 'error', message: getErrorMessage(error as Error) });
+      }
     },
     /** Opens a held sale; a submitted one goes on to its payment. */
     async selectedInvoiceName(invoice: { name: string; docstatus: number }) {

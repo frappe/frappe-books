@@ -115,10 +115,23 @@ export async function setPOSRowValue(
     return await setCartQuantity(row, value as number);
   }
 
+  if (field === 'item_discount_amount') {
+    validateDiscountAmount(row, value as Money);
+  }
   if (field !== 'transfer_rate') {
     await row.set('set_item_discount_amount', field === 'item_discount_amount');
   }
   await row.set(field, value);
+}
+
+/** The server's limit: a row's discount amount up to its amount. */
+function validateDiscountAmount(row: SalesInvoiceItem, discount: Money) {
+  const amount = row.amount;
+  if (amount && !amount.isZero() && discount.gt(amount.abs())) {
+    throw new ValidationError(
+      t`Item discount amount cannot exceed the row amount.`
+    );
+  }
 }
 
 /** A cart row field's label, as the cart and its keypad show it. */

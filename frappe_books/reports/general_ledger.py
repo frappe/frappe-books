@@ -8,6 +8,8 @@ from frappe_books.accounting.money import as_decimal, sum_decimal
 DOCTYPE = "Books Ledger Entry"
 BALANCE = {"SUB": [{"SUM": "debit"}, {"SUM": "credit"}], "as": "balance"}
 GROUP_FIELDS = {"party": "party", "account": "account", "reference_name": "voucher_no"}
+# Groups that carry a balance from before the period; a document has none.
+OPENING_GROUP_FIELDS = ("party", "account")
 ENTRY_FIELDS = [
 	"account",
 	"posting_date",
@@ -47,7 +49,8 @@ def get_data(filters) -> list[dict]:
 	"""Return a period's ledger rows with opening, running, group and closing balances."""
 	conditions = _conditions(filters)
 	group_field = GROUP_FIELDS.get(filters.get("group_by") or "none")
-	openings = _opening_balances(conditions, filters.get("from_date"), group_field)
+	opening_field = group_field if group_field in OPENING_GROUP_FIELDS else None
+	openings = _opening_balances(conditions, filters.get("from_date"), opening_field)
 	groups = _grouped_entries(_period_entries(conditions, filters), openings, group_field)
 	index = count(1)
 	rows = []
@@ -108,8 +111,9 @@ def _grouped_entries(entries, openings, group_field):
 	groups = {}
 	for entry in entries:
 		groups.setdefault(entry.get(group_field) or "", []).append(entry)
-	for key in openings:
-		groups.setdefault(key, [])
+	if group_field in OPENING_GROUP_FIELDS:
+		for key in openings:
+			groups.setdefault(key, [])
 	return groups
 
 
@@ -120,7 +124,7 @@ def _group_rows(key, entries, opening, filters, index):
 	for row in rows if filters.get("ascending") else reversed(rows):
 		balance += row["debit"] - row["credit"]
 		row["balance"] = balance
-	if filters.get("from_date"):
+	if filters.get("from_date") and filters.get("group_by") != "reference_name":
 		rows.insert(0, _opening_row(key, opening, filters.get("group_by")))
 	if filters.get("group_by") in GROUP_FIELDS:
 		rows += [_total_row(rows, balance), {}]

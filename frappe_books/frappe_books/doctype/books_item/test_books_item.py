@@ -12,10 +12,9 @@ from frappe_books.tests.accounting import (
 	ensure_user,
 	make_account,
 	make_item,
+	make_item_default_sources,
 	make_tax,
-	root_group,
 	set_company_value,
-	set_inventory_accounts,
 	unique_name,
 )
 
@@ -75,7 +74,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(item.gst_hsn_code, "1234567890")
 
 	def test_missing_accounts_and_hsn_code_get_the_app_defaults(self):
-		cogs, received, group = self.make_default_sources()
+		cogs, received, group = make_item_default_sources()
 
 		service = make_item(None, None, item_type="Service", item_group=group.name)
 		product = make_item(None, None, is_stock_item=1)
@@ -85,14 +84,14 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual(_accounts(product), ("Sales", received.name))
 
 	def test_products_sell_into_the_company_income_account(self):
-		self.make_default_sources()
+		make_item_default_sources()
 		income = make_account("Company Income", root_type="Income")
 		set_company_value("default_income_account", income.name)
 
 		self.assertEqual(_accounts(make_item(None, None))[0], income.name)
 
 	def test_accounts_are_kept_once_for_the_one_company(self):
-		self.make_default_sources()
+		make_item_default_sources()
 		item = make_item(None, None)
 
 		self.assertEqual([row.company for row in item.item_defaults], [default_company()])
@@ -168,7 +167,7 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		self.assertEqual((row.qty, row.stock_qty), (1, 1))
 
 	def test_preview_fills_what_a_save_would_without_saving(self):
-		cogs, received, group = self.make_default_sources()
+		cogs, received, group = make_item_default_sources()
 		item = frappe.new_doc("Books Item", item_type="Service", item_group=group.name)
 		item.item_code = unique_name("Preview Item")
 
@@ -187,21 +186,6 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		item = frappe.new_doc("Books Item")
 		with self.set_user(ensure_user(READ_ONLY_USER)), self.assertRaises(frappe.PermissionError):
 			item.preview()
-
-	def make_default_sources(self):
-		"""The accounts and item group an item without its own takes them from."""
-		for name in ("Sales", "Service"):
-			if not frappe.db.exists("Books Account", name):
-				values = {"account_name": name, "parent_account": root_group("Income")}
-				frappe.get_doc({"doctype": "Books Account", **values}).insert()
-		set_company_value("default_income_account", "Sales")
-		cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
-		received = make_account("Item Received", root_type="Liability")
-		set_inventory_accounts(None, received.name, cogs.name)
-		group = frappe.get_doc(
-			{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "998877"}
-		).insert()
-		return cogs, received, group
 
 
 def _accounts(item):

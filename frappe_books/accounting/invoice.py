@@ -31,7 +31,7 @@ from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
-from frappe_books.permissions import check_preview_permission
+from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
@@ -51,6 +51,10 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	party_account_type: str | None
 	# The item field that holds a row's income or expense account.
 	item_account_field: str
+
+	def before_insert(self):
+		# Row accounts are the server's to fill for users who cannot write them.
+		reset_new_rows_above_permlevel(self)
 
 	def before_validate(self):
 		set_default_terms(self)

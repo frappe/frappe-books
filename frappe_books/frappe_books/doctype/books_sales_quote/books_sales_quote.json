@@ -8,11 +8,11 @@
  "field_order": [
   "default_section_break_1",
   "number_series",
+  "reference_type",
   "party",
   "date",
   "status",
   "price_list",
-  "reference_type",
   "items_section_break_6",
   "items",
   "net_total",
@@ -49,10 +49,20 @@
    "set_only_once": 1
   },
   {
+   "default": "Books Party",
+   "fieldname": "reference_type",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "DocType",
+   "placeholder": "Type",
+   "reqd": 1
+  },
+  {
    "fieldname": "party",
    "fieldtype": "Dynamic Link",
    "in_list_view": 1,
-   "label": "Customer",
+   "label": "Party",
    "options": "reference_type",
    "reqd": 1
   },
@@ -83,16 +93,6 @@
    "fieldtype": "Link",
    "label": "Price List",
    "options": "Books Price List"
-  },
-  {
-   "default": "Books Party",
-   "fieldname": "reference_type",
-   "fieldtype": "Link",
-   "in_list_view": 1,
-   "label": "Type",
-   "options": "DocType",
-   "placeholder": "Type",
-   "reqd": 1
   },
   {
    "fieldname": "items_section_break_6",
@@ -227,7 +227,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-05 16:00:00.000000",
+ "modified": "2026-11-07 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Sales Quote",

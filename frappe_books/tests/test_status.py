@@ -57,6 +57,16 @@ class IntegrationTestDocumentStatus(IntegrationTestCase):
 		self.assertEqual(credit_note.db_get("status"), "Cancelled")
 		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
 
+	def test_a_partly_returned_invoice_shows_what_it_owes_until_settled(self):
+		self.invoice.submit()
+		partial = map_return(self.invoice.doctype, self.invoice.name)
+		partial.items[0].quantity = -1
+		partial.insert().submit()
+		self.assertEqual(self.invoice.db_get("status"), "Unpaid")
+
+		self._pay(180)
+		self.assertEqual(self.invoice.db_get("status"), "Return Issued")
+
 	def test_every_status_has_a_state_colour(self):
 		for doctype in STATUS_DOCTYPES:
 			meta = frappe.get_meta(doctype)

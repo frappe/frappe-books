@@ -59,10 +59,11 @@ class BooksSetupWizard(Document):
 		info = get_books_country_info().get(self.country) or {}
 		self.currency = self.currency or get_country_currency(country_info)
 		self.chart_of_accounts = self.chart_of_accounts or get_country_chart(country_info.get("code"))
-		self.fiscal_year_start = self.fiscal_year_start or get_fiscal_year_date(info, "fiscal_year_start")
+		country_start, country_end = get_country_fiscal_year(info)
+		self.fiscal_year_start = self.fiscal_year_start or country_start
 		if not self.fiscal_year_start and self.fiscal_year_end:
 			self.fiscal_year_start = add_days(add_years(self.fiscal_year_end, -1), 1)
-		self.fiscal_year_end = self.fiscal_year_end or get_fiscal_year_date(info, "fiscal_year_end")
+		self.fiscal_year_end = self.fiscal_year_end or country_end
 		if not self.fiscal_year_end and self.fiscal_year_start:
 			self.fiscal_year_end = add_days(add_years(self.fiscal_year_start, 1), -1)
 
@@ -94,19 +95,16 @@ def get_country_chart(code: str | None) -> str | None:
 	return chart["name"]
 
 
-def get_fiscal_year_date(info: dict, fieldname: str) -> date | None:
-	"""The fiscal year that is current in Books' reckoning: before April it began last year."""
-	month_day = info.get(fieldname)
-	if not month_day:
-		return None
+def get_country_fiscal_year(info: dict) -> tuple[date | None, date | None]:
+	"""The country's fiscal year that holds today, from the month and day it starts on."""
+	if not info.get("fiscal_year_start"):
+		return None, None
 	today = getdate()
-	month, day = (int(part) for part in month_day.split("-"))
-	is_first_quarter = today.month <= 3
-	if fieldname == "fiscal_year_start":
-		year = today.year - 1 if is_first_quarter else today.year
-	else:
-		year = today.year if is_first_quarter else today.year + 1
-	return date(year, month, day)
+	month, day = (int(part) for part in info["fiscal_year_start"].split("-"))
+	start = date(today.year, month, day)
+	if start > today:
+		start = date(today.year - 1, month, day)
+	return start, add_days(add_years(start, 1), -1)
 
 
 @frappe.whitelist(methods=["POST"])

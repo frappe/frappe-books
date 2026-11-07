@@ -7,7 +7,7 @@ from frappe.model.document import Document
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import set_quantity_signs
-from frappe_books.inventory import invoice_transfer, stock_posting
+from frappe_books.inventory import entry_costs, invoice_transfer, stock_posting
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	create_series_batches,
@@ -64,7 +64,8 @@ class StockMovementController(StockTransactionController):
 		"""Fill row locations, defaults and the total, without writing anything."""
 		set_movement_locations(self)
 		start_row_quantities(self.items)
-		self.amount = populate_stock_rows(self.items)
+		populate_stock_rows(self.items)
+		self.amount = entry_costs.total_amount(self.items)
 
 	@frappe.whitelist()
 	def preview(self):

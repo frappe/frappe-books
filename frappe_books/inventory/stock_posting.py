@@ -5,7 +5,7 @@ from frappe import _
 
 from frappe_books.accounting import ledger
 from frappe_books.accounting.money import as_decimal
-from frappe_books.inventory import valuation
+from frappe_books.inventory import entry_costs, valuation
 from frappe_books.inventory.stock import parse_serial_numbers
 
 # The Books Inventory Settings account each stock document moves its stock value against.
@@ -23,9 +23,18 @@ RETURN_RATES = {
 
 
 def post(transaction):
-	"""Add a submitted transaction's stock ledger entries and post their value, then repost what they restated."""
-	restated = _create_entries(transaction, _valued_rows(transaction))
+	"""Add a submitted transaction's stock ledger entries and post their value, then repost what they restated.
+
+	Outgoing rows post first, so a manufacture's products can take the cost consumed.
+	"""
+	rows = _valued_rows(transaction)
+	produced = [row for row in rows if not row["from_location"]]
+	restated = _create_entries(transaction, [row for row in rows if row["from_location"]])
+	if transaction.get("movement_type") == "Manufacture":
+		entry_costs.rate_products(transaction, produced)
+	restated |= _create_entries(transaction, produced)
 	_post_stock_value(transaction)
+	_store_costs(transaction)
 	_repost(restated)
 
 
@@ -175,6 +184,11 @@ def _validate_value_direction(transaction, value):
 		)
 
 
+def _store_costs(transaction):
+	if transaction.doctype == "Books Stock Movement":
+		entry_costs.store_costs(transaction)
+
+
 def _repost(restated):
 	"""Revalue the stock valued from restated transactions, then post the value of every changed one again."""
 	for doctype, name in sorted(_revalue_dependents(restated)):
@@ -182,17 +196,22 @@ def _repost(restated):
 			transaction = frappe.get_doc(doctype, name)
 			ledger.delete_entries(transaction)
 			_post_stock_value(transaction)
+			_store_costs(transaction)
 
 
 def _revalue_dependents(restated):
-	"""Pass restated costs on to the stock that material transfers and sales returns took in at them.
+	"""Pass restated costs on to the stock that material transfers, manufactures and sales returns took in at them.
 
 	Return every transaction whose stock value changed.
 	"""
 	changed = set(restated)
 	pending = set(restated)
 	while pending:
-		pending = _revalue_transfers(pending) | _revalue_returns(pending)
+		pending = (
+			_revalue_transfers(pending)
+			| entry_costs.revalue_manufactures(pending)
+			| _revalue_returns(pending)
+		)
 		changed |= pending
 	return changed
 

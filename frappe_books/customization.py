@@ -26,6 +26,7 @@ PROTECTED_DOCTYPES = {
 	"Books Setup Wizard",
 	"Books Stock Ledger Entry",
 }
+UNTARGETABLE_DOCTYPES = {"Books Custom Field", "Books Custom Form"}
 OPTION_FIELDTYPES = {"Select", "AutoComplete"}
 CUSTOM_FIELD_PREFIX = "custom_books_"
 
@@ -126,11 +127,23 @@ def _validate_custom_field(meta, row):
 	if (required := ROW_OPTIONS_FIELDS.get(row.fieldtype)) and not row.get(required):
 		label = _(frappe.get_meta("Books Custom Field").get_label(required))
 		frappe.throw(_("Custom field {0} needs a {1}.").format(row.label, label))
+	if row.fieldtype in ("Link", "Table") and not _is_target(row.target, row.fieldtype == "Table"):
+		frappe.throw(_("Custom field {0} cannot link to {1}.").format(row.label, row.target))
 	if row.is_required and not row.default:
 		frappe.throw(_("Required custom field {0} needs a default value.").format(row.label))
 	options = [option for option in (row.options or "").split("\n") if option.strip()]
 	if row.fieldtype in OPTION_FIELDTYPES and len(options) < 2:
 		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
+
+
+def _is_target(doctype: str, is_table: bool) -> bool:
+	"""A Books form for a Link, a Books child table for a Table, as the form's Target list offers."""
+	if doctype in UNTARGETABLE_DOCTYPES:
+		return False
+	values = frappe.db.get_value("DocType", doctype, ["module", "issingle", "istable"], as_dict=True)
+	return (
+		bool(values) and values.module == BOOKS_MODULE and not values.issingle and values.istable == is_table
+	)
 
 
 def get_saved_definition(doctype: str, fieldname: str) -> dict:

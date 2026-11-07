@@ -59,14 +59,36 @@ export function findSidebarEntry(
   groups: SidebarRoot[],
   route: SidebarRoute
 ): SidebarEntry | undefined {
-  const path = getSidebarPath(route);
-  const exactPath = decodeURI(path);
-  const entries = groups.flatMap((group) =>
+  const exactPath = decodeURI(getSidebarPath(route));
+  return (
+    getEntries(groups).find(
+      ({ item }) => decodeURI(item.route) === exactPath
+    ) ?? getMatchingEntries(groups, route)[0]
+  );
+}
+
+/** The filtered lists of the route's doctype, e.g. Sales and Purchase Payments. */
+export function getFilteredLists(
+  groups: SidebarRoot[],
+  route: SidebarRoute
+): SidebarEntry[] {
+  return getMatchingEntries(groups, route).filter(
+    ({ item }) => item.filters?.length
+  );
+}
+
+function getEntries(groups: SidebarRoot[]): SidebarEntry[] {
+  return groups.flatMap((group) =>
     (group.items ?? [group]).map((item) => ({ group, item }))
   );
+}
 
-  return (
-    entries.find(({ item }) => decodeURI(item.route) === exactPath) ??
-    entries.find(({ item }) => matchesSidebarPath(path, item.route))
+function getMatchingEntries(
+  groups: SidebarRoot[],
+  route: SidebarRoute
+): SidebarEntry[] {
+  const path = getSidebarPath(route);
+  return getEntries(groups).filter(({ item }) =>
+    matchesSidebarPath(path, item.route)
   );
 }

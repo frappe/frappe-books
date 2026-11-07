@@ -104,6 +104,22 @@ def make_item(income_account, expense_account, tax=None, **values):
 	).insert()
 
 
+def make_item_default_sources():
+	"""The accounts and item group an item without its own takes them from."""
+	for name in ("Sales", "Service"):
+		if not frappe.db.exists("Books Account", name):
+			values = {"account_name": name, "parent_account": root_group("Income")}
+			frappe.get_doc({"doctype": "Books Account", **values}).insert()
+	set_company_value("default_income_account", "Sales")
+	cogs = make_account("Item COGS", root_type="Expense", account_type="Cost of Goods Sold")
+	received = make_account("Item Received", root_type="Liability")
+	set_inventory_accounts(None, received.name, cogs.name)
+	group = frappe.get_doc(
+		{"doctype": "Books Item Group", "item_group_name": unique_name("Group"), "gst_hsn_code": "998877"}
+	).insert()
+	return cogs, received, group
+
+
 def make_tax(account, rate=10):
 	return frappe.get_doc(
 		{

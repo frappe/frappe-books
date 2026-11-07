@@ -22,6 +22,7 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_item_default_sources,
 	make_tax,
 	make_warehouse,
 	set_company_value,
@@ -185,6 +186,8 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		expense = make_account("Warehouse Expense", root_type="Expense", account_type="Expense Account")
 		warehouse = make_warehouse("Rights Warehouse").name
 		item = make_item(income.name, expense.name)
+		# A new item's accounts come from the defaults the server fills.
+		make_item_default_sources()
 
 		with self.set_user(BOOKS_USER):
 			edited = frappe.get_doc("Books Item", item.name)
@@ -206,7 +209,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 			[warehouse, income.name],
 		)
 		self.assertEqual(new.item_defaults[0].default_warehouse, warehouse)
-		self.assertNotEqual(new.item_defaults[0].income_account, other_income.name)
+		self.assertEqual(new.item_defaults[0].income_account, "Sales")
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")

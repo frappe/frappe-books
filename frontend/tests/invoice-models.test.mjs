@@ -646,6 +646,19 @@ test('a new supplier or quote party leaves the party currency to the server', as
   }
 });
 
+test("an item tax row shows its items' rate only when they share one", () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  invoice.push('taxes', { account_head: 'CGST', set_by_item_tax_template: 1 });
+  const [row] = invoice.taxes;
+  const state = () => row.getFieldState(row.fieldMap.rate);
+
+  assert.equal(state().hidden, true);
+  row.rate = 9;
+  assert.equal(state().hidden, false);
+  assert.equal(state().readOnly, true);
+});
+
 test('amounts show in the party currency, base amounts in the company one', () => {
   setSettings();
   const invoice = newInvoice('SalesInvoice', {

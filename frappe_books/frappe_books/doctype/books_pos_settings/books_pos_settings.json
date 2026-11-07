@@ -90,21 +90,24 @@
    "description": "The digits that scale barcodes start with, such as 21.",
    "fieldname": "check_digits",
    "fieldtype": "Int",
-   "label": "Barcode Prefix"
+   "label": "Barcode Prefix",
+   "non_negative": 1
   },
   {
    "default": "0",
    "depends_on": "weight_enabled_barcode",
    "fieldname": "item_code_digits",
    "fieldtype": "Int",
-   "label": "Item Code Digits"
+   "label": "Item Code Digits",
+   "non_negative": 1
   },
   {
    "default": "0",
    "depends_on": "weight_enabled_barcode",
    "fieldname": "item_weight_digits",
    "fieldtype": "Int",
-   "label": "Item Weight Digits"
+   "label": "Item Weight Digits",
+   "non_negative": 1
   },
   {
    "fieldname": "default_section_break_13",
@@ -147,7 +150,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 19:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Settings",

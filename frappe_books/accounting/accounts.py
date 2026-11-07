@@ -7,6 +7,10 @@ PARTY_ACCOUNT_TYPES = {
 	"Both": ("Receivable", "Payable"),
 }
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
+DEFAULT_PARTY_ACCOUNT_FIELDS = {
+	"Receivable": "default_receivable_account",
+	"Payable": "default_payable_account",
+}
 
 
 def validate_account(doc, fieldname, account_types=(), root_types=()):
@@ -67,6 +71,17 @@ def validate_changed_accounts(doc, rules):
 	for fieldname, types in rules.items():
 		if doc.has_value_changed(fieldname):
 			validate_account(doc, fieldname, **types)
+
+
+def default_party_account(account_type):
+	"""The company's default receivable or payable ledger, else the newest of the type."""
+	return company_party_account(account_type) or latest_ledger_account(account_type)
+
+
+def company_party_account(account_type):
+	"""The receivable or payable ledger Books Accounting Settings defaults parties to."""
+	fieldname = DEFAULT_PARTY_ACCOUNT_FIELDS[account_type]
+	return frappe.db.get_single_value("Books Accounting Settings", fieldname)
 
 
 def latest_ledger_account(account_type):

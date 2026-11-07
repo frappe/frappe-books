@@ -8,6 +8,7 @@ from frappe import _
 from frappe.desk.page.setup_wizard.setup_wizard import setup_complete
 
 from frappe_books.coa import (
+	chart_default_names,
 	ensure_bank_account,
 	ensure_cash_account,
 	ensure_chart,
@@ -30,7 +31,8 @@ def run_setup(wizard):
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
 	enable_currency(wizard.currency)
-	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
+	names = chart_default_names(wizard.chart_of_accounts)
+	accounts = {**default_accounts(chart, names), "cash": ensure_cash_account(chart)}
 	_update_accounting_settings(wizard, discount_account, accounts)
 	_update_books_system_settings(wizard)
 	_update_print_settings(wizard)
@@ -76,12 +78,17 @@ def enable_currency(currency):
 		doc.save()
 
 
-def default_accounts(chart):
-	"""Pick the chart's ledger accounts for settings by name first, then by account type."""
+def default_accounts(chart, names=None):
+	"""Pick the chart's ledger accounts for settings by name first, then by account type.
+
+	`names` holds the ledgers the chart names, as `{"receivable": ..., "payable": ...}`.
+	"""
+	names = names or {}
 	return {
 		"write_off": find_ledger_account(chart, ["Write Off"]),
 		"round_off": find_ledger_account(chart, ["Rounded Off", "Round Off"]),
-		"receivable": find_ledger_account(chart, ["Debtors"], "Receivable"),
+		"receivable": find_ledger_account(chart, [names.get("receivable"), "Debtors"], "Receivable"),
+		"payable": find_ledger_account(chart, [names.get("payable"), "Creditors"], "Payable"),
 		"stock_in_hand": find_ledger_account(chart, ["Stock In Hand"], "Stock"),
 		"stock_received_but_not_billed": find_ledger_account(
 			chart, ["Stock Received But Not Billed"], "Stock Received But Not Billed"
@@ -101,13 +108,16 @@ def _update_accounting_settings(wizard, discount_account, accounts):
 			"email": wizard.email,
 			"write_off_account": accounts["write_off"],
 			"round_off_account": accounts["round_off"],
+			"default_receivable_account": accounts["receivable"],
+			"default_payable_account": accounts["payable"],
 			"discount_account": discount_account,
 			"fiscal_year_start": wizard.fiscal_year_start,
 			"fiscal_year_end": wizard.fiscal_year_end,
-			"setup_complete": 1,
 		}
 	)
 	settings.save(ignore_permissions=True)
+	# The settings refuse to change it, so it stays set once the setup is done.
+	frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 1)
 
 
 def _update_print_settings(wizard):

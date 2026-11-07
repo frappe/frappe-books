@@ -6,12 +6,14 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
-from frappe_books.accounting.accounts import validate_party_account
+from frappe_books.accounting.accounts import company_party_account, validate_party_account
 from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.settlement import party_outstanding
 from frappe_books.commerce.loyalty import get_available_points
 from frappe_books.regional import validate_gstin
 from frappe_books.settings import require_features
+
+ROLE_ACCOUNTS = {"Customer": ("Receivable", "Debtors"), "Supplier": ("Payable", "Creditors")}
 
 
 class BooksParty(Document):
@@ -79,9 +81,11 @@ class BooksParty(Document):
 
 
 def _default_account(role):
-	"""Debtors for a customer and Creditors for a supplier, when the chart has them."""
-	account = {"Customer": "Debtors", "Supplier": "Creditors"}.get(role)
-	return account if account and frappe.db.exists("Books Account", account) else None
+	"""The company's default receivable or payable, else Debtors or Creditors when the chart has them."""
+	if role not in ROLE_ACCOUNTS:
+		return None
+	account_type, name = ROLE_ACCOUNTS[role]
+	return company_party_account(account_type) or (name if frappe.db.exists("Books Account", name) else None)
 
 
 @frappe.whitelist()

@@ -7,7 +7,10 @@ import {
 import {
   fyo,
   getDocType,
+  getExportFields,
+  getExportTableFields,
   getImportableSchemaNames,
+  getListColumns,
   getModel,
   getSidebarConfig,
   loadDocPermissions,
@@ -297,6 +300,31 @@ test("a row's field levels follow its parent's permissions", async () => {
       assert.equal(field.hidden, true);
       assert.equal(field.required, undefined);
     }
+  } finally {
+    window.frappe.boot.user.roles = ['Books Manager'];
+    await loadFrappeModels();
+  }
+});
+
+test('lists and exports leave out the fields the user cannot read', async () => {
+  const fieldnames = (fields) => fields.map(({ fieldname }) => fieldname);
+  window.frappe.boot.user.roles = ['Books User'];
+
+  try {
+    await loadFrappeModels();
+    const columns = getListColumns(
+      'StockLedgerEntry',
+      getModel('StockLedgerEntry').getListViewSettings()
+    );
+    const items = getExportTableFields('SalesInvoice').find(
+      ({ fieldname }) => fieldname === 'items'
+    );
+
+    assert.ok(fieldnames(columns).includes('item'));
+    assert.ok(!fieldnames(columns).includes('rate'));
+    assert.ok(!fieldnames(getExportFields('SalesInvoice')).includes('account'));
+    assert.ok(fieldnames(items.fields).includes('item'));
+    assert.ok(!fieldnames(items.fields).includes('account'));
   } finally {
     window.frappe.boot.user.roles = ['Books Manager'];
     await loadFrappeModels();

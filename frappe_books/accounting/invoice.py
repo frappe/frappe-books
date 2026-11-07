@@ -8,8 +8,8 @@ from frappe.utils import getdate
 
 from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
+	default_party_account,
 	item_account_root_types,
-	latest_ledger_account,
 	validate_account,
 	validate_item_usage,
 	validate_party_role,
@@ -26,7 +26,7 @@ from frappe_books.accounting.money import (
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
-from frappe_books.currency import get_exchange_rate
+from frappe_books.currency import exchange_rate
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import (
@@ -457,14 +457,14 @@ def _populate_pos_defaults(invoice):
 
 
 def _party_account(invoice, account):
-	"""The party's ledger if it suits the invoice, else the newest that does.
+	"""The party's ledger if it suits the invoice, else the company's default, else the newest that does.
 
 	A party with both roles has one ledger, receivable or payable, for either invoice.
 	"""
 	account_type = invoice.party_account_type
 	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
 		return account
-	return latest_ledger_account(account_type)
+	return default_party_account(account_type)
 
 
 def _party_defaults(invoice):
@@ -487,7 +487,7 @@ def _populate_currency(invoice, party_currency):
 	if invoice.currency == company:
 		invoice.exchange_rate = 1
 	elif not invoice.get("exchange_rate"):
-		invoice.exchange_rate = get_exchange_rate(invoice.currency, company, invoice.date)
+		invoice.exchange_rate = exchange_rate(invoice.currency, company, invoice.date)
 
 
 def _populate_row(invoice, row, item, rates):

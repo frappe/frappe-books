@@ -355,7 +355,7 @@ import EmptyState from 'src/components/EmptyState.vue';
 import PageHeader from 'src/components/PageHeader.vue';
 import { DataImport } from 'src/dataImport';
 import { getDocType } from 'src/frappe/doctypes';
-import { getSchema } from 'src/frappe/registry';
+import { getDoctypeLabel, getSchema } from 'src/frappe/registry';
 import {
   ImportFile,
   Importer,
@@ -370,6 +370,7 @@ import { downloadFile } from 'src/utils/browser';
 import { showDialog } from 'src/utils/interactive';
 import { docsPathMap } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
+import { serverHtmlToText } from 'src/utils/serverHtml';
 import { selectTextFile } from 'src/utils/ui';
 import { defineComponent } from 'vue';
 
@@ -766,9 +767,12 @@ export default defineComponent({
       const { success: imported, failed } = await dataImport.getLogs();
       const failedRows = failed.map(({ rows }) => getGridRows(file, rows));
       this.success = imported.map(({ docname }) => docname ?? '');
+      // Server messages name the DocType, e.g. `Books Party`, where /books shows its label.
+      const doctype = this.getDoctype();
+      const label = getDoctypeLabel(doctype);
       this.failed = failed.map(({ message }, index) => ({
         name: this.importer.getRowName(failedRows[index][0]),
-        message,
+        message: serverHtmlToText(message).replaceAll(doctype, label),
       }));
       this.failedRows = failedRows.flat();
     },

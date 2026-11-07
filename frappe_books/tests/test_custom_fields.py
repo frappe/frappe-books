@@ -197,16 +197,34 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 		cases = {
 			"needs a default": [{**FIELD, "is_required": 1}],
 			"already used for Custom Field 1": [FIELD, {**FIELD, "label": "Duplicate"}],
+			"hostedbridgetestvalue already used": [FIELD, {**FIELD, "fieldname": FIELD["fieldname"].lower()}],
 			"already exists for Books Uom": [{**FIELD, "fieldname": "is_whole"}],
 			"at least two options": [{**FIELD, "fieldtype": "Select", "options": "Only\n "}],
 			"needs a Target": [{**PARTY_FIELD, "target": None}],
 			"needs a References": [{**REFERENCE_FIELD, "references": None}],
+			"cannot link to User": [{**PARTY_FIELD, "target": "User"}],
+			"cannot link to Books Sales Invoice Item": [
+				{**PARTY_FIELD, "target": "Books Sales Invoice Item"}
+			],
+			"cannot link to Books Party": [{**PARTY_FIELD, "fieldtype": "Table"}],
 		}
 		for message, fields in cases.items():
 			with self.subTest(message=message):
 				self.assertRaisesRegex(
 					frappe.ValidationError, message, _custom_form("Books Uom", fields).insert
 				)
+
+
+class IntegrationTestCustomFormSavesAllOrNone(IntegrationTestCase):
+	def test_a_row_frappe_rejects_fails_the_save_before_the_table_changes(self):
+		# MariaDB commits at ALTER TABLE, so an earlier row's alter would keep part of the save.
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
+		rows = [FIELD, {**SIZE_FIELD, "default": "Huge"}]
+		with patch.object(frappe.db, "updatedb") as updatedb:
+			self.assertRaisesRegex(
+				frappe.ValidationError, "list of options", _custom_form("Books Uom", rows).insert
+			)
+		updatedb.assert_not_called()
 
 
 class IntegrationTestCustomFieldnames(IntegrationTestCase):

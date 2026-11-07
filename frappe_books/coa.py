@@ -46,6 +46,14 @@ def load_chart(chart_name) -> list[ChartAccount]:
 	frappe.throw(_("Unknown chart of accounts: {0}").format(chart_name))
 
 
+def chart_default_names(chart_name) -> dict[str, str]:
+	"""The ledgers a country chart names for settings defaults, when it has several of their type."""
+	for chart in _country_charts():
+		if chart["name"] == chart_name:
+			return chart.get("defaultAccounts", {})
+	return {}
+
+
 def ensure_chart(accounts: list[ChartAccount]):
 	for account in accounts:
 		_create_account(

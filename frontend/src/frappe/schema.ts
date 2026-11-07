@@ -215,6 +215,7 @@ function toField(docfield: DocField, context: FieldContext): Field {
     required: docfield.reqd && levels.write.has(level) ? true : undefined,
     readOnly: docfield.read_only || !levels.write.has(level) ? true : undefined,
     hidden: docfield.hidden || !levels.read.has(level) ? true : undefined,
+    unreadable: !levels.read.has(level) || undefined,
     create: isLink(docfield) || undefined,
     linkFilters: getLinkFilters(docfield),
     ...shown,

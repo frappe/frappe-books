@@ -2,6 +2,7 @@
 
 import re
 import unicodedata
+from contextlib import contextmanager
 
 import frappe
 from frappe import _
@@ -25,6 +26,7 @@ PROTECTED_DOCTYPES = {
 	"Books Setup Wizard",
 	"Books Stock Ledger Entry",
 }
+UNTARGETABLE_DOCTYPES = {"Books Custom Field", "Books Custom Form"}
 OPTION_FIELDTYPES = {"Select", "AutoComplete"}
 CUSTOM_FIELD_PREFIX = "custom_books_"
 
@@ -108,13 +110,15 @@ def _is_settings_table(doctype: str) -> bool:
 
 
 def _validate_unique_fieldnames(rows):
+	"""By their Custom Field's fieldname, which ignores case."""
 	first_rows = {}
 	for row in rows:
-		if first := first_rows.get(row.fieldname):
+		target = custom_target_field(row.fieldname)
+		if first := first_rows.get(target):
 			frappe.throw(
 				_("Fieldname {0} already used for Custom Field {1}").format(row.fieldname, first.idx)
 			)
-		first_rows[row.fieldname] = row
+		first_rows[target] = row
 
 
 def _validate_custom_field(meta, row):
@@ -123,11 +127,23 @@ def _validate_custom_field(meta, row):
 	if (required := ROW_OPTIONS_FIELDS.get(row.fieldtype)) and not row.get(required):
 		label = _(frappe.get_meta("Books Custom Field").get_label(required))
 		frappe.throw(_("Custom field {0} needs a {1}.").format(row.label, label))
+	if row.fieldtype in ("Link", "Table") and not _is_target(row.target, row.fieldtype == "Table"):
+		frappe.throw(_("Custom field {0} cannot link to {1}.").format(row.label, row.target))
 	if row.is_required and not row.default:
 		frappe.throw(_("Required custom field {0} needs a default value.").format(row.label))
 	options = [option for option in (row.options or "").split("\n") if option.strip()]
 	if row.fieldtype in OPTION_FIELDTYPES and len(options) < 2:
 		frappe.throw(_("Custom field {0} needs at least two options.").format(row.label))
+
+
+def _is_target(doctype: str, is_table: bool) -> bool:
+	"""A Books form for a Link, a Books child table for a Table, as the form's Target list offers."""
+	if doctype in UNTARGETABLE_DOCTYPES:
+		return False
+	values = frappe.db.get_value("DocType", doctype, ["module", "issingle", "istable"], as_dict=True)
+	return (
+		bool(values) and values.module == BOOKS_MODULE and not values.issingle and values.istable == is_table
+	)
 
 
 def get_saved_definition(doctype: str, fieldname: str) -> dict:
@@ -152,10 +168,29 @@ def get_saved_definition(doctype: str, fieldname: str) -> dict:
 
 def update_custom_fields(doc):
 	"""Save each row's definition in its Custom Field and delete those of removed rows."""
-	for row in doc.custom_fields:
-		_save_custom_field(doc.name, _custom_field_values(row))
-	_remove_stale_custom_fields(doc.name, {custom_target_field(row.fieldname) for row in doc.custom_fields})
-	frappe.clear_cache(doctype=doc.name)
+	with _table_altered_once(doc.name):
+		for row in doc.custom_fields:
+			_save_custom_field(doc.name, _custom_field_values(row))
+		_remove_stale_custom_fields(
+			doc.name, {custom_target_field(row.fieldname) for row in doc.custom_fields}
+		)
+
+
+@contextmanager
+def _table_altered_once(doctype: str):
+	"""Alter the table once, after every Custom Field passed Frappe's checks, as create_custom_fields does.
+
+	MariaDB commits at each ALTER TABLE, so a field failing after another altered the table saved part of the form.
+	"""
+	# Also clears the meta a failed save cached, when the save rolls back.
+	frappe.clear_cache(doctype=doctype)
+	frappe.flags.in_create_custom_fields = True
+	try:
+		yield
+	finally:
+		frappe.flags.in_create_custom_fields = False
+	frappe.clear_cache(doctype=doctype)
+	frappe.db.updatedb(doctype)
 
 
 def remove_custom_fields(doctype: str):

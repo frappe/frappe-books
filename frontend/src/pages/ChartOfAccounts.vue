@@ -22,6 +22,8 @@
         :nodes="accounts"
         node-key="name"
         :aria-label="t`Chart of Accounts`"
+        @keydown.enter="openFocusedLedger"
+        @keydown.space="openFocusedLedger"
       >
         <template #item-prefix="{ node }">
           <span
@@ -35,6 +37,7 @@
             type="button"
             class="min-w-0 flex-1 self-stretch truncate rounded-3 bg-transparent text-start text-base leading-tighter text-ink-gray-8"
             :title="accountLabel(String(node.name))"
+            :data-account="node.name"
             @keydown.enter.stop
             @keydown.space.stop
             @click.stop="onClick(node as AccountItem)"
@@ -323,6 +326,17 @@ export default defineComponent({
         currency,
       };
     },
+    /** Enter or Space on a ledger row opens it, as a click does; the Tree only toggles groups. */
+    async openFocusedLedger(event: KeyboardEvent) {
+      const label = (event.target as HTMLElement).querySelector<HTMLElement>(
+        ':scope > [data-slot=row] [data-account]'
+      );
+      const account =
+        label && findAccount(this.accounts, label.dataset.account);
+      if (account && !account.is_group) {
+        await this.onClick(account);
+      }
+    },
     async onClick(account: AccountItem) {
       let shouldOpen = !account.is_group;
       if (account.is_group) {
@@ -542,5 +556,20 @@ export default defineComponent({
     },
   },
 });
+
+function findAccount(
+  accounts: AccountItem[],
+  name?: string
+): AccountItem | undefined {
+  for (const account of accounts) {
+    const found =
+      account.name === name
+        ? account
+        : findAccount(account.children ?? [], name);
+    if (found) {
+      return found;
+    }
+  }
+}
 </script>
 

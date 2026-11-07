@@ -15,6 +15,8 @@
   "accounts_section_break_7",
   "write_off_account",
   "round_off_account",
+  "default_receivable_account",
+  "default_payable_account",
   "discount_account",
   "features_section_break_11",
   "enable_discounting",
@@ -98,6 +100,18 @@
    "fieldname": "round_off_account",
    "fieldtype": "Link",
    "label": "Round Off Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_receivable_account",
+   "fieldtype": "Link",
+   "label": "Default Receivable Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_payable_account",
+   "fieldtype": "Link",
+   "label": "Default Payable Account",
    "options": "Books Account"
   },
   {
@@ -247,7 +261,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 18:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

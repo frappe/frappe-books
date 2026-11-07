@@ -60,6 +60,7 @@ export interface BaseField {
   hidden?: boolean;              // UI Facing config, whether field is shown in a form
   invisible?: boolean;           // UI Facing config, whether field is invisible but occupies space
   readOnly?: boolean;            // UI Facing config, whether field is editable
+  unreadable?: boolean;          // The user's roles cannot read it, so the server leaves its value out
   setOnlyOnce?: boolean;         // Read only once the document is saved
   description?: string;          // UI Facing, translateable, used for inline documentation
   default?: RawValue;            // Default value of a field, should match the db type

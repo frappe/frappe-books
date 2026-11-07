@@ -1,4 +1,8 @@
 {
+  "defaultAccounts": {
+    "receivable": "Trade Receivable",
+    "payable": "Trade Payable"
+  },
   "countryCode": "ae",
   "name": "U.A.E - Chart of Accounts",
   "tree": {

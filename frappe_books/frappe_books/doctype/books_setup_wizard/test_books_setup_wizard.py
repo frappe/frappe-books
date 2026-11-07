@@ -6,7 +6,14 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
+from frappe_books.accounting.accounts import default_party_account
+from frappe_books.coa import (
+	STANDARD_CHART,
+	chart_default_names,
+	chart_options,
+	find_ledger_account,
+	load_chart,
+)
 from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
 	ACCOUNT_TYPES as ACCOUNTING_RULES,
 )
@@ -18,7 +25,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
 from frappe_books.setup_service import complete_frappe_setup, default_accounts, run_setup
-from frappe_books.tests.accounting import ensure_user, unique_name
+from frappe_books.tests.accounting import ensure_user, make_account, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
 FRAPPE_SETUP_FIELDS = (
@@ -40,6 +47,7 @@ SETUP_ACCOUNT_RULES = {
 	"round_off": ACCOUNTING_RULES["round_off_account"],
 	"cash": POS_RULES["cash_account"],
 	"receivable": POS_RULES["default_account"],
+	"payable": ACCOUNTING_RULES["default_payable_account"],
 	**INVENTORY_RULES,
 }
 
@@ -135,6 +143,26 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "round_off_account"))
 		self.assertFalse(frappe.db.get_single_value("Books Inventory Settings", "stock_in_hand"))
 
+	def test_parties_and_invoices_default_to_the_companys_trade_accounts(self):
+		# Setup sets them from the chart; the U.A.E chart's newest receivable is not its trade receivable.
+		receivable = make_account("Trade Receivable", account_type="Receivable").name
+		payable = make_account("Trade Payable", root_type="Liability", account_type="Payable").name
+		make_account("Newer Receivable", account_type="Receivable")
+		frappe.db.set_single_value(
+			"Books Accounting Settings",
+			{"default_receivable_account": receivable, "default_payable_account": payable},
+		)
+
+		customer = frappe.get_doc(
+			{"doctype": "Books Party", "name": unique_name("Customer"), "role": "Customer"}
+		)
+		supplier = frappe.get_doc(
+			{"doctype": "Books Party", "name": unique_name("Supplier"), "role": "Supplier"}
+		)
+		self.assertEqual(customer.insert().default_account, receivable)
+		self.assertEqual(supplier.insert().default_account, payable)
+		self.assertEqual(default_party_account("Receivable"), receivable)
+
 	def test_setup_makes_a_cash_ledger_for_a_chart_without_one(self):
 		wizard = self._wizard(
 			country="Canada",
@@ -154,8 +182,16 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(charts["Switzerland - General Chart of Accounts"]["country_code"], "ch")
 		for name in charts:
 			with self.subTest(chart=name):
-				self.assert_settings_accept_default_accounts(load_chart(name))
+				self.assert_settings_accept_default_accounts(name)
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
+
+	def test_every_chart_has_a_receivable_and_a_payable_ledger(self):
+		# Without them no invoice can be made after setup.
+		for chart in chart_options():
+			with self.subTest(chart=chart["name"]):
+				accounts = load_chart(chart["name"])
+				for account_type in ("Receivable", "Payable"):
+					self.assertTrue(find_ledger_account(accounts, account_type=account_type))
 
 	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
@@ -239,6 +275,18 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
 		)
 
+	def test_preview_suggests_the_fiscal_year_that_holds_today(self):
+		for today, country, year in (
+			("2026-05-15", "Australia", ("2025-07-01", "2026-06-30")),
+			("2026-07-01", "Australia", ("2026-07-01", "2027-06-30")),
+			("2026-09-01", "Thailand", ("2025-10-01", "2026-09-30")),
+			("2027-03-01", "South Africa", ("2027-03-01", "2028-02-29")),
+		):
+			with self.subTest(today=today, country=country), self.freeze_time(today):
+				wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": country})
+				wizard.preview()
+				self.assertEqual((str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), year)
+
 	def test_preview_keeps_values_the_user_set(self):
 		wizard = frappe.get_doc(
 			{
@@ -293,6 +341,12 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		with self.set_user(ensure_user("books-wizard-user@example.com", "Books User")):
 			self.assertRaises(frappe.PermissionError, wizard.preview)
 
+	def test_only_a_system_manager_sets_up_books(self):
+		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
+		with self.set_user(ensure_user("books-wizard-manager@example.com", "Books Manager")):
+			self.assertRaises(frappe.PermissionError, complete_setup)
+			self.assertRaises(frappe.PermissionError, self._wizard().save)
+
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		self._wizard().save()
@@ -308,9 +362,13 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			"System Settings", {field: settings.get(field) for field in FRAPPE_SETUP_FIELDS}
 		)
 
-	def assert_settings_accept_default_accounts(self, chart):
+	def assert_settings_accept_default_accounts(self, chart_name):
+		chart = load_chart(chart_name)
 		by_name = {account.name: account for account in chart}
-		picks = {**default_accounts(chart), "cash": find_ledger_account(chart, ["Cash"], "Cash")}
+		names = chart_default_names(chart_name)
+		picks = {**default_accounts(chart, names), "cash": find_ledger_account(chart, ["Cash"], "Cash")}
+		for key, name in names.items():
+			self.assertEqual(picks[key], name)
 		for key, name in picks.items():
 			if not name:
 				continue

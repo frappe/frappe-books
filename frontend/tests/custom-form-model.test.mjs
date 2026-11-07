@@ -89,7 +89,8 @@ test('a row asks for options, a target or references as its field type needs', a
   const [row] = form.custom_fields;
   assert.ok(row instanceof CustomField);
   const shown = (fieldname) => !row.getFieldState(field(row, fieldname)).hidden;
-  const required = (fieldname) => row.getFieldState(field(row, fieldname)).required;
+  const required = (fieldname) =>
+    row.getFieldState(field(row, fieldname)).required;
   assert.deepEqual(['options', 'target', 'references'].map(shown), [
     false,
     false,
@@ -119,6 +120,11 @@ test('custom field names still reject another row and built-in fields', async ()
   await assert.rejects(
     form.custom_fields[1].set('fieldname', 'myNote'),
     /Fieldname myNote already used for Custom Field 1/
+  );
+  // Both would share the Custom Field custom_books_mynote.
+  await assert.rejects(
+    form.custom_fields[1].set('fieldname', 'mynote'),
+    /Fieldname mynote already used for Custom Field 1/
   );
 });
 
@@ -158,6 +164,15 @@ test('a Table field targets only child tables', async () => {
   assert.ok(targets('Table').includes('Books Sales Invoice Item'));
   assert.equal(targets('Table').includes('Books Party'), false);
   assert.ok(targets('Link').includes('Books Party'));
+  assert.equal(targets('Link').includes('Books Sales Invoice Item'), false);
+});
+
+test('custom fields target only Books doctypes, as the server allows', async () => {
+  const [row] = (await newForm()).custom_fields;
+  const targets = CustomField.lists.target(row).map(({ value }) => value);
+  for (const doctype of ['Currency', 'Country', 'Address', 'Print Format']) {
+    assert.equal(targets.includes(doctype), false, doctype);
+  }
 });
 
 test('editing a row previews its name from the server', async () => {

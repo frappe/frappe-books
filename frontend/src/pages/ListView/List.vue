@@ -21,6 +21,7 @@
   <div v-else class="flex flex-col overflow-hidden text-base">
     <FrappeScrollArea
       v-if="data.length"
+      orientation="both"
       class="min-h-0 flex-1"
       viewport-class="px-3 pb-10 sm:px-5"
     >

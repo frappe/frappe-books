@@ -85,16 +85,11 @@
       </div>
     </template>
     <template #footer>
-      <div class="flex items-center justify-between">
-        <FrappeButton
-          class="w-24"
-          :disabled="loading"
-          @click="cancel"
-          >{{ t`Cancel` }}</FrappeButton>
+      <div class="flex items-center justify-end gap-4">
         <FrappeButton
           v-if="fyo.store.isDevelopment"
           variant="ghost"
-          class="w-24 ml-auto mr-4"
+          class="w-24"
           :disabled="loading"
           @click="fill"
           >{{ t`Fill` }}</FrappeButton>
@@ -121,11 +116,13 @@ import { DocValue } from 'fyo/core/types';
 import { FrappeDoc } from 'src/frappe/document';
 import { Field } from 'schemas/types';
 import FormContainer from 'src/components/FormContainer.vue';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getErrorMessage } from 'src/utils';
 import { showDialog } from 'src/utils/interactive';
 import { getSetupWizardDoc } from 'src/utils/misc';
 import { getFieldsGroupedByTabAndSection } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
+import { call } from 'src/web/api';
 import { getAppIconUrl } from 'src/web/pwa';
 import { computed, defineComponent } from 'vue';
 import CommonFormSection from '../CommonForm/CommonFormSection.vue';
@@ -145,7 +142,7 @@ export default defineComponent({
       doc: computed(() => this.docOrNull),
     };
   },
-  emits: ['setup-complete', 'setup-canceled'],
+  emits: ['setup-complete'],
   setup() {
     return { isMobile, appIconUrl: getAppIconUrl() };
   },
@@ -259,10 +256,18 @@ export default defineComponent({
       }
 
       this.loading = true;
-      this.$emit('setup-complete', this.doc);
-    },
-    cancel() {
-      this.$emit('setup-canceled');
+      try {
+        await this.doc.sync();
+        await call(
+          'frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard.complete_setup'
+        );
+      } catch (error) {
+        // The server's message, e.g. an end date before the start, lets the user fix the values.
+        this.loading = false;
+        await handleErrorWithDialog(error, this.doc, true);
+        return;
+      }
+      this.$emit('setup-complete');
     },
   },
 });

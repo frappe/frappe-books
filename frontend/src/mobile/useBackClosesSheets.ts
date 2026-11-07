@@ -9,8 +9,11 @@ export function useBackClosesSheets() {
   const router = useRouter();
   let position = getHistoryPosition();
 
-  const removeAfterEach = router.afterEach(() => {
-    position = getHistoryPosition();
+  // A back press this guard stopped also ends here, before history goes forward again.
+  const removeAfterEach = router.afterEach((_to, _from, failure) => {
+    if (!failure) {
+      position = getHistoryPosition();
+    }
   });
 
   const removeBeforeEach = router.beforeEach((to, from) => {

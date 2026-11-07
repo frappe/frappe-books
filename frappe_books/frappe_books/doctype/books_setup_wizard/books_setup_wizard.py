@@ -11,6 +11,7 @@ from frappe.utils import add_days, add_years, getdate, momentjs
 
 from frappe_books.coa import chart_options
 from frappe_books.permissions import check_preview_permission
+from frappe_books.settings import validate_fiscal_year
 from frappe_books.setup_service import get_books_country_info, run_setup
 
 
@@ -58,16 +59,16 @@ class BooksSetupWizard(Document):
 		info = get_books_country_info().get(self.country) or {}
 		self.currency = self.currency or get_country_currency(country_info)
 		self.chart_of_accounts = self.chart_of_accounts or get_country_chart(country_info.get("code"))
-		self.fiscal_year_start = self.fiscal_year_start or get_fiscal_year_date(info, "fiscal_year_start")
+		country_start, country_end = get_country_fiscal_year(info)
+		self.fiscal_year_start = self.fiscal_year_start or country_start
 		if not self.fiscal_year_start and self.fiscal_year_end:
 			self.fiscal_year_start = add_days(add_years(self.fiscal_year_end, -1), 1)
-		self.fiscal_year_end = self.fiscal_year_end or get_fiscal_year_date(info, "fiscal_year_end")
+		self.fiscal_year_end = self.fiscal_year_end or country_end
 		if not self.fiscal_year_end and self.fiscal_year_start:
 			self.fiscal_year_end = add_days(add_years(self.fiscal_year_start, 1), -1)
 
 	def validate(self):
-		if getdate(self.fiscal_year_end) <= getdate(self.fiscal_year_start):
-			frappe.throw(_("Fiscal Year End Date must be after Fiscal Year Start Date."))
+		validate_fiscal_year(self.fiscal_year_start, self.fiscal_year_end)
 		if self.time_zone and self.time_zone not in momentjs.get_all_timezones():
 			frappe.throw(_("{0} is not a valid time zone.").format(self.time_zone))
 
@@ -94,24 +95,23 @@ def get_country_chart(code: str | None) -> str | None:
 	return chart["name"]
 
 
-def get_fiscal_year_date(info: dict, fieldname: str) -> date | None:
-	"""The fiscal year that is current in Books' reckoning: before April it began last year."""
-	month_day = info.get(fieldname)
-	if not month_day:
-		return None
+def get_country_fiscal_year(info: dict) -> tuple[date | None, date | None]:
+	"""The country's fiscal year that holds today, from the month and day it starts on."""
+	if not info.get("fiscal_year_start"):
+		return None, None
 	today = getdate()
-	month, day = (int(part) for part in month_day.split("-"))
-	is_first_quarter = today.month <= 3
-	if fieldname == "fiscal_year_start":
-		year = today.year - 1 if is_first_quarter else today.year
-	else:
-		year = today.year if is_first_quarter else today.year + 1
-	return date(year, month, day)
+	month, day = (int(part) for part in info["fiscal_year_start"].split("-"))
+	start = date(today.year, month, day)
+	if start > today:
+		start = date(today.year - 1, month, day)
+	return start, add_days(add_years(start, 1), -1)
 
 
 @frappe.whitelist(methods=["POST"])
 def complete_setup() -> dict:
 	"""Set up the company from the saved wizard values, once."""
+	# Frappe's own setup, which this completes, is for System Managers only.
+	frappe.only_for("System Manager")
 	wizard = frappe.get_single("Books Setup Wizard")
 	wizard.check_permission("write")
 	if frappe.db.get_single_value("Books Accounting Settings", "setup_complete"):

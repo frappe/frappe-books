@@ -1,4 +1,8 @@
 {
+  "defaultAccounts": {
+    "receivable": "Piutang Dagang - 1131.0010",
+    "payable": "Hutang Dagang Dalam Negeri - 2111.001"
+  },
   "countryCode": "id",
   "name": "Indonesia - Chart of Accounts",
   "tree": {

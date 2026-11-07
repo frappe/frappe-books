@@ -7,7 +7,7 @@ from frappe.model.document import Document
 
 from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
-	latest_ledger_account,
+	default_party_account,
 	validate_account,
 	validate_item_usage,
 	validate_party_role,
@@ -403,14 +403,14 @@ def _populate_pos_defaults(invoice):
 
 
 def _party_account(invoice, account):
-	"""The party's ledger if it suits the invoice, else the newest that does.
+	"""The party's ledger if it suits the invoice, else the company's default, else the newest that does.
 
 	A party with both roles has one ledger, receivable or payable, for either invoice.
 	"""
 	account_type = invoice.party_account_type
 	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
 		return account
-	return latest_ledger_account(account_type)
+	return default_party_account(account_type)
 
 
 def _party_defaults(invoice):

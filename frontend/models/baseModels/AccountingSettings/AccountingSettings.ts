@@ -15,6 +15,8 @@ export class AccountingSettings extends FrappeDoc {
     fields: withoutCreate([
       'write_off_account',
       'round_off_account',
+      'default_receivable_account',
+      'default_payable_account',
       'discount_account',
     ]),
   };
@@ -28,6 +30,8 @@ export class AccountingSettings extends FrappeDoc {
   declare tax_id?: string;
   declare write_off_account?: string;
   declare round_off_account?: string;
+  declare default_receivable_account?: string;
+  declare default_payable_account?: string;
   declare discount_account?: string;
   declare fiscal_year_start?: Date;
   declare fiscal_year_end?: Date;
@@ -54,6 +58,14 @@ export class AccountingSettings extends FrappeDoc {
     round_off_account: () => [
       ['is_group', '=', 0],
       ['root_type', '=', 'Expense'],
+    ],
+    default_receivable_account: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', 'Receivable'],
+    ],
+    default_payable_account: () => [
+      ['is_group', '=', 0],
+      ['account_type', '=', 'Payable'],
     ],
     discount_account: () => [
       ['is_group', '=', 0],

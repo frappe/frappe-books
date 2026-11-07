@@ -32,6 +32,8 @@ ACCOUNT_TYPES = {
 	"write_off_account": {"root_types": ("Expense",)},
 	"round_off_account": {"root_types": ("Expense",)},
 	"discount_account": {"root_types": ("Income",)},
+	"default_receivable_account": {"account_types": ("Receivable",)},
+	"default_payable_account": {"account_types": ("Payable",)},
 }
 
 
@@ -47,6 +49,8 @@ class BooksAccountingSettings(Document):
 		bank_name: DF.Data
 		company_name: DF.Data
 		country: DF.Link | None
+		default_payable_account: DF.Link | None
+		default_receivable_account: DF.Link | None
 		discount_account: DF.Link | None
 		email: DF.Data
 		enable_coupon_code: DF.Check

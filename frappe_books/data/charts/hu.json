@@ -1,4 +1,8 @@
 {
+  "defaultAccounts": {
+    "receivable": "311. Belföldi követelések (forintban)",
+    "payable": "4541. Belföldi anyag- és áruszállítók"
+  },
   "countryCode": "hu",
   "name": "Hungary - Chart of Accounts",
   "tree": {

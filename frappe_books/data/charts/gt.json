@@ -1,4 +1,8 @@
 {
+  "defaultAccounts": {
+    "receivable": "Compañía No Afiliada (EJEMPLO) - 1.8.3.1.1",
+    "payable": "Acreedores 1"
+  },
   "countryCode": "gt",
   "name": "Guatemala - Cuentas",
   "tree": {

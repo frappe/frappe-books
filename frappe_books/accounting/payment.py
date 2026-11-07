@@ -9,6 +9,7 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import (
+	default_party_account,
 	latest_ledger_account,
 	validate_party_account,
 	validate_payment_account,
@@ -184,12 +185,12 @@ def _reference_type(invoice, payment_type):
 
 
 def _default_party_account(party, invoice, payment_type):
-	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
+	"""The party's ledger, else the invoice's, else the company's default payable or receivable ledger."""
 	if party and party.role != "Both" and party.default_account:
 		return party.default_account
 	if invoice:
 		return invoice.account
-	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
+	return default_party_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
 def _default_payment_account(payment_method, invoice):

@@ -1,4 +1,8 @@
 {
+  "defaultAccounts": {
+    "receivable": "Cuentas por Cobrar Moneda Nacional",
+    "payable": "Cuentas por Pagar Moneda Nacional"
+  },
   "countryCode": "ni",
   "name": "Nicaragua - Catalogo de Cuentas",
   "tree": {

@@ -8,11 +8,13 @@
  "engine": "InnoDB",
  "field_order": [
   "period_end_date",
+  "pos_opening_entry",
+  "cashier",
+  "pos_profile",
   "payment_reconciliation",
   "cash_count_section",
   "closing_cash",
   "references_section",
-  "pos_opening_entry",
   "journal_entry",
   "amended_from",
   "company"
@@ -26,6 +28,33 @@
    "no_copy": 1,
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "pos_opening_entry",
+   "fieldtype": "Link",
+   "label": "POS Opening Entry",
+   "options": "Books POS Opening Entry",
+   "read_only": 1,
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cashier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Cashier",
+   "no_copy": 1,
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "POS Profile",
+   "no_copy": 1,
+   "options": "Books POS Profile",
+   "read_only": 1
   },
   {
    "fieldname": "payment_reconciliation",
@@ -48,15 +77,6 @@
    "fieldname": "references_section",
    "fieldtype": "Section Break",
    "label": "References"
-  },
-  {
-   "fieldname": "pos_opening_entry",
-   "fieldtype": "Link",
-   "label": "POS Opening Entry",
-   "options": "Books POS Opening Entry",
-   "read_only": 1,
-   "reqd": 1,
-   "search_index": 1
   },
   {
    "depends_on": "journal_entry",
@@ -90,7 +110,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-07 12:00:00.000000",
+ "modified": "2026-11-07 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books POS Closing Entry",

@@ -6,9 +6,9 @@ from frappe_books.accounting.money import as_decimal
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
 # ERPNext's status of a submitted delivery note or receipt that its invoices bill only in part.
 PARTLY_BILLED = {"Books Delivery Note": "Partially Billed", "Books Purchase Receipt": "Partly Billed"}
-# ERPNext's status of an invoice a submitted return points to, and of a submitted quote.
+# ERPNext's status of an invoice a submitted return points to, and of a submitted quote or shift.
 RETURN_ISSUED = {"Books Sales Invoice": "Credit Note Issued", "Books Purchase Invoice": "Debit Note Issued"}
-SUBMITTED = {"Books Quotation": "Open"}
+SUBMITTED = {"Books Quotation": "Open", "Books POS Opening Entry": "Open"}
 
 
 class StatusMixin:
@@ -35,6 +35,8 @@ def get_status(doc) -> str:
 		return RETURN_ISSUED[doc.doctype]
 	if doc.doctype in INVOICE_DOCTYPES:
 		return _payment_status(doc)
+	if _is_closed_shift(doc):
+		return "Closed"
 	return SUBMITTED.get(doc.doctype, "Submitted")
 
 
@@ -56,6 +58,13 @@ def _is_returned(doc) -> bool:
 	if doc.doctype not in INVOICE_DOCTYPES:
 		return False
 	return bool(frappe.db.exists(doc.doctype, {"return_against": doc.name, "docstatus": 1}))
+
+
+def _is_closed_shift(doc) -> bool:
+	"""A POS shift has a submitted closing entry."""
+	if doc.doctype != "Books POS Opening Entry":
+		return False
+	return bool(frappe.db.exists("Books POS Closing Entry", {"pos_opening_entry": doc.name, "docstatus": 1}))
 
 
 def _payment_status(invoice) -> str:

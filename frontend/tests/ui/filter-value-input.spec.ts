@@ -218,7 +218,7 @@ test('Dynamic Link filters follow the selected type and clear stale selections',
   await openField(page, 'Quotation', 'Type');
   await setValue(page, 'Customer');
   await page.getByRole('button', { name: 'Add a filter', exact: true }).click();
-  await choose(page, 'Field', 'Customer', 1);
+  await choose(page, 'Field', 'Party', 1);
   await setValue(page, 'Customer-001', 1);
   await setValue(page, 'Lead');
   const input = page
@@ -238,7 +238,7 @@ test('Dynamic Link filters follow the selected type and clear stale selections',
 test('unresolved Dynamic Links allow text until their type is selected', async ({
   page,
 }) => {
-  await openField(page, 'Quotation', 'Customer');
+  await openField(page, 'Quotation', 'Party');
   await expect(
     page.getByRole('combobox', { name: 'Value', exact: true })
   ).toHaveCount(0);

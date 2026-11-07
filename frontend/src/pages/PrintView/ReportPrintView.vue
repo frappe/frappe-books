@@ -39,6 +39,18 @@
                   {{ title }}
                 </td>
               </tr>
+              <tr v-if="printedFilters">
+                <td
+                  colspan="2"
+                  style="
+                    padding: 0 0.5rem 0.5rem;
+                    font-size: 0.75rem;
+                    color: #7c7c7c;
+                  "
+                >
+                  {{ printedFilters }}
+                </td>
+              </tr>
             </table>
 
             <table
@@ -65,7 +77,7 @@
                   <td
                     v-for="(cell, c) of row"
                     :key="cell.idx"
-                    :style="getCellStyle(c, cell.idx)"
+                    :style="[getCellStyle(c, cell.idx), cell.style]"
                   >
                     {{ cell.value }}
                   </td>
@@ -219,6 +231,7 @@ import { isMobile } from 'src/utils/viewport';
 import { PropType, StyleValue, defineComponent } from 'vue';
 import PrintSheet from 'src/components/PrintSheet.vue';
 import { usePDFShare } from './pdfShare';
+import { getCellTypeStyle, getPrintedFilters } from './reportPrint';
 
 const CELL_BORDER = '1px solid #e2e2e2';
 
@@ -279,20 +292,25 @@ export default defineComponent({
         .map((column, idx) => ({ label: column.label, idx }))
         .filter(({ idx }) => this.columnSelection[idx]);
     },
-    rows(): { value: string; idx: number }[][] {
+    printedFilters(): string {
+      return this.report ? getPrintedFilters(this.report as Report) : '';
+    },
+    rows(): { value: string; idx: number; style: StyleValue }[][] {
       if (!this.report) {
         return [];
       }
 
       const start = Math.max(this.start - 1, 0);
       const end = Math.min(start + this.limit, this.report.reportData.length);
-      return this.report.reportData
-        .slice(start, end)
-        .map((row) =>
-          row.cells
-            .map((cell, idx) => ({ value: cell.value, idx }))
-            .filter(({ idx }) => this.columnSelection[idx])
-        );
+      return this.report.reportData.slice(start, end).map((row) =>
+        row.cells
+          .map((cell, idx) => ({
+            value: cell.value,
+            idx,
+            style: getCellTypeStyle(cell, row),
+          }))
+          .filter(({ idx }) => this.columnSelection[idx])
+      );
     },
     size(): { width: number; height: number } {
       const size = paperSizeMap[this.printSize];

@@ -7,7 +7,7 @@ from frappe.api.v2 import run_doc_method as run_doc_method_v2
 from frappe.client import insert
 from frappe.model.mapper import make_mapped_doc
 from frappe.tests import IntegrationTestCase
-from frappe.utils import set_request
+from frappe.utils import getdate, set_request
 
 from frappe_books.accounting.invoice import get_payments_to_cancel
 from frappe_books.accounting.payment import map_invoice_payment
@@ -404,6 +404,25 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					frappe.db.get_value("Books Payment", payment, ["payment_method", "reference_id"]),
 					(method, invoice.name),
 				)
+
+	def test_automatic_payment_clears_on_its_date_when_the_method_needs_a_clearance(self):
+		bank = make_account("Cleared Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "sales_payment_account", bank.name)
+		frappe.db.set_value("Books Payment Method", "Bank", "requires_clearance_date", 1)
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			make_auto_payment=1,
+		).submit()
+
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		date, clearance_date = frappe.db.get_value("Books Payment", payment, ["date", "clearance_date"])
+		self.assertEqual(clearance_date, getdate(date))
+		self.assertEqual(invoice.db_get("status"), "Paid")
 
 	def test_mapped_payment_needs_a_method_of_the_account_type(self):
 		frappe.db.set_single_value(

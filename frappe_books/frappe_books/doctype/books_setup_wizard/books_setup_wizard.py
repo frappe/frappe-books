@@ -112,6 +112,8 @@ def get_fiscal_year_date(info: dict, fieldname: str) -> date | None:
 @frappe.whitelist(methods=["POST"])
 def complete_setup() -> dict:
 	"""Set up the company from the saved wizard values, once."""
+	# Frappe's own setup, which this completes, is for System Managers only.
+	frappe.only_for("System Manager")
 	wizard = frappe.get_single("Books Setup Wizard")
 	wizard.check_permission("write")
 	if frappe.db.get_single_value("Books Accounting Settings", "setup_complete"):

@@ -11,6 +11,7 @@ from frappe_books.frappe_books.doctype.books_pos_closing_shift.test_books_pos_cl
 	close_shift,
 )
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
+	open_shift,
 	start_pos_shift,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import (
@@ -165,7 +166,7 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		payment = frappe.get_doc("Books Payment", counter_payments(refund)[0])
 		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", self.counter))
-		self.assertEqual(transacted_amounts(invoice.date, now_datetime()), {"Cash": 0})
+		self.assertEqual(transacted_amounts(invoice.date, now_datetime(), frappe.session.user), {"Cash": 0})
 
 	def test_pos_cash_without_a_shift_goes_to_the_methods_account(self):
 		invoice = self.make_pos_invoice()
@@ -290,7 +291,11 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 	def make_cashier(self):
 		# A cashier cannot pick the account, so a POS sale takes this one, as set up.
 		frappe.db.set_single_value("Books Pos Settings", "default_account", self.receivable.name)
-		return ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		cashier = ensure_user("pos-only-cashier@example.com", "Books Cashier")
+		with self.set_user(cashier):
+			# A cashier sells in their own shift.
+			open_shift(0)
+		return cashier
 
 	def make_pos_invoice(self, **values):
 		return make_invoice(

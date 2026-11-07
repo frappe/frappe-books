@@ -12,6 +12,7 @@ from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	credits,
 	debits,
+	make_user,
 	open_shift,
 	set_pos_accounts,
 )
@@ -216,6 +217,28 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		# Each takes up to what it expects; the first also takes the surplus.
 		self.assertEqual(shares, [[(90, 30), (40, 0)], [(50, -10), (0, -40)]])
 
+	def test_a_cashier_closes_only_the_payments_they_took(self):
+		open_shift(0)
+		start = now_datetime()
+		invoice = self._pos_invoice()
+		self._cash_payment([invoice]).submit()
+		cashier = make_user("Books Cashier")
+		with self.set_user(cashier):
+			closing = close_shift(open_shift(50), 50)
+
+		self.assertEqual(cash_amounts(closing).expected_amount, 50)
+		self.assertEqual(transacted_amounts(start, add_days(now_datetime(), 1), cashier), {})
+		self.assertEqual(
+			transacted_amounts(start, add_days(now_datetime(), 1), frappe.session.user),
+			{"Cash": invoice.base_grand_total},
+		)
+
+	def test_a_cashier_cannot_close_another_users_shift(self):
+		opening = open_shift(0)
+
+		with self.set_user(make_user("Books Cashier")):
+			self.assertRaises(frappe.PermissionError, make_closing_shift(opening, 0).insert)
+
 	def test_preview_needs_an_open_shift(self):
 		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})
 
@@ -227,7 +250,7 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		invoices = [self._pos_invoice(), self._pos_invoice()]
 		self._cash_payment(invoices).submit()
 
-		amounts = transacted_amounts(start, add_days(now_datetime(), 1))
+		amounts = transacted_amounts(start, add_days(now_datetime(), 1), frappe.session.user)
 
 		self.assertEqual(amounts["Cash"], sum(invoice.base_grand_total for invoice in invoices))
 

@@ -130,9 +130,9 @@ def _create_serial_numbers(item, serial_numbers):
 	)
 	for serial_number in serial_numbers:
 		if serial_number not in existing:
-			frappe.get_doc(
-				{"doctype": "Books Serial Number", "name": serial_number, "item": item, "status": "Active"}
-			).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Books Serial Number", "name": serial_number, "item": item}).insert(
+				ignore_permissions=True
+			)
 
 
 def _serial_status(transaction, row, cancel):

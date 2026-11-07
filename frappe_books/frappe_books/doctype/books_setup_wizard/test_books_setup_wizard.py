@@ -53,7 +53,75 @@ SETUP_ACCOUNT_RULES = {
 }
 
 
-class IntegrationTestBooksSetupWizard(IntegrationTestCase):
+class SetupWizardTestMixin:
+	"""Helpers for tests that run the setup."""
+
+	def restored_system_settings(self):
+		settings = frappe.get_single("System Settings")
+		return self.change_settings(
+			"System Settings", {field: settings.get(field) for field in FRAPPE_SETUP_FIELDS}
+		)
+
+	def assert_settings_accept_default_accounts(self, chart_name):
+		chart = load_chart(chart_name)
+		by_name = {account.name: account for account in chart}
+		names = chart_default_names(chart_name)
+		for key, default in DEFAULT_ACCOUNTS.items():
+			name = find_default_account(chart, default, names.get(key))
+			if not name:
+				continue
+			account, rules = by_name[name], SETUP_ACCOUNT_RULES[key]
+			self.assertFalse(account.is_group, name)
+			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
+			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+
+	def assert_first_invoice_takes(self, receivable, income):
+		customer = frappe.get_doc(
+			{"doctype": "Books Customer", "customer_name": unique_name("First Customer")}
+		).insert()
+		item = frappe.get_doc({"doctype": "Books Item", "item_code": unique_name("First Item")}).insert()
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice",
+				"customer": customer.name,
+				"items": [{"item_code": item.name, "qty": 1, "price_list_rate": 100}],
+			}
+		).insert()
+		self.assertEqual((invoice.debit_to, invoice.items[0].income_account), (receivable, income))
+
+	def assert_gst_heads(self):
+		accounts = ("CGST", "SGST", "IGST", "Exempt")
+		heads = [frappe.db.get_value("Books Account", account, "gst_head") for account in accounts]
+		self.assertEqual(heads, list(accounts))
+
+	def assert_pos_accounts_are_ledgers(self):
+		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):
+			account = frappe.db.get_single_value("Books POS Settings", fieldname)
+			self.assertEqual(
+				frappe.db.get_value("Books Account", account, ["is_group", "account_type"]), (0, account_type)
+			)
+
+	def _wizard(self, **values):
+		wizard = frappe.get_single("Books Setup Wizard")
+		wizard.update(
+			{
+				# The site's one company, which a rerun of the setup keeps
+				"company_name": default_company(),
+				"fullname": "Test Owner",
+				"email": "owner@example.com",
+				"country": "India",
+				"currency": "INR",
+				"bank_name": unique_name("Test Primary Bank"),
+				"chart_of_accounts": STANDARD_CHART,
+				"fiscal_year_start": "2026-04-01",
+				"fiscal_year_end": "2027-03-31",
+				**values,
+			}
+		)
+		return wizard
+
+
+class IntegrationTestBooksSetupWizard(SetupWizardTestMixin, IntegrationTestCase):
 	def test_rejects_invalid_fiscal_year(self):
 		wizard = self._wizard(fiscal_year_start="2027-04-01", fiscal_year_end="2027-03-31")
 		with self.assertRaises(frappe.ValidationError):
@@ -176,35 +244,6 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				self.assertLessEqual({"receivable", "payable", "income"}, set(names))
 				for key, name in names.items():
 					self.assertEqual(find_default_account(accounts, DEFAULT_ACCOUNTS[key], name), name, key)
-
-	def test_setup_leaves_a_country_chart_ready_to_invoice(self):
-		for country, currency, chart, accounts in (
-			(
-				"Switzerland",
-				"CHF",
-				"Switzerland - General Chart of Accounts",
-				("1100-Trade Receivables (Debtors)", "2000-Trade Payables (Creditors)", "3200-Trade Revenue"),
-			),
-			# Its Sales account is a group, which no item can sell into.
-			(
-				"United Arab Emirates",
-				"AED",
-				"U.A.E - Chart of Accounts",
-				("Trade Receivable", "Trade Payable", "Sales Account"),
-			),
-		):
-			with self.subTest(chart=chart), self.restored_system_settings():
-				wizard = self._wizard(country=country, currency=currency, chart_of_accounts=chart)
-				wizard.save(ignore_permissions=True)
-				run_setup(wizard)
-
-				self.assertEqual(
-					company_value(
-						["default_receivable_account", "default_payable_account", "default_income_account"]
-					),
-					accounts,
-				)
-				self.assert_first_invoice_takes(accounts[0], accounts[2])
 
 	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
@@ -366,66 +405,35 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertTrue(frappe.db.get_single_value("Books Accounting Settings", "setup_complete"))
 		self.assertRaises(frappe.ValidationError, complete_setup)
 
-	def restored_system_settings(self):
-		settings = frappe.get_single("System Settings")
-		return self.change_settings(
-			"System Settings", {field: settings.get(field) for field in FRAPPE_SETUP_FIELDS}
-		)
 
-	def assert_settings_accept_default_accounts(self, chart_name):
-		chart = load_chart(chart_name)
-		by_name = {account.name: account for account in chart}
-		names = chart_default_names(chart_name)
-		for key, default in DEFAULT_ACCOUNTS.items():
-			name = find_default_account(chart, default, names.get(key))
-			if not name:
-				continue
-			account, rules = by_name[name], SETUP_ACCOUNT_RULES[key]
-			self.assertFalse(account.is_group, name)
-			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
-			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+class IntegrationTestCountryChartSetup(SetupWizardTestMixin, IntegrationTestCase):
+	"""Country charts set up on a site without the standard chart, as a real site has one chart."""
 
-	def assert_first_invoice_takes(self, receivable, income):
-		customer = frappe.get_doc(
-			{"doctype": "Books Customer", "customer_name": unique_name("First Customer")}
-		).insert()
-		item = frappe.get_doc({"doctype": "Books Item", "item_code": unique_name("First Item")}).insert()
-		invoice = frappe.get_doc(
-			{
-				"doctype": "Books Sales Invoice",
-				"customer": customer.name,
-				"items": [{"item_code": item.name, "qty": 1, "price_list_rate": 100}],
-			}
-		).insert()
-		self.assertEqual((invoice.debit_to, invoice.items[0].income_account), (receivable, income))
+	def test_setup_leaves_a_country_chart_ready_to_invoice(self):
+		for country, currency, chart, accounts in (
+			(
+				"Switzerland",
+				"CHF",
+				"Switzerland - General Chart of Accounts",
+				("1100-Trade Receivables (Debtors)", "2000-Trade Payables (Creditors)", "3200-Trade Revenue"),
+			),
+			# Its Sales account is a group, which no item can sell into.
+			(
+				"United Arab Emirates",
+				"AED",
+				"U.A.E - Chart of Accounts",
+				("Trade Receivable", "Trade Payable", "Sales Account"),
+			),
+		):
+			with self.subTest(chart=chart), self.restored_system_settings():
+				wizard = self._wizard(country=country, currency=currency, chart_of_accounts=chart)
+				wizard.save(ignore_permissions=True)
+				run_setup(wizard)
 
-	def assert_gst_heads(self):
-		accounts = ("CGST", "SGST", "IGST", "Exempt")
-		heads = [frappe.db.get_value("Books Account", account, "gst_head") for account in accounts]
-		self.assertEqual(heads, list(accounts))
-
-	def assert_pos_accounts_are_ledgers(self):
-		for fieldname, account_type in (("cash_account", "Cash"), ("default_account", "Receivable")):
-			account = frappe.db.get_single_value("Books POS Settings", fieldname)
-			self.assertEqual(
-				frappe.db.get_value("Books Account", account, ["is_group", "account_type"]), (0, account_type)
-			)
-
-	def _wizard(self, **values):
-		wizard = frappe.get_single("Books Setup Wizard")
-		wizard.update(
-			{
-				# The site's one company, which a rerun of the setup keeps
-				"company_name": default_company(),
-				"fullname": "Test Owner",
-				"email": "owner@example.com",
-				"country": "India",
-				"currency": "INR",
-				"bank_name": unique_name("Test Primary Bank"),
-				"chart_of_accounts": STANDARD_CHART,
-				"fiscal_year_start": "2026-04-01",
-				"fiscal_year_end": "2027-03-31",
-				**values,
-			}
-		)
-		return wizard
+				self.assertEqual(
+					company_value(
+						["default_receivable_account", "default_payable_account", "default_income_account"]
+					),
+					accounts,
+				)
+				self.assert_first_invoice_takes(accounts[0], accounts[2])

@@ -56,6 +56,20 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 				outstanding = Decimal(str(invoice.db_get("outstanding_amount")))
 				self.assertEqual(outstanding, Decimal("-198" if is_return else "198"))
 
+	def test_a_number_too_large_to_store_names_its_row(self):
+		party = make_party(self.ledgers["Books Sales Invoice"]).name
+		row = {"item": self.item, "quantity": 10**12, "rate": 10**6}
+		with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* is too large"):
+			make_invoice(
+				"Books Sales Invoice",
+				party,
+				self.ledgers["Books Sales Invoice"],
+				self.item,
+				self.income,
+				items=[row],
+				**NO_FOLLOW_UPS,
+			)
+
 	def submit_invoice(self, doctype, is_return):
 		role = "Supplier" if doctype == "Books Purchase Invoice" else "Customer"
 		party = make_party(self.ledgers[doctype], role=role).name

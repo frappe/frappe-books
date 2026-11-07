@@ -184,6 +184,7 @@ test('Is Empty on User Remark hides Value and sends the unary condition', async 
   ]);
 });
 
+// Pickers show dates in the system date format (the fixture's default, MMM d, y); filters stay ISO.
 test('date filters use the calendar and reset incompatible field values', async ({
   page,
 }) => {
@@ -207,12 +208,12 @@ test('date filters use the calendar and reset incompatible field values', async 
   await page.locator('[role="gridcell"][data-value="2024-02-29"]').click();
   await expect(page.getByRole('grid', { name: 'Calendar dates' })).toBeHidden();
   await expect(page.getByPlaceholder('Select time')).toHaveCount(0);
-  await expect(input).toHaveValue('2024-02-29');
+  await expect(input).toHaveValue('Feb 29, 2024');
   await expect(panel).toBeVisible();
   expect(await appliedFilters(page)).toEqual([]);
   await input.fill('not a date');
   await input.press('Enter');
-  await expect(input).toHaveValue('2024-02-29');
+  await expect(input).toHaveValue('Feb 29, 2024');
   await expect(panel).toBeVisible();
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
   expect(await appliedFilters(page)).toEqual([
@@ -221,7 +222,7 @@ test('date filters use the calendar and reset incompatible field values', async 
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
-  await expect(input).toHaveValue('2024-02-29');
+  await expect(input).toHaveValue('Feb 29, 2024');
 });
 
 test('same-field conditions survive apply, reopen, edit, remove, refresh and clear', async ({
@@ -345,10 +346,10 @@ test('datetime filters select both calendar date and time and preserve SQL round
   await expect(time).toBeVisible();
   await time.click();
   await page.getByRole('option', { name: '13:30', exact: true }).click();
-  await expect(input).toHaveValue('2024-02-29 13:30:00');
+  await expect(input).toHaveValue('Feb 29, 2024 13:30:00');
   await time.fill('13:45:00');
   await time.press('Enter');
-  await expect(input).toHaveValue('2024-02-29 13:45:00');
+  await expect(input).toHaveValue('Feb 29, 2024 13:45:00');
   await expect(panel).toBeVisible();
   expect(await appliedFilters(page)).toEqual([]);
   await page.getByRole('button', { name: 'Apply', exact: true }).click();
@@ -359,7 +360,7 @@ test('datetime filters select both calendar date and time and preserve SQL round
   await page
     .getByRole('button', { name: '1 filter applied', exact: true })
     .click();
-  await expect(input).toHaveValue('2024-02-29 13:45:00');
+  await expect(input).toHaveValue('Feb 29, 2024 13:45:00');
   await input.click();
   await expect(time).toHaveValue('13:45');
   await expect(
@@ -401,7 +402,7 @@ for (const schema of ['JournalEntry', 'POSOpeningEntry']) {
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     await expect(input).toHaveValue(
-      schema === 'JournalEntry' ? '2024-02-16' : '2024-02-16 00:00:00'
+      schema === 'JournalEntry' ? 'Feb 16, 2024' : 'Feb 16, 2024 00:00:00'
     );
     // Escape dismisses the nested calendar without applying its parent filter.
     await input.click();

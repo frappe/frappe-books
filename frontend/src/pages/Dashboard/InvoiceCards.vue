@@ -1,5 +1,12 @@
 <template>
-  <div v-for="card in cards" :key="card.title" :class="cardClass">
+  <!-- A phone card is the link: its title and a link button do not fit side by side. -->
+  <component
+    :is="isMobile && hasList(card) ? 'RouterLink' : 'div'"
+    v-for="card in cards"
+    :key="card.title"
+    :to="isMobile && hasList(card) ? getListRoute(card.paid) : undefined"
+    :class="cardClass"
+  >
     <!-- The card clips at its top edge and the link button overflows the
       title row; the negative margin makes room without moving the card
       (frappe/frappe-ui#1255). -->
@@ -12,21 +19,21 @@
       :card="false"
       class="-mt-2 pt-2"
     >
-      <template v-if="summary && card.count" #actions>
+      <template v-if="!isMobile && hasList(card)" #actions>
         <FrappeButton
           variant="ghost"
           :size="isMobile ? 'md' : 'sm'"
           icon="lucide-arrow-up-right"
           :label="card.linkLabel"
           :tooltip="card.linkLabel"
-          :route="getListRoute(summary, card.paid)"
+          :route="getListRoute(card.paid)"
         />
       </template>
       <template #error>
         <ChartLoadError @retry="loadData" />
       </template>
     </FrappeNumberCard>
-  </div>
+  </component>
 </template>
 <script lang="ts">
 import { t } from 'fyo';
@@ -88,10 +95,13 @@ export default defineComponent({
     },
   },
   methods: {
-    getListRoute(summary: InvoiceSummary, paid: boolean) {
+    hasList(card: { count: number }): boolean {
+      return !!this.summary && card.count > 0;
+    },
+    getListRoute(paid: boolean) {
       const schemaLabel = getSchema(this.schemaName)!.label;
       const label = paid ? t`Paid ${schemaLabel}` : t`Unpaid ${schemaLabel}`;
-      const filters = getInvoiceListFilters(summary, paid);
+      const filters = getInvoiceListFilters(this.summary!, paid);
       return {
         path: `/list/${this.schemaName}/${label}`,
         query: { filters: JSON.stringify(filters) },

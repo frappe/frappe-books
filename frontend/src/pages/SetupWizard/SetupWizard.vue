@@ -85,16 +85,11 @@
       </div>
     </template>
     <template #footer>
-      <div class="flex items-center justify-between">
-        <FrappeButton
-          class="w-24"
-          :disabled="loading"
-          @click="cancel"
-          >{{ t`Cancel` }}</FrappeButton>
+      <div class="flex items-center justify-end gap-4">
         <FrappeButton
           v-if="fyo.store.isDevelopment"
           variant="ghost"
-          class="w-24 ml-auto mr-4"
+          class="w-24"
           :disabled="loading"
           @click="fill"
           >{{ t`Fill` }}</FrappeButton>
@@ -147,7 +142,7 @@ export default defineComponent({
       doc: computed(() => this.docOrNull),
     };
   },
-  emits: ['setup-complete', 'setup-canceled'],
+  emits: ['setup-complete'],
   setup() {
     return { isMobile, appIconUrl: getAppIconUrl() };
   },
@@ -273,9 +268,6 @@ export default defineComponent({
         return;
       }
       this.$emit('setup-complete');
-    },
-    cancel() {
-      this.$emit('setup-canceled');
     },
   },
 });

@@ -93,6 +93,13 @@ class IntegrationTestLedgerReports(IntegrationTestCase):
 			[(row["voucher_type"], row["debit"]) for row in entries], [("Books Payment Entry", Decimal(30))]
 		)
 
+	def test_general_ledger_party_type_all_shows_every_entry(self):
+		_post("2045-01-05", self.cash.name, 50, 0)
+
+		rows = self._ledger(account=self.cash.name, party_type="All", voucher_type="All")
+
+		self.assertEqual([row["debit"] for row in rows if row.get("type") == "entry"], [Decimal(50)])
+
 	def test_general_ledger_of_a_group_account_shows_its_accounts_entries(self):
 		_post("2044-12-31", self.cash.name, 100, 0)
 		_post("2045-01-05", self.cash.name, 50, 0)

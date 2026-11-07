@@ -25,7 +25,7 @@ export class StockLedger extends Report {
   itemCode?: string;
   warehouse?: string;
   batchNo?: string;
-  serialNumber?: string;
+  serialNo?: string;
   fromDate?: string;
   toDate?: string;
   ascending?: boolean;
@@ -117,6 +117,17 @@ export class StockLedger extends Report {
               placeholder: t`Batch`,
               label: t`Batch`,
               fieldname: 'batchNo',
+            },
+          ] as Field[])
+        : []),
+      ...(this.hasSerialNumbers
+        ? ([
+            {
+              fieldtype: 'Link',
+              target: 'SerialNo',
+              placeholder: t`Serial Number`,
+              label: t`Serial Number`,
+              fieldname: 'serialNo',
             },
           ] as Field[])
         : []),

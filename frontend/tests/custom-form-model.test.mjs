@@ -54,6 +54,26 @@ test('the Custom Form asks for a form type among the forms Books can customize',
   }
 });
 
+test('form types have labels of their own', () => {
+  const types = Object.fromEntries(
+    CustomForm.lists
+      .name(newFrappeDoc('CustomForm'))
+      .map(({ value, label }) => [value, label])
+  );
+  assert.equal(
+    types['Books Sales Taxes and Charges'],
+    'Sales Taxes and Charges'
+  );
+  assert.equal(
+    types['Books Purchase Taxes and Charges'],
+    'Purchase Taxes and Charges'
+  );
+  assert.equal(
+    frappeModels.DeliveryNote.rowModels.items.presentation.label,
+    'Delivery Note Item'
+  );
+});
+
 test('custom field rows open in the row editor', () => {
   const table = getSchema('CustomForm').fields.find(
     (f) => f.fieldname === 'custom_fields'

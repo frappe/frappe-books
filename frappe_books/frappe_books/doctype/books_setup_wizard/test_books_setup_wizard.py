@@ -157,6 +157,14 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 				self.assert_settings_accept_default_accounts(load_chart(name))
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
 
+	def test_every_chart_has_a_receivable_and_a_payable_ledger(self):
+		# Without them no invoice can be made after setup.
+		for chart in chart_options():
+			with self.subTest(chart=chart["name"]):
+				accounts = load_chart(chart["name"])
+				for account_type in ("Receivable", "Payable"):
+					self.assertTrue(find_ledger_account(accounts, account_type=account_type))
+
 	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		frappe.db.set_value("Installed Application", {"app_name": "frappe"}, "is_setup_complete", 0)

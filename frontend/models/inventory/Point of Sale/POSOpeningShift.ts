@@ -1,4 +1,5 @@
 import { ListViewSettings } from 'fyo/model/types';
+import { getDocStatusListColumn } from 'models/helpers';
 import type { Money } from 'pesa';
 import { FrappeDoc } from 'src/frappe/document';
 
@@ -44,7 +45,7 @@ export class POSOpeningShift extends FrappeDoc {
   }
 
   static getListViewSettings(): ListViewSettings {
-    return { columns: ['name', 'opening_date'] };
+    return { columns: ['name', getDocStatusListColumn(), 'opening_date'] };
   }
 }
 

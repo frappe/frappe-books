@@ -1,10 +1,14 @@
+import { t } from 'fyo';
+import { ValidationError } from 'fyo/utils/errors';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import { fyo } from 'src/initFyo';
 
-/** Whether the POS offers coupons on the sale: the feature is on and its totals can still change. */
+/** Whether the POS offers coupons on the sale: the feature is on and its totals can still change; a return keeps its original's prices. */
 export function isCouponOffered(sale: SalesInvoice): boolean {
   return (
-    !!fyo.singles.AccountingSettings?.enable_coupon_code && !sale.isSubmitted
+    !!fyo.singles.AccountingSettings?.enable_coupon_code &&
+    !sale.isSubmitted &&
+    !sale.isReturn
   );
 }
 
@@ -37,6 +41,25 @@ export function canRedeemLoyalty(sale: SalesInvoice): boolean {
     hasItemsAndCustomer(sale) &&
     (sale.available_loyalty_points ?? 0) > 0
   );
+}
+
+/** Redeems `points` on the sale; refuses, as its save does, more points than the customer has or than it costs. */
+export async function redeemLoyaltyPoints(sale: SalesInvoice, points: number) {
+  const available = sale.available_loyalty_points ?? 0;
+  if (points > available) {
+    throw new ValidationError(
+      t`Customer ${sale.party ?? ''} has only ${available} available loyalty points.`
+    );
+  }
+
+  await sale.set('loyalty_points', points);
+  await sale.set('redeem_loyalty_points', points > 0);
+  await sale.preview();
+  if (sale.grand_total?.isNegative()) {
+    throw new ValidationError(
+      t`Loyalty redemption cannot exceed the invoice total.`
+    );
+  }
 }
 
 function hasItemsAndCustomer(sale: SalesInvoice): boolean {

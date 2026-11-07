@@ -46,6 +46,20 @@ test('a System Manager can export every doctype, as in Frappe', () => {
   assert.equal(hasPermission(permissions, 'Tax', 'print'), false);
 });
 
+test('a Books Cashier creates sales only through the POS', () => {
+  const user = {
+    roles: ['Books Cashier'],
+    can_create: ['Books Sales Invoice'],
+  };
+  fyo.store.permissions = { doctypes, user };
+  assert.equal(fyo.can('SalesInvoice', 'create'), false);
+  assert.equal(newFrappeDoc('SalesInvoice', { is_pos: true }).canWrite, true);
+  assert.equal(newFrappeDoc('SalesInvoice').canWrite, false);
+
+  user.roles.push('Books User');
+  assert.equal(fyo.can('SalesInvoice', 'create'), true);
+});
+
 test('without boot permissions nothing is restricted', () => {
   assert.equal(hasPermission(null, 'Tax', 'delete'), true);
 });

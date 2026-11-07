@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import now_datetime
+from frappe.utils import add_to_date, now_datetime
 
 from frappe_books.frappe_books.doctype.books_purchase_receipt.books_purchase_receipt import (
 	make_purchase_invoice,
@@ -50,7 +50,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		self.assertEqual(sum(Decimal(str(row.debit or 0)) for row in entries), Decimal("100"))
 		self.assertEqual(sum(Decimal(str(row.credit or 0)) for row in entries), Decimal("100"))
 
-	def test_purchase_return_posts_fifo_value(self):
+	def test_purchase_return_posts_the_cost_it_was_received_at(self):
 		stock = make_account("Stock", account_type="Stock")
 		received = make_account(
 			"Received", root_type="Liability", account_type="Stock Received But Not Billed"
@@ -69,8 +69,12 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 
 		entries = ledger_entries(purchase_return.doctype, purchase_return.name)
 		stock_credit = sum(Decimal(str(row.credit or 0)) for row in entries if row.account == stock.name)
-		self.assertEqual(stock_credit, Decimal("10"))
+		self.assertEqual(stock_credit, Decimal("20"))
 		self.assertEqual(stock_value_change(purchase_return), -stock_credit)
+
+		# A restatement keeps the return at its receipt's cost.
+		make_receipt(item.name, quantity=1, rate=5, date=add_to_date(now_datetime(), hours=-1))
+		self.assertEqual(stock_value_change(purchase_return), Decimal("-20"))
 
 	def test_purchase_return_cannot_exceed_the_received_quantity(self):
 		set_inventory_accounts(
@@ -86,7 +90,7 @@ class IntegrationTestBooksPurchaseReceipt(IntegrationTestCase):
 		make_receipt(item.name, quantity=5, rate=10)
 		receipt = make_receipt(item.name, quantity=2, rate=10)
 
-		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2"):
+		with self.assertRaisesRegex(frappe.ValidationError, "exceed the quantity of 2 in"):
 			make_receipt(item.name, quantity=-3, rate=10, return_against=receipt.name)
 
 	def test_invoice_and_return_are_mapped_from_a_receipt(self):

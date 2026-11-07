@@ -83,21 +83,27 @@
       </dl>
 
       <MobileSheetFooter>
-        <FrappeButton
+        <POSActionButton
           v-if="!sinvDoc.isSubmitted"
+          action="save"
+          :profile="profile"
           class="flex-1"
           size="lg"
-          :label="t`Hold`"
           @click="$emit('hold')"
-        />
-        <FrappeButton
+        >
+          {{ t`Hold` }}
+        </POSActionButton>
+        <POSActionButton
+          action="pay"
+          :profile="profile"
           class="flex-[2]"
           size="lg"
           variant="solid"
           :disabled="disablePay"
-          :label="payLabel"
           @click="$emit('pay')"
-        />
+        >
+          {{ payLabel }}
+        </POSActionButton>
       </MobileSheetFooter>
     </div>
   </FrappeBottomSheet>
@@ -105,19 +111,19 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
-import {
-  BottomSheet as FrappeBottomSheet,
-  Button as FrappeButton,
-} from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
+import { BottomSheet as FrappeBottomSheet } from 'frappe-ui';
 import {
   List as FrappeList,
   ListCell as FrappeListCell,
   ListRow as FrappeListRow,
 } from 'frappe-ui/list';
+import type { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
 import type { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import type { SalesInvoice } from 'models/invoices/SalesInvoice';
 import MultiLabelLink from 'src/components/Controls/MultiLabelLink.vue';
 import NumberStepper from 'src/components/POS/NumberStepper.vue';
+import POSActionButton from 'src/components/POS/POSActionButton.vue';
 import { POS_ITEM_TOAST_ID } from 'src/components/POS/types';
 import { fyo } from 'src/initFyo';
 import MobileSheetFooter from 'src/mobile/MobileSheetFooter.vue';
@@ -127,7 +133,11 @@ import { getCartRowQuantity, setCartQuantity } from 'src/utils/posCart';
 import { computed, inject, type Ref } from 'vue';
 
 /** The cart sheet: customer, lines with quantity steppers, totals, Hold and Pay; a submitted sale only pays. */
-defineProps<{ open: boolean; disablePay: boolean }>();
+defineProps<{
+  open: boolean;
+  disablePay: boolean;
+  profile: POSProfile | null;
+}>();
 
 defineEmits<{
   'update:open': [open: boolean];
@@ -165,7 +175,7 @@ async function setQuantity(row: SalesInvoiceItem, quantity: number) {
     showToast({
       id: POS_ITEM_TOAST_ID,
       type: 'error',
-      message: t`${error as string}`,
+      message: getErrorMessage(error as Error),
     });
   }
 }

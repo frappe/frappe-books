@@ -1,6 +1,8 @@
 import frappe
 
 BOOKS_MODULE = "Frappe Books"
+# Roles that sell outside the POS; a Books Cashier without one sells only through it.
+SELLING_ROLES = ("Books User", "Books Manager", "System Manager")
 
 
 def has_app_permission() -> bool:
@@ -26,3 +28,9 @@ def reset_new_rows_above_permlevel(doc) -> None:
 		fields = frappe.get_meta(table.options).get_high_permlevel_fields()
 		for row in doc.get(table.fieldname) if fields else []:
 			row.reset_values_if_no_permlevel_access(has_access_to, fields)
+
+
+def sells_only_at_pos(user=None) -> bool:
+	"""Books Cashiers sell, and take returns, only through the POS."""
+	roles = frappe.get_roles(user)
+	return "Books Cashier" in roles and not any(role in roles for role in SELLING_ROLES)

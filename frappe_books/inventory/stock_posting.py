@@ -4,8 +4,8 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting import ledger
-from frappe_books.accounting.money import as_decimal, rounded
-from frappe_books.inventory import valuation
+from frappe_books.accounting.money import as_decimal
+from frappe_books.inventory import entry_costs, valuation
 from frappe_books.inventory.stock import parse_serial_numbers
 
 # The Books Inventory Settings account each stock document moves its stock value against.
@@ -15,11 +15,26 @@ STOCK_COUNTER_ACCOUNTS = {
 	"Books Stock Movement": "stock_adjustment",
 }
 
+# The rates of a return's original and the row field they value the return by.
+RETURN_RATES = {
+	"Books Shipment": (valuation.outgoing_rates, "rate"),
+	"Books Purchase Receipt": (valuation.incoming_rates, "outgoing_rate"),
+}
+
 
 def post(transaction):
-	"""Add a submitted transaction's stock ledger entries and post their value, then repost what they restated."""
-	restated = _create_entries(transaction, _valued_rows(transaction))
+	"""Add a submitted transaction's stock ledger entries and post their value, then repost what they restated.
+
+	Outgoing rows post first, so a manufacture's products can take the cost consumed.
+	"""
+	rows = _valued_rows(transaction)
+	produced = [row for row in rows if not row["from_location"]]
+	restated = _create_entries(transaction, [row for row in rows if row["from_location"]])
+	if transaction.get("movement_type") == "Manufacture":
+		entry_costs.rate_products(transaction, produced)
+	restated |= _create_entries(transaction, produced)
 	_post_stock_value(transaction)
+	_store_costs(transaction)
 	_repost(restated)
 
 
@@ -39,12 +54,19 @@ def delete(transaction):
 
 
 def _valued_rows(transaction):
-	"""Return the transaction's rows, with a sales return valued at the cost its shipment took out."""
+	"""Return the transaction's rows, with a return valued at the cost its original moved.
+
+	A sales return takes stock back at the cost its shipment took out; a purchase
+	return sends it back at the cost it was received at, as ERPNext does.
+	"""
 	rows = transaction.transfer_rows()
-	if transaction.doctype == "Books Shipment" and transaction.return_against:
-		rates = valuation.outgoing_rates(transaction.doctype, [transaction.return_against])
-		for row in rows:
-			row["rate"] = rates[transaction.return_against, row["item"], row["batch"] or ""]
+	original = transaction.get("return_against")
+	if not original:
+		return rows
+	original_rates, field = RETURN_RATES[transaction.doctype]
+	rates = original_rates(transaction.doctype, [original])
+	for row in rows:
+		row[field] = rates[original, row["item"], row["batch"] or ""]
 	return rows
 
 
@@ -65,7 +87,7 @@ def _create_entries(transaction, rows):
 
 def _create_location_entries(transaction, row, quantity, serial_number):
 	restated = set()
-	rate = rounded(row["rate"])
+	rate = as_decimal(row["rate"])
 	if row.get("from_location"):
 		entry, taken = _create_entry(transaction, row, row["from_location"], -quantity, serial_number, rate)
 		restated |= taken
@@ -86,6 +108,8 @@ def _create_entry(transaction, row, location, quantity, serial_number, rate):
 			"serial_number": serial_number,
 			"item": row["item"],
 			"rate": rate,
+			# Only stock leaving takes a fixed outgoing rate.
+			"outgoing_rate": row.get("outgoing_rate") if quantity < 0 else None,
 			"quantity": quantity,
 			"reference_type": transaction.doctype,
 			"reference_name": transaction.name,
@@ -115,9 +139,9 @@ def _create_serial_numbers(item, serial_numbers):
 	)
 	for serial_number in serial_numbers:
 		if serial_number not in existing:
-			frappe.get_doc(
-				{"doctype": "Books Serial Number", "name": serial_number, "item": item, "status": "Active"}
-			).insert(ignore_permissions=True)
+			frappe.get_doc({"doctype": "Books Serial Number", "name": serial_number, "item": item}).insert(
+				ignore_permissions=True
+			)
 
 
 def _serial_status(transaction, row, cancel):
@@ -160,6 +184,11 @@ def _validate_value_direction(transaction, value):
 		)
 
 
+def _store_costs(transaction):
+	if transaction.doctype == "Books Stock Movement":
+		entry_costs.store_costs(transaction)
+
+
 def _repost(restated):
 	"""Revalue the stock valued from restated transactions, then post the value of every changed one again."""
 	for doctype, name in sorted(_revalue_dependents(restated)):
@@ -167,17 +196,22 @@ def _repost(restated):
 			transaction = frappe.get_doc(doctype, name)
 			ledger.delete_entries(transaction)
 			_post_stock_value(transaction)
+			_store_costs(transaction)
 
 
 def _revalue_dependents(restated):
-	"""Pass restated costs on to the stock that material transfers and sales returns took in at them.
+	"""Pass restated costs on to the stock that material transfers, manufactures and sales returns took in at them.
 
 	Return every transaction whose stock value changed.
 	"""
 	changed = set(restated)
 	pending = set(restated)
 	while pending:
-		pending = _revalue_transfers(pending) | _revalue_returns(pending)
+		pending = (
+			_revalue_transfers(pending)
+			| entry_costs.revalue_manufactures(pending)
+			| _revalue_returns(pending)
+		)
 		changed |= pending
 	return changed
 
@@ -219,7 +253,6 @@ def _revalue_returns(references):
 	costs = valuation.outgoing_rates("Books Shipment", list(set(returns.values())))
 	entries = valuation.transaction_entries("Books Shipment", list(returns))
 	rates = {
-		entry.name: rounded(costs[returns[entry.reference_name], entry.item, entry.batch or ""])
-		for entry in entries
+		entry.name: costs[returns[entry.reference_name], entry.item, entry.batch or ""] for entry in entries
 	}
 	return valuation.revalue_entries(entries, rates)

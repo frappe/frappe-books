@@ -75,6 +75,17 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		self.assertRaisesRegex(frappe.ValidationError, re.escape(message), issue.submit)
 		self.assertEqual(stock_quantity(self.item.name, "Stores"), 6)
 
+	def test_negative_quantity_is_rejected(self):
+		for movement_type, location in (
+			("MaterialReceipt", "to_location"),
+			("MaterialIssue", "from_location"),
+		):
+			with self.subTest(movement_type=movement_type):
+				row = {"item": self.item.name, location: "Stores", "quantity": -3, "rate": 10}
+				movement = frappe.get_doc(movement_values(movement_type, [row]))
+
+				self.assertRaisesRegex(frappe.ValidationError, "greater than zero", movement.insert)
+
 	def test_serial_number_cannot_repeat_in_a_row(self):
 		item = self._serial_item()
 		receipt = frappe.get_doc(
@@ -108,6 +119,19 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 		receipt = frappe.get_doc(movement_values("MaterialReceipt", [row, row]))
 
 		self.assertRaisesRegex(frappe.ValidationError, "more than once", receipt.insert)
+
+	def test_serial_number_cannot_leave_before_it_arrives(self):
+		item, late, early = self._serial_item(), unique_name("SER"), unique_name("SER")
+		now = now_datetime()
+		self._receive_serial(item, late)
+		self._receive_serial(item, early, add_to_date(now, hours=-2))
+		row = {"item": item, "from_location": "Stores", "quantity": 1, "rate": 5, "serial_number": late}
+		issue = frappe.get_doc(
+			{**movement_values("MaterialIssue", [row]), "date": add_to_date(now, hours=-1)}
+		)
+		issue.insert()
+
+		self.assertRaisesRegex(frappe.ValidationError, "not available", issue.submit)
 
 	def test_receipt_cannot_be_cancelled_once_its_stock_is_used(self):
 		receipt = self._receive(10)
@@ -176,19 +200,18 @@ class IntegrationTestBooksStockMovement(IntegrationTestCase):
 			frappe.ValidationError, "already in stock", self._receive_serial, item, serial_number
 		)
 
-	def _receive_serial(self, item, serial_number):
-		receipt = make_movement(
-			"MaterialReceipt",
-			[
-				{
-					"item": item,
-					"to_location": "Stores",
-					"quantity": 1,
-					"rate": 5,
-					"serial_number": serial_number,
-				}
-			],
+	def _receive_serial(self, item, serial_number, date=None):
+		row = {
+			"item": item,
+			"to_location": "Stores",
+			"quantity": 1,
+			"rate": 5,
+			"serial_number": serial_number,
+		}
+		receipt = frappe.get_doc(
+			{**movement_values("MaterialReceipt", [row]), "date": date or now_datetime()}
 		)
+		receipt.insert()
 		receipt.submit()
 		return receipt
 
@@ -391,7 +414,59 @@ class IntegrationTestStockMovementPostings(IntegrationTestCase):
 		self.assertEqual(self.balances(receipt), {self.stock: Decimal(40), self.adjustment: Decimal(-40)})
 		self.assertEqual(self.balances(issue), {self.stock: Decimal(-10), self.adjustment: Decimal(10)})
 		self.assertEqual(ledger_entries(transfer.doctype, transfer.name), [])
-		self.assertEqual(self.balances(manufacture), {self.stock: Decimal(10), self.adjustment: Decimal(-10)})
+		# A manufacture of one product brings it in at the cost consumed, so it posts nothing.
+		self.assertEqual(ledger_entries(manufacture.doctype, manufacture.name), [])
+
+	def test_manufactured_product_takes_the_cost_consumed(self):
+		now = now_datetime()
+		self.submit(
+			"MaterialReceipt",
+			[self.row(1, 10, to_location="Stores"), self.row(1, 20, to_location="Stores")],
+			add_to_date(now, hours=-2),
+		)
+		product = {**self.row(1, 500, to_location="Stores"), "item": self.product}
+		manufacture = self.submit(
+			"Manufacture", [self.row(2, 99, from_location="Stores"), product], add_to_date(now, hours=-1)
+		)
+
+		self.assertEqual(self.item_values(manufacture), {self.item: Decimal(-30), self.product: Decimal(30)})
+		self.assertEqual([(row.rate, row.amount) for row in manufacture.items], [(15, 30), (30, 30)])
+		self.assertEqual(manufacture.amount, 30)
+
+		self.submit("MaterialReceipt", [self.row(1, 1, to_location="Stores")], add_to_date(now, hours=-3))
+
+		self.assertEqual(self.item_values(manufacture), {self.item: Decimal(-11), self.product: Decimal(11)})
+		self.assertEqual(frappe.db.get_value(manufacture.doctype, manufacture.name, "amount"), 11)
+
+	def test_manufacture_of_several_products_keeps_their_rates(self):
+		self.submit("MaterialReceipt", [self.row(2, 10, to_location="Stores")])
+		other = make_item(
+			make_account("Income", root_type="Income").name,
+			make_account("Received", root_type="Liability").name,
+			track_item=1,
+		).name
+		manufacture = self.submit(
+			"Manufacture",
+			[
+				self.row(2, 99, from_location="Stores"),
+				{**self.row(1, 30, to_location="Stores"), "item": self.product},
+				{**self.row(1, 5, to_location="Stores"), "item": other},
+			],
+		)
+
+		self.assertEqual(self.balances(manufacture), {self.stock: Decimal(15), self.adjustment: Decimal(-15)})
+		self.assertEqual(manufacture.amount, 35)
+
+	def test_transfer_rows_show_the_cost_moved(self):
+		self.submit(
+			"MaterialReceipt", [self.row(2, 10, to_location="Stores"), self.row(1, 20, to_location="Stores")]
+		)
+
+		transfer = self.submit(
+			"MaterialTransfer", [self.row(3, 99, from_location="Stores", to_location=self.shop)]
+		)
+
+		self.assertEqual((transfer.items[0].amount, transfer.amount), (40, 40))
 
 	def test_cancelling_a_movement_reverses_its_entries(self):
 		receipt = self.submit("MaterialReceipt", [self.row(4, 10, to_location="Stores")])
@@ -443,6 +518,16 @@ class IntegrationTestStockMovementPostings(IntegrationTestCase):
 		movement = frappe.get_doc({**movement_values(movement_type, items), "date": date or now_datetime()})
 		movement.insert().submit()
 		return movement
+
+	def item_values(self, movement):
+		values = {}
+		for entry in frappe.get_all(
+			"Books Stock Ledger Entry",
+			filters={"reference_name": movement.name},
+			fields=["item", "value_change"],
+		):
+			values[entry.item] = values.get(entry.item, Decimal(0)) + Decimal(str(entry.value_change))
+		return values
 
 	def balances(self, movement):
 		balances = {}

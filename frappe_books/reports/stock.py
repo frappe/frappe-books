@@ -105,8 +105,9 @@ def get_ledger_data(filters) -> list[dict]:
 	]
 	if filters.get("reference_type") and filters["reference_type"] != "All":
 		conditions.append(["reference_type", "=", filters["reference_type"]])
-	if filters.get("reference_name"):
-		conditions.append(["reference_name", "=", filters["reference_name"]])
+	for field in ("reference_name", "serial_number"):
+		if filters.get(field):
+			conditions.append([field, "=", filters[field]])
 	direction = "asc" if filters.get("ascending") else "desc"
 	fields = [*LEDGER_FIELDS, *_value_fields(LEDGER_VALUE_FIELDS)]
 	entries = frappe.get_list(

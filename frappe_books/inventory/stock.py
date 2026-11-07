@@ -5,6 +5,7 @@ from collections import Counter, defaultdict
 import frappe
 from frappe import _
 from frappe.query_builder.functions import Coalesce, Min, Sum
+from frappe.utils import get_datetime
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.units import populate_units
@@ -30,6 +31,34 @@ def validate_batches(rows):
 	batch_items = _items_of("Books Batch", [row.get("batch") for row in rows])
 	for row in rows:
 		_validate_batch(row, items[row["item"]], batch_items)
+
+
+def validate_listed_serial_numbers(rows):
+	"""Check the serial numbers rows list: of their item, one per stock unit, none twice. Rows without any pass."""
+	listed = [
+		{"item": row.item, "serial_number": row.serial_number, "quantity": row.quantity}
+		for row in rows
+		if row.item and row.serial_number
+	]
+	if listed:
+		_validate_serial_numbers(listed)
+
+
+def validate_serial_numbers_not_gone(rows):
+	"""Reject serial numbers that were in stock and have left it; ones not yet received pass."""
+	serial_numbers = sorted(set(_all_serial_numbers(rows)))
+	if not serial_numbers:
+		return
+	sle = frappe.qb.DocType(LEDGER)
+	gone = (
+		frappe.qb.from_(sle)
+		.select(sle.serial_number)
+		.where(sle.serial_number.isin(serial_numbers))
+		.groupby(sle.serial_number)
+		.having(Sum(sle.quantity) <= 0)
+	).run(pluck=True)
+	if gone:
+		frappe.throw(_("Serial number {0} has already left stock.").format(", ".join(sorted(gone))))
 
 
 def create_series_batches(rows):
@@ -70,7 +99,7 @@ def validate_stock_available(transfers, date):
 	outgoing = [row for row in transfers if row.get("from_location")]
 	incoming = [row for row in transfers if not row.get("from_location")]
 	_validate_quantities_available(outgoing, date)
-	_validate_serial_numbers_available(outgoing)
+	_validate_serial_numbers_available(outgoing, date)
 	_validate_serial_numbers_not_in_stock(incoming)
 
 
@@ -162,7 +191,7 @@ def parse_serial_numbers(value):
 def _validate_row(transfer):
 	if not transfer.get("item"):
 		frappe.throw(_("Every stock row requires an item."))
-	if abs(as_decimal(transfer.get("quantity"))) <= 0:
+	if as_decimal(transfer.get("quantity")) <= 0:
 		frappe.throw(_("Quantity must be greater than zero."))
 	if as_decimal(transfer.get("rate")) < 0:
 		frappe.throw(_("Stock rate cannot be negative."))
@@ -183,7 +212,7 @@ def _validate_batch(transfer, item, batch_items):
 		frappe.throw(_("Please select a batch first"))
 	if batch and not item.has_batch:
 		frappe.throw(_("Item {0} does not use batches.").format(transfer["item"]))
-	if batch_items.get(batch) and batch_items[batch] != transfer["item"]:
+	if batch and batch_items.get(batch) != transfer["item"]:
 		frappe.throw(_("Batch {0} belongs to another item.").format(batch))
 
 
@@ -257,7 +286,7 @@ def _key_totals(sle, keys, aggregate, condition):
 	return {(item, location, batch): as_decimal(value) for item, location, batch, value in rows}
 
 
-def _validate_serial_numbers_available(outgoing):
+def _validate_serial_numbers_available(outgoing, date):
 	wanted = [
 		(transfer["item"], transfer["from_location"], serial_number)
 		for transfer in outgoing
@@ -265,17 +294,32 @@ def _validate_serial_numbers_available(outgoing):
 	]
 	if not wanted:
 		return
-	sle = frappe.qb.DocType(LEDGER)
-	rows = (
-		frappe.qb.from_(sle)
-		.select(sle.item, sle.location, sle.serial_number, Sum(sle.quantity))
-		.where(sle.serial_number.isin(sorted({key[2] for key in wanted})))
-		.groupby(sle.item, sle.location, sle.serial_number)
-	).run()
-	available = {(item, location, serial): as_decimal(quantity) for item, location, serial, quantity in rows}
+	available = _serial_numbers_available(sorted({key[2] for key in wanted}), get_datetime(date))
 	for key in wanted:
 		if available.get(key, 0) < 1:
 			frappe.throw(_("Serial number {0} is not available at the source.").format(key[2]))
+
+
+def _serial_numbers_available(serial_numbers, date):
+	"""Map each (item, location, serial number) to its stock at the date, capped by its lowest later balance."""
+	sle = frappe.qb.DocType(LEDGER)
+	entries = (
+		frappe.qb.from_(sle)
+		.select(sle.item, sle.location, sle.serial_number, sle.quantity, sle.date)
+		.where(sle.serial_number.isin(serial_numbers))
+		.orderby(sle.date)
+		.orderby(sle.name)
+	).run()
+	balances = defaultdict(as_decimal)
+	available = {}
+	for item, location, serial_number, quantity, posted in entries:
+		key = (item, location, serial_number)
+		balances[key] += as_decimal(quantity)
+		if posted <= date:
+			available[key] = balances[key]
+		else:
+			available[key] = min(available.get(key, as_decimal(0)), balances[key])
+	return available
 
 
 def _validate_serial_numbers_not_in_stock(incoming):

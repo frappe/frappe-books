@@ -5,8 +5,9 @@ from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.accounts import validate_item_usage, validate_party_role
+from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import set_quantity_signs
-from frappe_books.inventory import invoice_transfer, stock_posting
+from frappe_books.inventory import entry_costs, invoice_transfer, stock_posting
 from frappe_books.inventory.returns import validate_transfer_return
 from frappe_books.inventory.stock import (
 	create_series_batches,
@@ -35,7 +36,8 @@ class StockTransactionController(StatusMixin, SeriesNamingMixin, Document):
 	"""A document that moves stock: checks it is there on submit and cancel, and posts it."""
 
 	def transfer_rows(self) -> list[dict]:
-		"""Return each row as the item, quantity, rate, batch and serial numbers it moves between locations."""
+		"""Return each row as the item, quantity, rate, batch and serial numbers it moves between locations;
+		the locations give the direction, so a return's quantity is positive too."""
 		raise NotImplementedError
 
 	def before_submit(self):
@@ -62,7 +64,8 @@ class StockMovementController(StockTransactionController):
 		"""Fill row locations, defaults and the total, without writing anything."""
 		set_movement_locations(self)
 		start_row_quantities(self.items)
-		self.amount = populate_stock_rows(self.items)
+		populate_stock_rows(self.items)
+		self.amount = entry_costs.total_amount(self.items)
 
 	@frappe.whitelist()
 	def preview(self):
@@ -81,7 +84,7 @@ class StockMovementController(StockTransactionController):
 		validate_transfer_rows(transfers)
 
 	def transfer_rows(self):
-		return [_transfer_row(row, row.from_location, row.to_location) for row in self.items]
+		return [_transfer_row(row, row.from_location, row.to_location, row.quantity) for row in self.items]
 
 
 class StockTransferController(StockTransactionController):
@@ -136,7 +139,7 @@ class StockTransferController(StockTransactionController):
 				from_location, to_location = None, row.location
 			if self.return_against:
 				from_location, to_location = to_location, from_location
-			rows.append(_transfer_row(row, from_location, to_location))
+			rows.append(_transfer_row(row, from_location, to_location, abs(as_decimal(row.quantity))))
 		return rows
 
 	@frappe.whitelist()
@@ -173,12 +176,12 @@ def fill_default_location(rows, fieldname):
 			row.set(fieldname, location)
 
 
-def _transfer_row(row, from_location, to_location):
+def _transfer_row(row, from_location, to_location, quantity):
 	return {
 		"item": row.item,
 		"from_location": from_location,
 		"to_location": to_location,
-		"quantity": row.quantity,
+		"quantity": quantity,
 		"rate": row.rate,
 		"batch": row.batch,
 		"serial_number": row.serial_number,

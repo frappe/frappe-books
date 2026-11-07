@@ -277,6 +277,16 @@ function setUOMConversions(isEnabled) {
 }
 
 /** A new POS sale with `rows`. */
+test('a cart discount amount cannot exceed the row amount, as the server checks', async () => {
+  const [row] = makeSale([{ item: tea, quantity: 1, amount: 40 }]).items;
+  await assert.rejects(
+    posCart.setPOSRowValue(row, 'item_discount_amount', fyo.pesa(50)),
+    /cannot exceed the row amount/
+  );
+  await posCart.setPOSRowValue(row, 'item_discount_amount', fyo.pesa(40));
+  assert.equal(row.item_discount_amount.float, 40);
+});
+
 function makeSale(rows = [], values = {}) {
   const sale = newFrappeDoc('SalesInvoice', {
     is_pos: true,

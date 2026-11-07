@@ -74,6 +74,13 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "already open"):
 			open_shift(0)
 
+	def test_a_refused_second_shift_leaves_no_draft(self):
+		open_shift(0)
+		drafts = frappe.db.count("Books Pos Opening Shift", {"docstatus": 0})
+
+		self.assertRaisesRegex(frappe.ValidationError, "already open", make_opening_shift(0).insert)
+		self.assertEqual(frappe.db.count("Books Pos Opening Shift", {"docstatus": 0}), drafts)
+
 	def test_submitted_shift_cannot_be_edited_or_deleted(self):
 		shift = open_shift(100)
 

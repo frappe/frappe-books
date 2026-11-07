@@ -17,7 +17,9 @@
    "fieldname": "item",
    "fieldtype": "Link",
    "label": "Item",
-   "options": "Books Item"
+   "options": "Books Item",
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "fieldname": "expiry_date",
@@ -33,7 +35,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Batch",

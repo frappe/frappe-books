@@ -155,6 +155,11 @@ test('list and form statuses come from the stored status', () => {
   );
   const shift = getSchema('POSOpeningShift');
   assert.equal(getDocStatus({ schema: shift, submitted: true }), 'Submitted');
+  // A list row has only its docstatus.
+  assert.deepEqual(
+    [0, 1, 2].map((docstatus) => getDocStatus({ schema: shift, docstatus })),
+    ['Saved', 'Submitted', 'Cancelled']
+  );
   assert.equal(
     getDocStatus({ schema: getSchema('Lead'), status: 'Open' }),
     'Saved'

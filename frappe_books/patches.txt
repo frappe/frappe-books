@@ -6,6 +6,7 @@
 # Patches added in this section will be executed after doctypes are migrated
 frappe_books.patches.grant_cashier_core_permissions
 frappe_books.patches.refresh_invoice_return_status
+frappe_books.patches.set_batch_items
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

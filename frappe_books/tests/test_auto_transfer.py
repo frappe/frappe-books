@@ -99,6 +99,41 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			frappe.ValidationError, f"{serial_numbers[0]} is not available", invoice.submit
 		)
 
+	def test_invoice_rows_follow_the_serial_number_rules(self):
+		invoice, item = self._sales_invoice()
+		frappe.db.set_value("Books Item", item, "has_serial_number", 1)
+		shipped, kept, other = (unique_name("SN") for _ in range(3))
+		row = {"item": item, "to_location": "Stores", "quantity": 3, "rate": 10}
+		make_movement("MaterialReceipt", [{**row, "serial_number": f"{shipped}\n{kept}\n{other}"}]).submit()
+		make_movement(
+			"MaterialIssue",
+			[{"item": item, "from_location": "Stores", "quantity": 1, "rate": 10, "serial_number": shipped}],
+		).submit()
+		plain_invoice, plain_item = self._sales_invoice()
+
+		cases = [
+			(invoice, kept, "Need 2 Serial Numbers"),
+			(invoice, f"{kept}\n{shipped}", f"{shipped} has already left stock"),
+			(plain_invoice, f"{kept}\n{other}", f"Item {plain_item} does not use serial numbers"),
+		]
+		for rows_invoice, serial_numbers, message in cases:
+			with self.subTest(message=message):
+				self.assertRaisesRegex(
+					frappe.ValidationError, message, save_serial_numbers, rows_invoice, serial_numbers
+				)
+
+		frappe.db.set_value("Books Item", plain_item, "has_serial_number", 1)
+		self.assertRaisesRegex(
+			frappe.ValidationError,
+			"belongs to another item",
+			save_serial_numbers,
+			plain_invoice,
+			f"{kept}\n{other}",
+		)
+		save_serial_numbers(invoice, f"{kept}\n{other}")
+		# Serial numbers not yet received pass: a sale may be invoiced before its stock arrives.
+		save_serial_numbers(invoice, f"{unique_name('SN')}\n{unique_name('SN')}")
+
 	def test_sales_invoice_creates_and_cancels_shipment(self):
 		invoice, item = self._sales_invoice(make_auto_stock_transfer=1)
 		invoice.submit()
@@ -403,3 +438,10 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 			is_pos=1,
 		)
 		return invoice, item, location
+
+
+def save_serial_numbers(invoice, serial_numbers):
+	"""Save the invoice's first row with the serial numbers, from a fresh copy as a form would."""
+	invoice = frappe.get_doc(invoice.doctype, invoice.name)
+	invoice.items[0].serial_number = serial_numbers
+	invoice.save()

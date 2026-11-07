@@ -242,6 +242,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
 import { ListCell as FrappeListCell } from 'frappe-ui/list';
 import { SalesInvoiceItem } from 'models/invoices/InvoiceItem';
 import { Money } from 'pesa';
@@ -420,7 +421,7 @@ export default defineComponent({
         showToast({
           id: POS_ITEM_TOAST_ID,
           type: 'error',
-          message: this.t`${error as string}`,
+          message: getErrorMessage(error as Error),
           duration: 'short',
         });
       }

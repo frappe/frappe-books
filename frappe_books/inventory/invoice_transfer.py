@@ -8,7 +8,7 @@ from frappe.utils import flt
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.commerce.pos import pos_profile
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
-from frappe_books.inventory.stock import parse_serial_numbers
+from frappe_books.inventory.stock import format_quantity, parse_serial_numbers
 from frappe_books.status import store_status
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
@@ -93,7 +93,7 @@ def validate_transfer(transfer):
 		if detail in left and quantity > left[detail]:
 			frappe.throw(
 				_("Invoice {0} has only {1} of {2} left to transfer.").format(
-					invoice.name, left[detail], items[detail]
+					invoice.name, format_quantity(left[detail]), items[detail]
 				)
 			)
 

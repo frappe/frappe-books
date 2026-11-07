@@ -103,11 +103,35 @@ class IntegrationTestAutoTransfer(IntegrationTestCase):
 		frappe.db.set_value("Books Item", item.name, "has_serial_no", 1)
 		serial_numbers = [unique_name("SN") for _ in range(2)]
 		invoice.items[0].serial_no = "\n".join(serial_numbers)
-		invoice.save()
 
-		self.assertRaisesRegex(
-			frappe.ValidationError, f"{serial_numbers[0]} is not available", invoice.submit
-		)
+		self.assertRaisesRegex(frappe.ValidationError, "is not in stock", invoice.save)
+
+	def test_invoice_rows_follow_the_serial_number_rules(self):
+		invoice, item = self._sales_invoice()
+		frappe.db.set_value("Books Item", item, "has_serial_no", 1)
+		shipped, kept, other = (unique_name("SN") for _ in range(3))
+		row = {"item_code": item, "t_warehouse": "Stores", "qty": 3, "basic_rate": 10}
+		make_movement("Material Receipt", [{**row, "serial_no": f"{shipped}\n{kept}\n{other}"}]).submit()
+		make_movement(
+			"Material Issue",
+			[{"item_code": item, "s_warehouse": "Stores", "qty": 1, "basic_rate": 10, "serial_no": shipped}],
+		).submit()
+		plain_invoice, plain_item = self._sales_invoice()
+
+		for rows_invoice, serial_numbers, message in (
+			(invoice, kept, "Need 2 Serial Numbers"),
+			(invoice, f"{kept}\n{shipped}", f"{shipped} is not in stock"),
+			(plain_invoice, f"{kept}\n{other}", f"Item {plain_item} does not use serial numbers"),
+		):
+			with self.subTest(message=message):
+				rows_invoice.items[0].serial_no = serial_numbers
+				self.assertRaisesRegex(frappe.ValidationError, message, rows_invoice.save)
+
+		frappe.db.set_value("Books Item", plain_item, "has_serial_no", 1)
+		self.assertRaisesRegex(frappe.ValidationError, "belongs to another item", plain_invoice.save)
+
+		invoice.items[0].serial_no = f"{kept}\n{other}"
+		invoice.save()
 
 	def test_sales_invoice_creates_and_cancels_delivery_note(self):
 		invoice, item = self._sales_invoice(make_auto_stock_transfer=1)

@@ -75,9 +75,18 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		return as_decimal(self.paid_amount) + DEDUCTION_SIGNS.get(self.payment_type, 0) * deducted
 
 	def settle_only_reference(self):
-		"""In the form, a payment's only reference takes all it settles, as the Books app kept them equal."""
-		if len(self.references) == 1 and self.paid_amount:
-			self.references[0].allocated_amount = rounded(self.party_amount)
+		"""In the form, a payment's only reference takes all it settles, as the Books app kept them equal.
+
+		A write-off that would settle more than the invoice owes comes off the paid amount, as in the Books app.
+		"""
+		if len(self.references) != 1 or not self.paid_amount:
+			return
+		row = self.references[0]
+		outstanding = as_decimal(row.outstanding_amount)
+		excess = self.party_amount - outstanding
+		if row.reference_name and excess > 0 and as_decimal(self.paid_amount) <= outstanding:
+			self.paid_amount = rounded(as_decimal(self.paid_amount) - excess)
+		row.allocated_amount = rounded(self.party_amount)
 
 	def set_missing_values(self):
 		"""Fill the party, payment type, accounts and amounts the way the Books app does while editing."""

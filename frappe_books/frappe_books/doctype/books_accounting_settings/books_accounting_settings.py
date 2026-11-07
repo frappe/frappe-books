@@ -27,6 +27,11 @@ ONE_WAY_SWITCHES = (
 	"enable_point_of_sale_with_out_inventory",
 	"enableitem_group",
 )
+# Switches that work only while another is on, in the order they depend on each other
+DEPENDENT_SWITCHES = {
+	"enable_pricing_rule": "enable_discounting",
+	"enable_coupon_code": "enable_pricing_rule",
+}
 
 ACCOUNT_TYPES = {
 	"write_off_account": {"root_types": ("Expense",)},
@@ -97,12 +102,19 @@ class BooksAccountingSettings(Document):
 		return bool(self.get(fieldname)) and self.has_value_changed(fieldname)
 
 	def validate(self):
+		self.clear_dependent_switches()
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		self.validate_setup_complete()
 		validate_fiscal_year(self.fiscal_year_start, self.fiscal_year_end)
 		validate_changed_accounts(self, ACCOUNT_TYPES)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)
+
+	def clear_dependent_switches(self):
+		"""Turn a switch off with the one it needs, as the form then hides it."""
+		for fieldname, needed in DEPENDENT_SWITCHES.items():
+			if not self.get(needed):
+				self.set(fieldname, 0)
 
 	def validate_setup_complete(self):
 		"""Only the setup sets it, as clearing it would let a second setup merge another chart in."""

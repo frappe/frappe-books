@@ -10,7 +10,7 @@ from frappe_books.accounting.returns import set_quantity_signs
 from frappe_books.company import company_value
 from frappe_books.dates import posting_datetime
 from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults
-from frappe_books.inventory import invoice_transfer, stock_posting
+from frappe_books.inventory import entry_costs, invoice_transfer, stock_posting
 from frappe_books.inventory.returns import update_returned_percent, validate_transfer_return
 from frappe_books.inventory.stock import (
 	create_series_batches,
@@ -71,7 +71,8 @@ class StockEntryController(StockTransactionController):
 		"""Fill row warehouses, defaults and the total, without writing anything."""
 		set_purpose_warehouses(self)
 		start_row_quantities(self.items)
-		self.total_amount = populate_stock_rows(self.items)
+		populate_stock_rows(self.items)
+		self.total_amount = entry_costs.total_amount(self.items)
 
 	@frappe.whitelist()
 	def preview(self):

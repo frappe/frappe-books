@@ -58,20 +58,23 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 
 /**
  * The fields of export and import files: the schema's `fileFields` in their
- * order, then its custom and meta fields; else all its stored fields.
+ * order, then its custom and meta fields; else all its stored fields. Fields
+ * the user cannot read are left out, as the server sends no values for them.
  */
 export function getFileFields(schemaName: string): Field[] {
   const schema = getSchema(schemaName)!;
   // Insert-only and client values are not the DocType's, so files cannot hold them.
   const fields = schema.fields.filter(
-    (field) => !field.insertOnly && !field.clientOnly
+    (field) => !field.insertOnly && !field.clientOnly && !field.unreadable
   );
   const { fileFields } = schema;
   if (!fileFields) {
     return fields;
   }
 
-  const listed = getFields(schemaName, fileFields);
+  const listed = getFields(schemaName, fileFields).filter(
+    (field) => !field.unreadable
+  );
   const rest = fields.filter(
     (field) => (field.isCustom || field.meta) && !listed.includes(field)
   );

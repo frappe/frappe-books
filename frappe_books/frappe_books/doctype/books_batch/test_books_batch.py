@@ -4,6 +4,8 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_shipment.test_books_shipment import seed_stock
+from frappe_books.patches import set_batch_items
 from frappe_books.tests.accounting import make_account, make_item, unique_name
 
 
@@ -30,6 +32,17 @@ class IntegrationTestBooksBatch(IntegrationTestCase):
 			manufacture_date="2026-12-01",
 			expiry_date="2026-10-01",
 		)
+
+	def test_patch_gives_a_batch_without_an_item_the_item_its_stock_moved(self):
+		used = make_batch(item=self.item).name
+		unused = make_batch(item=self.item).name
+		seed_stock(self.item, quantity=2, rate=10, batch=used)
+		frappe.db.set_value("Books Batch", {"name": ["in", [used, unused]]}, "item", None)
+
+		set_batch_items.execute()
+
+		self.assertEqual(frappe.db.get_value("Books Batch", used, "item"), self.item)
+		self.assertIsNone(frappe.db.get_value("Books Batch", unused, "item"))
 
 
 def make_batch(**values):

@@ -64,7 +64,12 @@
     />
 
     <!-- Report Body -->
-    <ListReport v-if="report && !isMobile" :report="report" class="" />
+    <ListReport
+      v-if="report && !isMobile"
+      :report="report"
+      class=""
+      @open-document="openDocument"
+    />
   </div>
 </template>
 <script lang="ts">
@@ -91,7 +96,7 @@ import { docsPathMap, showReport } from 'src/utils/misc';
 import { docsPathRef } from 'src/utils/refs';
 import { ActionGroup } from 'src/utils/types';
 import { canOpen } from 'src/utils/sidebarConfig';
-import { routeTo } from 'src/utils/ui';
+import { getFormRoute, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
 import { PropType, computed, defineComponent, inject } from 'vue';
 
@@ -184,6 +189,15 @@ export default defineComponent({
   },
   methods: {
     routeTo,
+    async openDocument({
+      schemaName,
+      name,
+    }: {
+      schemaName: string;
+      name: string;
+    }) {
+      await routeTo(getFormRoute(schemaName, name));
+    },
     async setReportData() {
       const isNew = !this.report;
       this.report = await showReport(

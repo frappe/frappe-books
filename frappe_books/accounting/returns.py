@@ -93,6 +93,7 @@ def validate_return(invoice):
 		frappe.throw(_("A return must use the same party as the original invoice."))
 	returns, returned_rows = _submitted_returns(original, exclude=invoice.name)
 	_validate_returned_rows(original, returned_rows, invoice.items)
+	_validate_returned_rates(invoice, original)
 	_validate_value(invoice, original, returns, len(returned_rows))
 
 
@@ -105,6 +106,34 @@ def _validate_returned_rows(original, returned_rows, rows):
 		original, [*returned_rows, *rows], _("Returns of {0} exceed the quantity of {1} in {2}.")
 	)
 	_validate_serial_numbers(original, returned_rows, rows)
+
+
+def _validate_returned_rates(invoice, original):
+	"""A return credits each item at most at what it was sold for per stock unit, net of discount and with
+	tax, as ERPNext caps a returned rate."""
+	sold = {}
+	for row in original.items:
+		sold[row.item] = max(sold.get(row.item, 0), _unit_value(original, row))
+	for row in invoice.items:
+		if row.item in sold and _unit_value(invoice, row) > sold[row.item] + _unit_rounding(invoice, row):
+			frappe.throw(
+				_("Row #{0}: {1} cannot be returned at more than it was sold for in {2}.").format(
+					row.idx, row.item, original.name
+				)
+			)
+
+
+def _unit_value(invoice, row):
+	"""What a row charges per stock unit, net of its discount and with its tax."""
+	total = row.item_discounted_total if invoice.discount_after_tax else row.item_taxed_total
+	return abs(as_decimal(total) / as_decimal(row.quantity))
+
+
+def _unit_rounding(invoice, row):
+	"""A row rounds its amount, discount and each tax, so a unit of another row can differ by that many
+	smallest units."""
+	taxes = frappe.get_cached_doc("Books Tax", row.tax).details if row.tax else []
+	return currency_unit(invoice.get("currency")) * (2 + len(taxes))
 
 
 def _validate_value(invoice, original, returns, returned_row_count):

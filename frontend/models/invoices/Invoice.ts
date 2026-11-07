@@ -169,11 +169,14 @@ export abstract class Invoice extends FrappeDoc {
 
   /** Rules of the fields invoices have and quotes lack: follow-ups on submit, and returns. */
   get postingHidden(): HiddenMap {
+    const inventoryOff = () =>
+      !this.fyo.singles.AccountingSettings?.enable_inventory;
     return {
       make_auto_payment: () => !this.autoPaymentAccount,
       make_auto_stock_transfer: () =>
-        !this.fyo.singles.AccountingSettings?.enable_inventory ||
-        !this.autoStockTransferLocation,
+        inventoryOff() || !this.autoStockTransferLocation,
+      // Without inventory nothing is shipped or received.
+      stock_not_transferred: inventoryOff,
       return_against: () =>
         !this.fyo.singles.AccountingSettings?.enable_invoice_returns &&
         !this.return_against,

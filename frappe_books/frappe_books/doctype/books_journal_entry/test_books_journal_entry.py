@@ -8,7 +8,7 @@ from frappe.api.v2 import run_doc_method
 from frappe.tests import IntegrationTestCase
 from frappe.utils import flt, nowdate, set_request
 
-from frappe_books.accounting.money import as_decimal
+from frappe_books.accounting.money import as_decimal, format_money
 from frappe_books.tests.accounting import ensure_user, ledger_entries, make_account, make_number_series
 
 READ_ONLY_USER = "books-journal-preview-reader@example.com"
@@ -68,6 +68,25 @@ class IntegrationTestBooksJournalEntry(IntegrationTestCase):
 			}
 		)
 		self.assertRaises(frappe.ValidationError, journal_entry.insert)
+
+	def test_unbalanced_error_shows_totals_as_money(self):
+		journal_entry = frappe.get_doc(
+			{
+				"doctype": "Books Journal Entry",
+				"posting_date": nowdate(),
+				"accounts": [
+					{"account": self.cash.name, "debit": "100.00000000000"},
+					{"account": self.equity.name, "credit": "90.00000000000"},
+				],
+			}
+		)
+		with self.assertRaises(frappe.ValidationError) as raised:
+			journal_entry.insert()
+
+		self.assertEqual(
+			str(raised.exception),
+			f"Total debit {format_money(100)} must equal total credit {format_money(90)}.",
+		)
 
 	def test_fractional_amounts_balance(self):
 		journal_entry = make_journal_entry(

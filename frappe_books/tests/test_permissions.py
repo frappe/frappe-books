@@ -164,6 +164,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 
 		self.assertEqual(item.db_get("income_account"), income.name)
 		self.assertEqual(invoice.account, receivable.name)
+		self.assertEqual(invoice.items[0].account, income.name)
 		self.assertIsNone(read_back["account"])
 		self.assertIsNone(read_back["items"][0]["account"])
 

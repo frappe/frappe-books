@@ -75,6 +75,7 @@ import {
   getSidebarPath,
   matchesSidebarPath,
 } from 'src/utils/sidebarNavigation';
+import { findRecordSidebarEntry } from 'src/utils/sidebarRecord';
 import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
@@ -100,10 +101,13 @@ export default defineComponent({
       groups: [],
       viewShortcuts: false,
       activeGroup: null,
+      recordItem: null,
     } as {
       groups: SidebarConfig;
       viewShortcuts: boolean;
       activeGroup: null | SidebarRoot;
+      // The filtered list that holds the record the route opens.
+      recordItem: null | SidebarRoot | SidebarItem;
     };
   },
   computed: {
@@ -115,8 +119,10 @@ export default defineComponent({
     this.groups = await getSidebarConfig();
 
     this.setActiveGroup();
+    void this.setRecordItem();
     router.afterEach(() => {
       this.setActiveGroup();
+      void this.setRecordItem();
     });
 
     this.shortcuts?.shift.set(COMPONENT_NAME, ['KeyH'], () => {
@@ -162,7 +168,20 @@ export default defineComponent({
             )) ??
         null;
     },
+    async setRecordItem() {
+      const route = this.$route;
+      this.recordItem = null;
+      const entry = await findRecordSidebarEntry(this.groups, route);
+      if (entry && route.fullPath === this.$route.fullPath) {
+        this.recordItem = entry.item;
+        this.setActiveGroup();
+      }
+    },
     isItemActive(item: SidebarItem) {
+      if (this.recordItem) {
+        return item === this.recordItem;
+      }
+
       return matchesSidebarPath(getSidebarPath(this.$route), item.route);
     },
     isGroupActive(group: SidebarRoot) {

@@ -1,7 +1,11 @@
 import { getSidebarConfig } from 'src/utils/sidebarConfig';
-import { findSidebarEntry } from 'src/utils/sidebarNavigation';
+import {
+  findSidebarEntry,
+  type SidebarEntry,
+} from 'src/utils/sidebarNavigation';
+import { findRecordSidebarEntry } from 'src/utils/sidebarRecord';
 import type { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
-import { computed } from 'vue';
+import { shallowRef, watch } from 'vue';
 import { useRoute, useRouter, type Router } from 'vue-router';
 import { isDesktopOnly } from './availability';
 
@@ -9,7 +13,18 @@ import { isDesktopOnly } from './availability';
 export function usePhoneSidebar() {
   const route = useRoute();
   const groups = getPhoneSidebar(useRouter());
-  const active = computed(() => findSidebarEntry(groups, route));
+  const active = shallowRef<SidebarEntry>();
+  watch(
+    () => route.fullPath,
+    async (path) => {
+      active.value = findSidebarEntry(groups, route);
+      const entry = await findRecordSidebarEntry(groups, route);
+      if (entry && path === route.fullPath) {
+        active.value = entry;
+      }
+    },
+    { immediate: true }
+  );
   return { groups, active };
 }
 

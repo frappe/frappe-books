@@ -89,7 +89,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 	@property
 	def loyalty_points_amount(self):
 		"""What the redeemed points take off the grand total, as a virtual field."""
-		return loyalty.redemption_amount(self)
+		return loyalty.invoice_redemption_amount(self)
 
 	def calculate(self, drop_invalid_coupons=False):
 		"""Also show the points the party can redeem."""
@@ -114,12 +114,12 @@ class BooksSalesInvoice(PostingInvoiceController):
 		"""A return gives back its share of the points its original redeemed."""
 		if self.return_against:
 			loyalty.set_return_redemption(self, total)
-		return total - loyalty.redemption_amount(self)
+		return total - loyalty.invoice_redemption_amount(self)
 
 	def get_ledger_posting(self):
 		"""Also expense the redeemed loyalty points, on the party's side."""
 		posting = super().get_ledger_posting()
-		redeemed = loyalty.redemption_amount(self)
+		redeemed = loyalty.invoice_redemption_amount(self)
 		if redeemed:
 			posting.on_party_side(loyalty.loyalty_expense_account(self), redeemed)
 		return posting

@@ -31,7 +31,9 @@
       :key="df.fieldname"
       class="min-w-0 self-center"
     >
+      <!-- A field its row's depends_on hides leaves an empty cell. -->
       <FormControl
+        v-if="!row.getFieldState(df).hidden"
         class="min-w-0 flex-1"
         :size="size"
         :df="df"

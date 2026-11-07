@@ -59,10 +59,25 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
       Default: ['number_series', 'party', 'account', 'date'],
       Items: ['items', 'net_total'],
       'Tax and Totals': ['grand_total'],
-      Outstanding: ['outstanding_amount', 'stock_not_transferred'],
+      Outstanding: ['outstanding_amount'],
       References: ['terms', 'attachment'],
     },
   });
+});
+
+test('only inventory shows the stock an invoice has not shipped or received', () => {
+  for (const schemaName of ['SalesInvoice', 'PurchaseInvoice']) {
+    setSettings({ accounting: { enable_inventory: true } });
+    assert.deepEqual(getLayout(newInvoice(schemaName)).Main.Outstanding, [
+      'outstanding_amount',
+      'stock_not_transferred',
+    ]);
+
+    setSettings();
+    assert.deepEqual(getLayout(newInvoice(schemaName)).Main.Outstanding, [
+      'outstanding_amount',
+    ]);
+  }
 });
 
 test('features and totals show the fields that go with them', () => {
@@ -101,7 +116,10 @@ test('features and totals show the fields that go with them', () => {
     'make_auto_payment',
     'make_auto_stock_transfer',
   ]);
-  assert.equal(invoice.getFieldState(invoice.fieldMap.exchange_rate).required, true);
+  assert.equal(
+    invoice.getFieldState(invoice.fieldMap.exchange_rate).required,
+    true
+  );
 });
 
 test('a submitted invoice hides what only a draft offers', () => {
@@ -124,12 +142,14 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
   setSettings();
   const quote = newInvoice('SalesQuote');
 
+  // The Type decides what the party is, so it comes first.
   assert.deepEqual(getLayout(quote).Main.Default, [
     'number_series',
+    'reference_type',
     'party',
     'date',
-    'reference_type',
   ]);
+  assert.equal(quote.fieldMap.party.label, 'Party');
   const type = quote.fieldMap.reference_type;
   assert.equal(type.fieldtype, 'Select');
   assert.deepEqual(
@@ -205,7 +225,8 @@ test('row fields show by the features and discounts turned on', () => {
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen' });
   const row = invoice.items[0];
-  const hidden = (fieldname) => row.getFieldState(row.fieldMap[fieldname]).hidden;
+  const hidden = (fieldname) =>
+    row.getFieldState(row.fieldMap[fieldname]).hidden;
 
   assert.equal(hidden('item_discount_percent'), false);
   assert.equal(hidden('item_discount_amount'), true);
@@ -232,7 +253,10 @@ test('a new invoice leaves its payment and stock follow-ups to the server', () =
   assert.equal('make_auto_payment' in sent, false);
   assert.equal('make_auto_stock_transfer' in sent, false);
   const copy = newInvoice('SalesInvoice', { make_auto_payment: false });
-  assert.equal(copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment, 0);
+  assert.equal(
+    copy.getMethodDocument({ clearServerFilled: true }).make_auto_payment,
+    0
+  );
 });
 
 test('a cleared row tax goes to the server empty, so it is not filled again', () => {
@@ -382,7 +406,10 @@ test('an invoice from selected items leaves their pricing to the server', async 
 test('selected items offer only the documents their Item Usage allows', async () => {
   const usages = { Pen: 'Sales', Ink: 'Both', Paper: 'Purchases' };
   stubFrappe(({ params }) => ({
-    data: params.filters[0][2].map((name) => ({ name, item_usage: usages[name] })),
+    data: params.filters[0][2].map((name) => ({
+      name,
+      item_usage: usages[name],
+    })),
   }));
   const list = { schemaName: 'Item', t: fyo.t };
   const offered = async (selected) => {
@@ -395,7 +422,10 @@ test('selected items offer only the documents their Item Usage allows', async ()
     'SalesInvoice',
     'PurchaseInvoice',
   ]);
-  assert.deepEqual(await offered(['Pen', 'Ink']), ['SalesQuote', 'SalesInvoice']);
+  assert.deepEqual(await offered(['Pen', 'Ink']), [
+    'SalesQuote',
+    'SalesInvoice',
+  ]);
   assert.deepEqual(await offered(['Paper']), ['PurchaseInvoice']);
   assert.deepEqual(await offered(['Pen', 'Paper']), []);
 });
@@ -435,7 +465,11 @@ test('a new party or price list prices rows again, except manual and free ones',
   setSettings();
   const invoice = newInvoice('SalesInvoice');
   invoice.push('items', { item: 'Pen', rate: fyo.pesa(5) });
-  invoice.push('items', { item: 'Ink', rate: fyo.pesa(9), is_manual_rate: true });
+  invoice.push('items', {
+    item: 'Ink',
+    rate: fyo.pesa(9),
+    is_manual_rate: true,
+  });
   invoice.push('items', { item: 'Cap', is_free_item: true });
 
   await invoice.set('party', 'Acme');
@@ -686,7 +720,10 @@ test('a submitted quote makes a Frappe-backed sales invoice from its mapper', as
     requests[0].path,
     '/api/method/frappe.model.mapper.make_mapped_doc'
   );
-  assert.match(requests[0].body.method, /books_sales_quote\.make_sales_invoice$/);
+  assert.match(
+    requests[0].body.method,
+    /books_sales_quote\.make_sales_invoice$/
+  );
   assert.ok(invoice instanceof frappeModels.SalesInvoice);
   assert.equal(invoice.items[0].qty, 2);
   assert.ok(invoice.date instanceof Date);
@@ -712,8 +749,16 @@ test('invoice lists show their columns and filter by status, totals and docstatu
   const status = filters.fields.find(({ fieldname }) => fieldname === 'status');
   assert.deepEqual(status.states.Unpaid, 'Orange');
   assert.deepEqual(
-    frappeModels.SalesInvoice.getListViewSettings()
-      .columns.map((column) => column.fieldname ?? column),
-    ['name', 'status', 'party', 'date', 'base_grand_total', 'outstanding_amount']
+    frappeModels.SalesInvoice.getListViewSettings().columns.map(
+      (column) => column.fieldname ?? column
+    ),
+    [
+      'name',
+      'status',
+      'party',
+      'date',
+      'base_grand_total',
+      'outstanding_amount',
+    ]
   );
 });

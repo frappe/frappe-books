@@ -7,7 +7,7 @@ from frappe.api.v2 import run_doc_method as run_doc_method_v2
 from frappe.client import insert
 from frappe.model.mapper import make_mapped_doc
 from frappe.tests import IntegrationTestCase
-from frappe.utils import set_request
+from frappe.utils import getdate, set_request
 
 from frappe_books.accounting.invoice import get_payments_to_cancel
 from frappe_books.accounting.payment import map_invoice_payment
@@ -171,6 +171,22 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				self.assertEqual(invoice.db_get("is_returned"), 0)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
+	def test_an_invoice_is_saved_as_not_returned_whatever_it_is_sent(self):
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			is_returned=1,
+			is_fully_returned=1,
+		)
+		invoice.items[0].item_discount_percent = 0
+		invoice.save().submit()
+
+		self.assertEqual((invoice.db_get("is_returned"), invoice.db_get("is_fully_returned")), (0, 0))
+		self.assertEqual(len(map_return(invoice.doctype, invoice.name).items), 1)
+
 	def test_return_offers_only_what_is_not_yet_returned(self):
 		invoice = make_invoice(
 			"Books Sales Invoice",
@@ -192,6 +208,19 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 
 		self.assertEqual([row.quantity for row in remaining.items], [-1, -1])
 		self.assertEqual(remaining.items[0].serial_number, "S-2")
+
+	def test_a_return_credits_an_item_at_most_at_what_it_was_sold_for(self):
+		invoice = self._paid_invoice(make_auto_payment=0)
+		for values in ({"rate": 300}, {"item_discount_percent": 0}):
+			with self.subTest(values=values):
+				credit_note = map_return(invoice.doctype, invoice.name)
+				credit_note.items[0].update({"quantity": -1, **values})
+				with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* cannot be returned at more"):
+					credit_note.insert()
+
+		credit_note = map_return(invoice.doctype, invoice.name)
+		credit_note.items[0].quantity = -1
+		self.assertEqual(credit_note.insert().grand_total, -90)
 
 	def test_return_keeps_the_item_discounts(self):
 		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
@@ -404,6 +433,25 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					frappe.db.get_value("Books Payment", payment, ["payment_method", "reference_id"]),
 					(method, invoice.name),
 				)
+
+	def test_automatic_payment_clears_on_its_date_when_the_method_needs_a_clearance(self):
+		bank = make_account("Cleared Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "sales_payment_account", bank.name)
+		frappe.db.set_value("Books Payment Method", "Bank", "requires_clearance_date", 1)
+		frappe.db.set_single_value("Books Accounting Settings", "discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			make_auto_payment=1,
+		).submit()
+
+		payment = frappe.db.get_value("Books Payment For", {"reference_name": invoice.name}, "parent")
+		date, clearance_date = frappe.db.get_value("Books Payment", payment, ["date", "clearance_date"])
+		self.assertEqual(clearance_date, getdate(date))
+		self.assertEqual(invoice.db_get("status"), "Paid")
 
 	def test_mapped_payment_needs_a_method_of_the_account_type(self):
 		frappe.db.set_single_value(

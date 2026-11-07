@@ -4,6 +4,7 @@ import { DocValue } from 'fyo/core/types';
 import { Action } from 'fyo/model/types';
 import Observable from 'fyo/utils/observable';
 import { Field, RawValue } from 'schemas/types';
+import { handleErrorWithDialog } from 'src/errorHandling';
 import { getLinkLabel } from 'src/frappe/link';
 import { getDoctypeLabel } from 'src/frappe/registry';
 import { getIsNullOrUndef } from 'utils';
@@ -90,9 +91,7 @@ export abstract class Report extends Observable<RawValue> {
     }
 
     // Clearing works for every field type, including checks.
-    value = getIsNullOrUndef(value)
-      ? null
-      : toFrappeValue(value, field, this.fyo);
+    value = getIsNullOrUndef(value) ? null : this.toFilterValue(value, field);
     const prevValue = this[key];
     if (prevValue === value) {
       return;
@@ -147,13 +146,29 @@ export abstract class Report extends Observable<RawValue> {
     return this.columns;
   }
 
+  /** The value the server reads, raised to the field's minimum, as the server requires. */
+  toFilterValue(value: DocValue, field: Field): DocValue {
+    const filterValue = toFrappeValue(value, field, this.fyo);
+    const minvalue = 'minvalue' in field ? field.minvalue : undefined;
+    return typeof filterValue === 'number' && minvalue !== undefined
+      ? Math.max(filterValue, minvalue)
+      : filterValue;
+  }
+
   async setReportData(_filter?: string, _force?: boolean): Promise<void> {
     this.loading = true;
-    const { columns, rows } = await this.runReport();
-    this.columns = columns;
-    this.reportData = rows.map((row) =>
-      isBlankRow(row) ? this.getEmptyRow() : this.getReportRow(row)
-    );
+    try {
+      const { columns, rows } = await this.runReport();
+      this.columns = columns;
+      this.reportData = rows.map((row) =>
+        isBlankRow(row) ? this.getEmptyRow() : this.getReportRow(row)
+      );
+    } catch (error) {
+      // The figures of the previous filters would pass for these.
+      this.reportData = [];
+      // The dialog stays open until dismissed; the report is done loading.
+      void handleErrorWithDialog(error, undefined, true);
+    }
     this.loading = false;
   }
 

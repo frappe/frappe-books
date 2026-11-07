@@ -7,6 +7,7 @@ from frappe.utils import add_days, now_datetime, nowdate
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.loyalty import expire_programs_and_points, get_available_points
 from frappe_books.tests.accounting import (
+	foreign_currency,
 	ledger_entries,
 	make_account,
 	make_invoice,
@@ -103,6 +104,22 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 
 				self.assertEqual(get_available_points(self.party.name, program.name), available)
 
+	def test_a_foreign_currency_sale_earns_and_redeems_in_the_company_currency(self):
+		loyalty_expense = make_account("Loyalty Expense", root_type="Expense").name
+		program = self._loyalty_program(expense_account=loyalty_expense)
+		self.party.db_set("currency", foreign_currency())
+		# 2 x 100 less 10% is 180, 1,800 in the company currency.
+		self._loyalty_invoice(program, exchange_rate=10).submit()
+		self.assertEqual(get_available_points(self.party.name, program.name), 1800)
+
+		# 20 points at 0.5 are worth 10 in the company currency, 1 in the invoice's.
+		redemption = self._loyalty_invoice(
+			program, exchange_rate=10, redeem_loyalty_points=1, loyalty_points=20
+		).submit()
+		self.assertEqual(Decimal(str(redemption.grand_total)), Decimal("179"))
+		entries = ledger_entries(redemption.doctype, redemption.name)
+		self.assertEqual([row.debit for row in entries if row.account == loyalty_expense], [10])
+
 	def test_status_follows_the_server_rules(self):
 		for values, status in (
 			({"is_enabled": 0}, "Disabled"),
@@ -113,14 +130,21 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				self.assertEqual(self._loyalty_program(**values).status, status)
 
 	def test_usage_says_what_books_says_at_its_fields(self):
-		for values, message in (
-			({"used": -1}, "Used count cannot be negative"),
-			({"maximum_use": -1}, "Maximum use cannot be negative"),
-			({"maximum_use": 2, "used": 3}, "Used count cannot exceed maximum use limit"),
-		):
-			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
-				self._loyalty_program(**values)
-			self.assertEqual(str(raised.exception), message)
+		with self.assertRaises(frappe.ValidationError) as raised:
+			self._loyalty_program(maximum_use=-1)
+		self.assertEqual(str(raised.exception), "Maximum use cannot be negative")
+
+	def test_a_save_counts_the_redemptions_whatever_it_is_sent(self):
+		program = self._loyalty_program(used=5)
+		self.assertEqual(program.used, 0)
+		self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+
+		program.reload()
+		program.used = 0
+		program.save()
+
+		self.assertEqual(program.db_get("used"), 1)
 
 	def test_status_is_maxed_at_the_use_limit(self):
 		program = self._loyalty_program(maximum_use=1)

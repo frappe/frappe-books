@@ -56,6 +56,50 @@ class IntegrationTestInvoicePosting(IntegrationTestCase):
 				outstanding = Decimal(str(invoice.db_get("outstanding_amount")))
 				self.assertEqual(outstanding, Decimal("-198" if is_return else "198"))
 
+	def test_a_row_posts_only_to_the_kind_of_account_its_item_takes(self):
+		equity = make_account("Owner Capital", root_type="Equity").name
+		for doctype in ("Books Sales Invoice", "Books Purchase Invoice"):
+			for account in (equity, self.expense if doctype == "Books Sales Invoice" else self.income):
+				with self.subTest(doctype=doctype, account=account):
+					role = "Supplier" if doctype == "Books Purchase Invoice" else "Customer"
+					party = make_party(self.ledgers[doctype], role=role).name
+					with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* must be of type"):
+						make_invoice(
+							doctype, party, self.ledgers[doctype], self.item, account, **NO_FOLLOW_UPS
+						)
+
+	def test_a_tax_row_has_no_rate_when_its_items_rates_differ(self):
+		other = make_item(self.income, self.expense, make_tax(self.tax_account, rate=5).name).name
+		party = make_party(self.ledgers["Books Sales Invoice"]).name
+		rows = [{"item": item, "rate": 100, "quantity": 1} for item in (self.item, other)]
+		# Both items tax one account, at 10% and 5%.
+		for items, rate, amount in ((rows[:1], 10, 10), (rows, 0, 15)):
+			with self.subTest(rate=rate):
+				invoice = make_invoice(
+					"Books Sales Invoice",
+					party,
+					self.ledgers["Books Sales Invoice"],
+					self.item,
+					self.income,
+					items=items,
+					**NO_FOLLOW_UPS,
+				)
+				self.assertEqual([(row.rate, row.amount) for row in invoice.taxes], [(rate, amount)])
+
+	def test_a_number_too_large_to_store_names_its_row(self):
+		party = make_party(self.ledgers["Books Sales Invoice"]).name
+		row = {"item": self.item, "quantity": 10**12, "rate": 10**6}
+		with self.assertRaisesRegex(frappe.ValidationError, "Row #1: .* is too large"):
+			make_invoice(
+				"Books Sales Invoice",
+				party,
+				self.ledgers["Books Sales Invoice"],
+				self.item,
+				self.income,
+				items=[row],
+				**NO_FOLLOW_UPS,
+			)
+
 	def submit_invoice(self, doctype, is_return):
 		role = "Supplier" if doctype == "Books Purchase Invoice" else "Customer"
 		party = make_party(self.ledgers[doctype], role=role).name

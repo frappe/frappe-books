@@ -4,16 +4,25 @@ import frappe
 from frappe import _
 from frappe.desk.form import linked_with
 from frappe.model.document import Document
+from frappe.utils import getdate
 
 from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
+	item_account_root_types,
 	latest_ledger_account,
 	validate_account,
 	validate_item_usage,
 	validate_party_role,
+	validate_row_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
+from frappe_books.accounting.money import (
+	as_decimal,
+	company_currency,
+	rounded,
+	sum_decimal,
+	validate_number_sizes,
+)
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
@@ -22,7 +31,7 @@ from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
 from frappe_books.inventory.stock import validate_batches
 from frappe_books.inventory.units import populate_units
-from frappe_books.permissions import check_preview_permission
+from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
@@ -42,6 +51,10 @@ class InvoiceController(StatusMixin, SeriesNamingMixin, Document):
 	party_account_type: str | None
 	# The item field that holds a row's income or expense account.
 	item_account_field: str
+
+	def before_insert(self):
+		# Row accounts are the server's to fill for users who cannot write them.
+		reset_new_rows_above_permlevel(self)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -121,6 +134,11 @@ class PostingInvoiceController(InvoiceController):
 		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
 		self.dont_update_if_missing.extend(self.follow_up_fields)
 
+	def before_validate(self):
+		# Its submitted returns mark an invoice returned, and an unsubmitted one has none.
+		self.is_returned = self.is_fully_returned = 0
+		super().before_validate()
+
 	def calculate(self, drop_invalid_coupons=False):
 		super().calculate(drop_invalid_coupons)
 		self.set_follow_up_defaults()
@@ -180,8 +198,10 @@ class PostingInvoiceController(InvoiceController):
 		# The submit makes the payment, so it needs no right to make payments.
 		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
 		payment.flags.ignore_permissions = True
-		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
+		# No one enters a bank reference or clearance for an automatic payment: it refers to
+		# the invoice and clears as it is made.
 		payment.reference_id = self.name
+		payment.clearance_date = getdate(payment.date)
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)
@@ -275,6 +295,9 @@ def _add_row_taxes(row, base, taxes, currency):
 		tax = taxes.setdefault(
 			detail.account, {"account": detail.account, "rate": detail.rate, "amount": as_decimal(0)}
 		)
+		if as_decimal(tax["rate"]) != as_decimal(detail.rate):
+			# The items tax the account at different rates, so the row has no one rate.
+			tax["rate"] = 0
 		tax["amount"] += amount
 		row_tax += amount
 	return row_tax
@@ -310,6 +333,8 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	_validate_row_accounts(invoice)
+	validate_number_sizes(invoice)
 	validate_hsn_codes(invoice.items)
 	validate_item_usage(invoice, invoice.is_purchase)
 	if invoice.get("return_against"):
@@ -340,6 +365,21 @@ def _validate_party_and_account(invoice):
 		validate_party_role(invoice, invoice.is_purchase)
 	if invoice.party_account_type:
 		validate_account(invoice, "account", (invoice.party_account_type,))
+
+
+def _validate_row_accounts(invoice):
+	"""Rows post to the kinds of ledger their items' defaults may hold."""
+	tracked = set(
+		frappe.get_all(
+			"Books Item",
+			filters={"name": ["in", list({row.item for row in invoice.items})], "track_item": 1},
+			pluck="name",
+		)
+	)
+	for track_item in (True, False):
+		rows = [row for row in invoice.items if (row.item in tracked) == track_item]
+		root_types = item_account_root_types(invoice.item_account_field, track_item)
+		validate_row_accounts(rows, "account", root_types=root_types)
 
 
 def _validate_row(invoice, row):

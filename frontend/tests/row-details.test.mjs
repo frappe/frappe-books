@@ -60,3 +60,38 @@ test('a row summary pairs the quantity with the rate in its unit', () => {
 
   assert.equal(getRowSummary(row, fields).meta, '6 × 3,100.00');
 });
+
+test('a tax row summary shows its rate only when its items share one', () => {
+  const invoice = newFrappeDoc('SalesInvoice', {
+    taxes: [
+      { account: 'CGST', rate: 9, amount: fyo.pesa(27) },
+      { account: 'SGST', rate: 0, amount: fyo.pesa(43.67) },
+    ],
+  });
+  const summaries = invoice.taxes.map((row) =>
+    getRowSummary(
+      row,
+      ['account', 'rate', 'amount'].map((name) => row.fieldMap[name])
+    )
+  );
+
+  assert.deepEqual(
+    summaries.map(({ title, meta }) => [title, meta]),
+    [
+      ['CGST', '9%'],
+      ['SGST', ''],
+    ]
+  );
+});
+
+test('a phone journal entry row names the side of each amount', () => {
+  const entry = newFrappeDoc('JournalEntry', {
+    accounts: [{ account: 'Cash', debit: fyo.pesa(5000), credit: fyo.pesa(0) }],
+  });
+  const [row] = entry.accounts;
+  const fields = row.schema.tableFields.map((name) => row.fieldMap[name]);
+  const { meta, amountLabel } = getRowSummary(row, fields);
+
+  assert.match(meta, /^Debit .*5,000\.00$/);
+  assert.equal(amountLabel, 'Credit');
+});

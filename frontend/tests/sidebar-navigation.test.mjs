@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   findSidebarEntry,
+  getFilteredLists,
   getSidebarPath,
   matchesSidebarPath,
 } from '../src/utils/sidebarNavigation.ts';
@@ -26,12 +27,7 @@ test('detail and print routes select their source list or report', () => {
       '/report/:reportName',
       '/report/GeneralLedger',
     ],
-    [
-      '/template-builder/Invoice',
-      {},
-      '/list/PrintFormat',
-      '/list/PrintFormat',
-    ],
+    ['/template-builder/Invoice', {}, '/list/PrintFormat', '/list/PrintFormat'],
   ]) {
     assert.equal(
       getSidebarPath({ path, params, meta: { sidebarPath } }),
@@ -87,4 +83,37 @@ test('a route belongs to the group whose entry has its exact path', () => {
     'sales/invoices'
   );
   assert.equal(ownerOf('/settings'), undefined);
+});
+
+test("a record's form offers the filtered lists of its doctype to belong to", () => {
+  const sales = {
+    name: 'sales',
+    route: '/list/Payment/Sales Payments',
+    filters: [['reference_type', '=', 'SalesInvoice']],
+  };
+  const purchases = {
+    name: 'purchases',
+    route: '/list/Payment/Purchase Payments',
+    filters: [['reference_type', '=', 'PurchaseInvoice']],
+  };
+  const groups = [
+    { name: 'sales', route: '/list/SalesInvoice', items: [sales] },
+    { name: 'purchases', route: '/list/PurchaseInvoice', items: [purchases] },
+    {
+      name: 'items',
+      route: '/list/Item',
+      items: [{ name: 'item', route: '/list/Item' }],
+    },
+  ];
+  const route = (schemaName) => ({
+    path: `/edit/${schemaName}/X-1`,
+    params: { schemaName, name: 'X-1' },
+    meta: { sidebarPath: '/list/:schemaName' },
+  });
+
+  assert.deepEqual(
+    getFilteredLists(groups, route('Payment')).map(({ item }) => item),
+    [sales, purchases]
+  );
+  assert.deepEqual(getFilteredLists(groups, route('Item')), []);
 });

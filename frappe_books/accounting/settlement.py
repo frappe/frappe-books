@@ -45,10 +45,16 @@ def signed(invoice, amount):
 
 
 def refresh_party(party_name):
-	"""Store what the party owes, net of what is owed to it when it both buys and sells."""
+	"""Store what the party owes."""
 	role = party_name and frappe.db.get_value("Books Party", party_name, "role")
-	if not role:
-		return
+	if role:
+		frappe.db.set_value(
+			"Books Party", party_name, "outstanding_amount", party_outstanding(party_name, role)
+		)
+
+
+def party_outstanding(party_name, role):
+	"""What the party owes on its submitted invoices, net of what is owed to it when it both buys and sells."""
 	if role == "Customer":
 		total = _invoice_total("Books Sales Invoice", party_name)
 	elif role == "Supplier":
@@ -57,7 +63,7 @@ def refresh_party(party_name):
 		total = _invoice_total("Books Sales Invoice", party_name) - _invoice_total(
 			"Books Purchase Invoice", party_name
 		)
-	frappe.db.set_value("Books Party", party_name, "outstanding_amount", rounded(total))
+	return rounded(total)
 
 
 def _invoice_total(doctype, party_name):

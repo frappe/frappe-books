@@ -30,6 +30,8 @@ export interface Presentation {
   linkDisplayField?: string;
   /** Table columns, where /books orders them unlike the DocType's in_list_view fields. */
   tableFields?: string[];
+  /** Columns a phone row summary shows with their labels, as Debit and Credit. */
+  mobileLabelledFields?: string[];
   /**
    * The fields of list exports, import templates and quick views, in Books'
    * order, where it differs from the DocType's; fields the server fills are
@@ -114,6 +116,7 @@ export function toSchema(
     linkDisplayField: presentation.linkDisplayField,
     create: presentation.create,
     fileFields: presentation.fileFields,
+    mobileLabelledFields: presentation.mobileLabelledFields,
     tableFields:
       presentation.tableFields ??
       meta.fields

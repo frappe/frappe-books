@@ -25,6 +25,7 @@ export class SalesQuote extends Invoice {
     fileFields: [
       'name',
       'number_series',
+      'reference_type',
       'party',
       'date',
       'price_list',
@@ -41,7 +42,6 @@ export class SalesQuote extends Invoice {
       'terms',
       'attachment',
       'status',
-      'reference_type',
     ],
   };
   static override rowModels = { items: SalesQuoteItem, taxes: TaxSummary };

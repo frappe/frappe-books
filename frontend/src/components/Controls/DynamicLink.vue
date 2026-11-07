@@ -13,6 +13,9 @@ export default {
     this.targetWatcher = this.$watch(watchKey, function (newTarget, oldTarget) {
       if (oldTarget && newTarget !== oldTarget) {
         this.triggerChange('');
+      } else if (newTarget && this.isDropdownOpen) {
+        // The target arrived while the options were open, as a server preview fills it.
+        this.updateSuggestions(this.searchQuery);
       }
     });
   },

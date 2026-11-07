@@ -182,6 +182,14 @@ test('a header row with a column of the file’s own maps the columns it names',
   assert.equal(importer.valueMatrix.length, 1);
 });
 
+test('a failed row without a name is named by its row number', () => {
+  const importer = new Importer('Address', fyo);
+  importer.assignedTemplateFields = ['Address.address_line1'];
+  importer.valueMatrix = [[{ value: '1 Road' }], [{ value: '2 Road' }]];
+
+  assert.equal(importer.getRowName(1), 'Row 2');
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

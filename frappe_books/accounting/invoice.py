@@ -295,6 +295,9 @@ def _add_row_taxes(row, base, taxes, currency):
 		tax = taxes.setdefault(
 			detail.account, {"account": detail.account, "rate": detail.rate, "amount": as_decimal(0)}
 		)
+		if as_decimal(tax["rate"]) != as_decimal(detail.rate):
+			# The items tax the account at different rates, so the row has no one rate.
+			tax["rate"] = 0
 		tax["amount"] += amount
 		row_tax += amount
 	return row_tax

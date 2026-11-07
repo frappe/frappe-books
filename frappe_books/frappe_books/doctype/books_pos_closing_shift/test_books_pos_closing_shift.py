@@ -12,11 +12,14 @@ from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	credits,
 	debits,
+	make_opening_shift,
+	make_profile,
 	make_user,
 	open_shift,
 	set_pos_accounts,
 )
 from frappe_books.frappe_books.doctype.books_sales_invoice.books_sales_invoice import pay_pos_invoice
+from frappe_books.patches import set_pos_shift_details
 from frappe_books.tests.accounting import (
 	ledger_entries,
 	make_account,
@@ -239,10 +242,60 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		with self.set_user(make_user("Books Cashier")):
 			self.assertRaises(frappe.PermissionError, make_closing_shift(opening, 0).insert)
 
-	def test_preview_needs_an_open_shift(self):
+	def test_preview_without_an_open_shift_leaves_the_shift_to_pick(self):
 		draft = frappe.get_doc({"doctype": "Books Pos Closing Shift"})
 
-		self.assertRaisesRegex(frappe.ValidationError, "no open POS shift", draft.preview)
+		draft.preview()
+
+		self.assertIsNone(draft.opening_shift)
+		self.assertRaisesRegex(frappe.ValidationError, "no open POS shift", draft.insert)
+
+	def test_a_manager_closes_a_cashiers_shift(self):
+		cashier = make_user("Books Cashier")
+		with self.set_user(cashier):
+			opening = open_shift(50)
+
+		with self.set_user(make_user("Books Manager")):
+			draft = frappe.get_doc({"doctype": "Books Pos Closing Shift", "opening_shift": opening.name})
+			draft.preview()
+			closing = close_shift(opening, 50)
+
+		self.assertEqual((draft.cashier, cash_amounts(draft).expected_amount), (cashier, 50))
+		self.assertEqual((closing.cashier, closing.pos_profile), (cashier, opening.pos_profile))
+		self.assertIsNone(open_shift_name(cashier))
+
+	def test_a_shift_shows_whether_it_is_open(self):
+		opening = make_opening_shift(0).insert()
+		statuses = [opening.status]
+		opening.submit()
+		statuses.append(opening.status)
+		closing = close_shift(opening, 0)
+		statuses.append(opening.reload().status)
+		closing.cancel()
+		statuses.append(opening.reload().status)
+
+		self.assertEqual(statuses, ["Saved", "Open", "Closed", "Open"])
+
+	def test_the_patch_fills_the_details_of_existing_shifts(self):
+		profile = make_profile()
+		frappe.db.set_single_value("Books Pos Settings", "pos_profile", profile)
+		closed = open_shift(0)
+		closing = close_shift(closed, 0)
+		still_open = open_shift(0)
+		for shift in (closed, still_open):
+			frappe.db.set_value(shift.doctype, shift.name, {"status": "Saved", "pos_profile": None})
+		frappe.db.set_value(closing.doctype, closing.name, {"cashier": None, "pos_profile": None})
+
+		set_pos_shift_details.execute()
+
+		shifts = [
+			frappe.db.get_value(s.doctype, s.name, ["status", "pos_profile"]) for s in (closed, still_open)
+		]
+		self.assertEqual(shifts, [("Closed", profile), ("Open", profile)])
+		self.assertEqual(
+			frappe.db.get_value(closing.doctype, closing.name, ["cashier", "pos_profile"]),
+			(frappe.session.user, profile),
+		)
 
 	def test_payment_for_several_invoices_is_counted_once(self):
 		open_shift(0)

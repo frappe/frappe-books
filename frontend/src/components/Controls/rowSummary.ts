@@ -53,7 +53,8 @@ function getMeta(row: FrappeDoc, fields: Field[]) {
 
 function formatCell(row: FrappeDoc, field: Field): string {
   const value = row.get(field.fieldname);
-  if (value === null || value === undefined || value === '') {
+  const isEmpty = value === null || value === undefined || value === '';
+  if (isEmpty || row.getFieldState(field).hidden) {
     return '';
   }
 

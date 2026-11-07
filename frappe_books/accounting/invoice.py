@@ -128,6 +128,11 @@ class PostingInvoiceController(InvoiceController):
 		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
 		self.dont_update_if_missing.extend(self.follow_up_fields)
 
+	def before_validate(self):
+		# Its submitted returns mark an invoice returned, and an unsubmitted one has none.
+		self.is_fully_returned = 0
+		super().before_validate()
+
 	def calculate(self, drop_invalid_coupons=False):
 		self.is_return = int(bool(self.return_against))
 		super().calculate(drop_invalid_coupons)

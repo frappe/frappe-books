@@ -119,6 +119,17 @@ class IntegrationTestInvoiceTaxes(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "cannot make the grand total negative"):
 			self.make_invoice(taxes=rebate, items=[self.row(self.item)])
 
+	def test_taxes_post_only_to_tax_charge_income_or_expense_accounts(self):
+		cash = make_account("Till", account_type="Cash").name
+		equity = make_account("Owner Capital", root_type="Equity").name
+		for account in (cash, equity):
+			rows = [{"charge_type": "On Net Total", "account_head": account, "rate": 10}]
+			with self.subTest(account=account):
+				with self.assertRaisesRegex(frappe.ValidationError, "Row #1: Account Head must be of type"):
+					self.make_invoice(taxes=rows)
+				with self.assertRaisesRegex(frappe.ValidationError, "Row #1: Account Head must be of type"):
+					self.make_template(rows)
+
 	def test_purchase_rows_add_to_the_total(self):
 		payable = make_account("Payable", root_type="Liability", account_type="Payable").name
 		invoice = frappe.get_doc(

@@ -492,6 +492,18 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 			[(row.debit, row.credit) for row in entries if row.account == writeoff.name], [(10, 0)]
 		)
 
+	def test_a_write_off_posts_only_to_an_income_or_expense_account(self):
+		equity = make_account("Rules Capital", root_type="Equity")
+		payment = self._payment(
+			self.invoice, paid_amount=170, deductions=[{"account": equity.name, "amount": 10}]
+		)
+		payment.references[0].allocated_amount = 180
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "Row #1: Account must be of type Expense or Income"
+		):
+			payment.insert()
+
 	def test_a_payment_write_off_credits_the_company_write_off_account(self):
 		writeoff = make_account("Rules Write Off", root_type="Expense")
 		set_company_value("write_off_account", writeoff.name)

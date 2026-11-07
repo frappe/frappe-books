@@ -13,7 +13,13 @@ from frappe_books.accounting.accounts import (
 	validate_tax_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
+from frappe_books.accounting.money import (
+	as_decimal,
+	company_currency,
+	rounded,
+	sum_decimal,
+	validate_number_sizes,
+)
 from frappe_books.accounting.party import PartyDocumentMixin, party_account
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.accounting.taxes import calculate_taxes, set_taxes
@@ -346,6 +352,7 @@ def validate_invoice(invoice):
 	_validate_row_accounts(invoice)
 	validate_tax_accounts(invoice.taxes)
 	_validate_total_sign(invoice)
+	validate_number_sizes(invoice)
 	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)

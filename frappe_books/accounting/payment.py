@@ -20,7 +20,7 @@ from frappe_books.accounting.accounts import (
 	validate_row_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal, validate_number_sizes
 from frappe_books.accounting.party import party_account
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.company import company_value
@@ -175,6 +175,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		)
 
 	def validate(self):
+		validate_number_sizes(self)
 		if as_decimal(self.paid_amount) <= 0:
 			frappe.throw(_("Payment amount must be greater than zero."))
 		if self.party_amount <= 0:

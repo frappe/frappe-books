@@ -540,12 +540,15 @@ export class Importer {
     return true;
   }
 
+  /** A row of field keys, or one whose cells mostly name fields: a file may add columns of its own. */
   isHeaderRow(row: string[]): boolean {
     const values = row.filter(Boolean);
+    const headers = values.filter((value) =>
+      this.templateFieldKeysByHeader.has(value)
+    );
     return (
       row.some((value) => this.templateFieldsMap.has(value)) ||
-      (values.length > 0 &&
-        values.every((value) => this.templateFieldKeysByHeader.has(value)))
+      headers.length * 2 > values.length
     );
   }
 

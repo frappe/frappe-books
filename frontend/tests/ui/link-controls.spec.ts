@@ -274,7 +274,12 @@ test('one notification renders once and dismisses on click', async ({
     fyo.singles.POSSettings.warehouse = 'Stores';
     fyo.singles.POSSettings.cash_account = 'Fixture Cash';
     fyo.singles.POSSettings.write_off_account = 'Fixture Write Off';
-    fyo.singles.AccountingSettings.enable_coupon_code = true;
+    // Coupons work through pricing rules, which need discounts.
+    Object.assign(fyo.singles.AccountingSettings, {
+      enable_discounts_and_margin: true,
+      enable_pricing_rule: true,
+      enable_coupon_code: true,
+    });
     return app.config.globalProperties.$router.push('/pos');
   });
   await expect(

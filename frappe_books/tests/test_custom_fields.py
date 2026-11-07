@@ -209,6 +209,18 @@ class IntegrationTestCustomFormValidation(IntegrationTestCase):
 				)
 
 
+class IntegrationTestCustomFormSavesAllOrNone(IntegrationTestCase):
+	def test_a_row_frappe_rejects_fails_the_save_before_the_table_changes(self):
+		# MariaDB commits at ALTER TABLE, so an earlier row's alter would keep part of the save.
+		frappe.db.set_single_value("Books Accounting Settings", "enable_form_customization", 1)
+		rows = [FIELD, {**SIZE_FIELD, "default": "Huge"}]
+		with patch.object(frappe.db, "updatedb") as updatedb:
+			self.assertRaisesRegex(
+				frappe.ValidationError, "list of options", _custom_form("Books Uom", rows).insert
+			)
+		updatedb.assert_not_called()
+
+
 class IntegrationTestCustomFieldnames(IntegrationTestCase):
 	def test_a_new_row_is_named_after_its_label_as_lodash_camel_case_names_it(self):
 		# Expected names are lodash's camelCase of each label.

@@ -59,6 +59,7 @@ export class PurchaseInvoice extends Invoice {
   override hidden: HiddenMap = {
     ...this.hidden,
     ...this.postingHidden,
+    per_received: () => this.isInventoryOff,
   };
 
   /** The server sets every row received, 100%, once nothing is left to receive; an ERPNext invoice may move its stock itself. */

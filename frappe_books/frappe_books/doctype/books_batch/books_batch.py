@@ -15,7 +15,7 @@ class BooksBatch(Document):
 		from frappe.types import DF
 
 		expiry_date: DF.Date | None
-		item: DF.Link | None
+		item: DF.Link
 		manufacture_date: DF.Date | None
 	# end: auto-generated types
 

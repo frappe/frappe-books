@@ -19,6 +19,7 @@ from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import (
 	counter_payment_amounts,
 	open_shift_name,
+	pos_profile,
 	validate_partial_payment,
 )
 from frappe_books.inventory.availability import validate_pos_stock
@@ -76,6 +77,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		outstanding_amount: DF.Currency
 		payments: DF.Table[BooksSalesInvoicePayment]
 		posting_date: DF.Date
+		pos_profile: DF.Link | None
 		posting_time: DF.Time | None
 		pricing_rules: DF.Table[BooksPricingRuleDetail]
 		redeem_loyalty_points: DF.Check
@@ -148,9 +150,15 @@ class BooksSalesInvoice(PostingInvoiceController):
 		if self.is_pos:
 			# Ship in the submit transaction, so a stock error also rejects the sale.
 			self.make_auto_stock_transfer = 1
+			self.set_pos_profile()
 		if self.is_held_to_pos_limits():
 			self.validate_pos_permissions()
 		self.validate_payments()
+
+	def set_pos_profile(self):
+		"""Record the profile a POS sale is held to, so it prints the same for everyone; a return keeps its original's."""
+		if not self.return_against:
+			self.pos_profile = pos_profile()
 
 	def is_held_to_pos_limits(self):
 		"""POS sales keep the POS rates and discounts; with POS on, so do all sales of users who cannot change them."""

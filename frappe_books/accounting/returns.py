@@ -47,7 +47,15 @@ def _prepare_return(invoice, credit_note):
 	if invoice.is_fully_returned:
 		frappe.throw(_("This invoice is already fully returned."))
 	return_unreturned_rows(invoice, credit_note)
+	_negate_actual_charges(credit_note.taxes)
 	credit_note.calculate()
+
+
+def _negate_actual_charges(taxes):
+	"""A return gives back its original's actual charges, as ERPNext maps them."""
+	for tax in taxes:
+		if tax.charge_type == "Actual":
+			tax.tax_amount = -as_decimal(tax.tax_amount)
 
 
 def return_unreturned_rows(original, return_doc):

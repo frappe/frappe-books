@@ -327,9 +327,20 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	_validate_total_sign(invoice)
 	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_total_sign(invoice):
+	"""Rebates cannot take a sale below zero, nor charges a return above it."""
+	total = as_decimal(invoice.grand_total)
+	if invoice.get("return_against"):
+		if total > 0:
+			frappe.throw(_("Charges cannot make a return's grand total positive."))
+	elif total < 0:
+		frappe.throw(_("Rebates cannot make the grand total negative."))
 
 
 def _validate_features(invoice):
@@ -379,7 +390,7 @@ class InvoicePosting(LedgerPosting):
 	def __init__(self, invoice):
 		super().__init__(invoice)
 		self.exchange_rate = as_decimal(invoice.conversion_rate or 1)
-		self.is_party_credited = invoice.is_purchase != bool(invoice.get("return_against"))
+		self.is_party_credited = invoice.is_purchase
 
 	def on_party_side(self, account, amount, party=None):
 		"""Post an invoice-currency amount on the party's side, as the discount is."""
@@ -390,8 +401,10 @@ class InvoicePosting(LedgerPosting):
 		self.add_entry(account, amount, party, credit=not self.is_party_credited)
 
 	def add_entry(self, account, amount, party, credit):
-		base_amount = abs(as_decimal(amount)) * self.exchange_rate
-		(self.credit if credit else self.debit)(account, base_amount, party)
+		"""A negative amount, like a return's or a rebate, posts on the other side."""
+		base_amount = as_decimal(amount) * self.exchange_rate
+		is_credit = credit if base_amount >= 0 else not credit
+		(self.credit if is_credit else self.debit)(account, abs(base_amount), party)
 
 
 def _discount_account():

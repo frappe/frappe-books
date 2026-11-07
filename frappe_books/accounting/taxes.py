@@ -92,7 +92,6 @@ class TaxCalculation:
 	def __init__(self, invoice):
 		self.invoice = invoice
 		self.currency = invoice.get("currency")
-		self.sign = -1 if invoice.get("return_against") else 1
 		self.items = list(invoice.items)
 		self.rates = item_tax_rates(self.items)
 		self.net_total = sum_decimal(row.net_amount for row in self.items)
@@ -167,8 +166,8 @@ class TaxCalculation:
 		return as_decimal(self.rates[id(row)].get(tax.account_head, default))
 
 	def _actual(self, tax):
-		"""An actual charge, signed like the document: a return gives it back."""
-		return self.sign * abs(as_decimal(tax.tax_amount))
+		"""An actual charge as entered: a negative one is a rebate; a return's gives its original's back."""
+		return as_decimal(tax.tax_amount)
 
 
 def _apply_template(invoice):

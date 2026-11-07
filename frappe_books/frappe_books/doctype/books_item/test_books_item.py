@@ -67,6 +67,8 @@ class IntegrationTestBooksItem(IntegrationTestCase):
 		# The U.A.E chart has a "Sales" group, which no item can sell into.
 		self.make_default_sources()
 		frappe.db.set_value("Books Account", "Sales", "is_group", 1)
+		# The class shares one transaction, so later tests need Sales back as a ledger.
+		self.addCleanup(frappe.db.set_value, "Books Account", "Sales", "is_group", 0)
 
 		item = frappe.new_doc("Books Item", item_name=unique_name("Item"))
 		item.preview()

@@ -124,6 +124,19 @@ class IntegrationTestPrinting(IntegrationTestCase):
 				self.assertIn(books_format(3100, "Currency", doc.currency), html)
 				self.assertNotIn(books_format(62, "Currency", doc.currency), html)
 
+	def test_invoice_rows_print_their_amount_before_the_discount(self):
+		row = {"item_code": self.item.name, "qty": 3, "price_list_rate": 100, "discount_percentage": 10}
+		invoice = frappe.get_doc(
+			{"doctype": "Books Sales Invoice", "customer": self.party.name, "items": [row]}
+		).insert()
+
+		for print_format in ("Business - Sales Invoice", "Business-POS - Sales Invoice"):
+			with self.subTest(print_format=print_format):
+				html = get_print(invoice.doctype, invoice.name, print_format=print_format)
+
+				self.assertIn(books_format(300, "Currency", invoice.currency), html)
+				self.assertNotIn(books_format(270, "Currency", invoice.currency), html)
+
 	def test_invoice_prints_the_hsn_code_with_its_leading_zero(self):
 		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
 		invoice = make_invoice(

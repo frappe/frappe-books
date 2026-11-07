@@ -60,10 +60,27 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
       Items: ['items'],
       Taxes: ['taxes_and_charges', 'taxes'],
       Totals: ['net_total', 'total_taxes_and_charges', 'grand_total'],
-      Outstanding: ['outstanding_amount', 'stock_not_transferred'],
+      Outstanding: ['outstanding_amount'],
       References: ['terms'],
     },
   });
+});
+
+test('only inventory shows the stock an invoice has not shipped or received', () => {
+  setSettings({ accounting: { enable_inventory: true } });
+  assert.deepEqual(getLayout(newInvoice('SalesInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+    'stock_not_transferred',
+  ]);
+  assert.deepEqual(getLayout(newInvoice('PurchaseInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+    'per_received',
+  ]);
+
+  setSettings();
+  assert.deepEqual(getLayout(newInvoice('PurchaseInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+  ]);
 });
 
 test('features and totals show the fields that go with them', () => {

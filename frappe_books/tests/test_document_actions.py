@@ -456,6 +456,30 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					(method, invoice.name),
 				)
 
+	def test_automatic_payment_clears_when_its_method_needs_a_clearance_date(self):
+		payable = make_account("Clearing Payable", root_type="Liability", account_type="Payable")
+		bank = make_account("Clearing Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "purchase_payment_account", bank.name)
+		frappe.db.set_value("Books Mode of Payment", "Bank", "requires_clearance_date", 1)
+		set_company_value("default_discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			make_supplier(payable.name).name,
+			payable.name,
+			self.item.name,
+			self.expense.name,
+			make_auto_payment=1,
+		).submit()
+
+		self.assertEqual(invoice.db_get("outstanding_amount"), 0)
+		payment = frappe.db.get_value(
+			"Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"
+		)
+		dates = frappe.db.get_value(
+			"Books Payment Entry", payment, ["clearance_date", "posting_date"], as_dict=True
+		)
+		self.assertEqual(dates.clearance_date, dates.posting_date)
+
 	def test_mapped_payment_needs_a_method_of_the_account_type(self):
 		frappe.db.set_single_value(
 			"Books Defaults", "sales_payment_account", make_account("Mapped Bank", account_type="Bank").name

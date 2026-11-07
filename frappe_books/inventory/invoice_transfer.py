@@ -6,6 +6,7 @@ from frappe.model.mapper import get_mapped_doc
 
 from frappe_books.accounting.money import as_decimal, rounded
 from frappe_books.inventory.returns import batch_quantities, validate_moved_quantities
+from frappe_books.inventory.stock import format_quantity
 
 # Fields an invoice and its transfer do not share when one is mapped from the other.
 UNSHARED_FIELDS = ["date", "number_series", "terms", "attachment", "is_returned", "return_against"]
@@ -80,7 +81,9 @@ def validate_transfer(transfer):
 	for item, quantity in requested.items():
 		if item in left and quantity > left[item]:
 			frappe.throw(
-				_("Invoice {0} has only {1} of {2} left to transfer.").format(invoice.name, left[item], item)
+				_("Invoice {0} has only {1} of {2} left to transfer.").format(
+					invoice.name, format_quantity(left[item]), item
+				)
 			)
 
 

@@ -10,7 +10,10 @@ import { fyo } from 'src/initFyo';
 
 export type ListColumn = ColumnConfig | Field;
 
-/** The list view's columns, or the name and quick edit fields without them. */
+/**
+ * The list view's columns, or the name and quick edit fields without them.
+ * Columns the user cannot read are left out.
+ */
 export function getListColumns(
   schemaName: string,
   listConfig?: ListViewSettings
@@ -22,7 +25,9 @@ export function getListColumns(
   }
 
   return columns.flatMap((column): ListColumn[] =>
-    typeof column === 'object' ? [column] : getFields(schemaName, [column])
+    typeof column === 'object'
+      ? [column]
+      : getFields(schemaName, [column]).filter((f) => !f.unreadable)
   );
 }
 

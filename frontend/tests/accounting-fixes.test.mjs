@@ -124,6 +124,27 @@ test('P&L takes its defaults, periods and totals from the server', async () => {
   );
 });
 
+test('a period count below one runs the report for one period', async () => {
+  const calls = stubServer((method) =>
+    method.endsWith('get_default_filters')
+      ? {
+          based_on: 'Until Date',
+          periodicity: 'Monthly',
+          count: 3,
+          to_date: '2024-12-31',
+        }
+      : reportResult([['account', 'Data']], [])
+  );
+  const profit = new ProfitAndLoss(await makeFyo());
+  await profit.initialize();
+
+  await profit.set('count', 0);
+  await profit.set('count', -2);
+
+  assert.equal(profit.get('count'), 1);
+  assert.equal(calls.at(-1).args.filters.count, 1);
+});
+
 test('list and form statuses come from the stored status', () => {
   const schema = getSchema('SalesInvoice');
   assert.equal(getDocStatus({ schema, status: 'Partly Paid' }), 'Partly Paid');

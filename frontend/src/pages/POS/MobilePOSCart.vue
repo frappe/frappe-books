@@ -107,6 +107,7 @@
 
 <script setup lang="ts">
 import { t } from 'fyo';
+import { getErrorMessage } from 'src/utils';
 import {
   BottomSheet as FrappeBottomSheet,
   Button as FrappeButton,
@@ -175,7 +176,7 @@ async function setQuantity(row: SalesInvoiceItem, quantity: number) {
     showToast({
       id: POS_ITEM_TOAST_ID,
       type: 'error',
-      message: t`${error as string}`,
+      message: getErrorMessage(error as Error),
     });
   }
 }

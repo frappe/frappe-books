@@ -94,6 +94,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
 import { defineComponent } from 'vue';
 import { t } from 'fyo';
 import { showToast } from 'src/utils/interactive';
@@ -174,7 +175,7 @@ export default defineComponent({
       } catch (error) {
         showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
         });
       }
     },

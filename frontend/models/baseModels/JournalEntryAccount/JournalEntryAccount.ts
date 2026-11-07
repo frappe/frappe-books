@@ -6,6 +6,8 @@ export class JournalEntryAccount extends FrappeDoc {
   static override presentation = {
     label: 'Journal Entry Account',
     fields: { account: { groupBy: 'root_type', create: false } },
+    // A phone row names the side of each amount.
+    mobileLabelledFields: ['debit', 'credit'],
   };
 
   static filters: FiltersMap = {

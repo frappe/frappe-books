@@ -23,7 +23,7 @@
     </div>
     <FrappeList class="list-gap-2.5 list-row-px-3">
       <FrappeListRow
-        v-for="{ row, title: rowTitle, meta, amount } of summaries"
+        v-for="{ row, title: rowTitle, meta, amount, amountLabel } of summaries"
         :key="row.name"
         :class="title ? 'min-h-16 py-2.5' : 'min-h-13 py-2'"
         @click="$emit('edit', row)"
@@ -49,13 +49,14 @@
           </div>
         </FrappeListCell>
         <FrappeListCell class="justify-end gap-2.5">
-          <span
-            v-if="amount"
-            class="text-lg-medium tabular-nums text-ink-gray-8"
-            dir="ltr"
-          >
-            {{ amount }}
-          </span>
+          <div v-if="amount" class="flex flex-col items-end">
+            <span class="text-lg-medium tabular-nums text-ink-gray-8" dir="ltr">
+              {{ amount }}
+            </span>
+            <span v-if="amountLabel" class="mt-0.5 text-md text-ink-gray-5">
+              {{ amountLabel }}
+            </span>
+          </div>
           <span
             class="lucide-chevron-right size-4 shrink-0 text-ink-gray-4 rtl-rotate-180"
             aria-hidden="true"

@@ -124,6 +124,7 @@ export interface Schema {
   isChild?: boolean;             // Indicates a child table, i.e table with "parent" FK column
   isSingle?: boolean;            // A single, like a settings DocType
   tableFields?: string[]         // Used for displaying childTableFields
+  mobileLabelledFields?: string[]; // Fields a phone row summary labels
   isSubmittable?: boolean;       // For transactional types, values considered only after submit
   quickEditFields?: string[];    // Used to get fields for the quickEditForm
   fileFields?: string[];         // Fields of export and import files, in order

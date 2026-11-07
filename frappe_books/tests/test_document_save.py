@@ -5,8 +5,8 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from frappe_books.frappe_books.doctype.books_lead.books_lead import BooksLead
-from frappe_books.tests.accounting import unique_name
+from frappe_books.frappe_books.doctype.books_lead.books_lead import BooksLead, make_sales_quote
+from frappe_books.tests.accounting import enable_features, make_account, make_item, unique_name
 
 
 class IntegrationTestDocumentSave(IntegrationTestCase):
@@ -50,6 +50,24 @@ class IntegrationTestDocumentSave(IntegrationTestCase):
 						"from_lead": lead.name,
 					}
 				).insert()
+
+	def test_quote_made_from_a_lead_saves_whatever_the_lead_status(self):
+		enable_features()
+		item = make_item(
+			make_account("Lead Income", root_type="Income").name,
+			make_account("Lead Expense", root_type="Expense").name,
+		)
+		lead = frappe.get_doc(
+			{"doctype": "Books Lead", "name": unique_name("Quote Lead"), "status": "Replied"}
+		).insert()
+
+		quote = make_sales_quote(lead.name)
+		quote.append("items", {"item": item.name, "quantity": 1, "rate": 10})
+		quote.insert()
+
+		self.assertEqual(
+			(quote.reference_type, quote.party, quote.status), ("Books Lead", lead.name, "Saved")
+		)
 
 	@staticmethod
 	def reject_save(*args, **kwargs):

@@ -487,6 +487,10 @@ export class Importer {
       return this.getOptionFieldVmi(vmi, tf);
     }
 
+    if (tf.fieldtype === FieldTypeEnum.Check) {
+      return this.getCheckVmi(vmi);
+    }
+
     try {
       vmi.value = toDocValue(rawValue, tf, this.fyo);
     } catch {
@@ -494,6 +498,18 @@ export class Importer {
     }
 
     return vmi;
+  }
+
+  /** A Check as a file or a list shows it: 1/0, Yes/No or True/False; other text is an error. */
+  getCheckVmi({ rawValue }: ValueMatrixItem): ValueMatrixItem {
+    const text = String(rawValue).trim().toLowerCase();
+    const yes = ['1', 'yes', 'true', this.fyo.t`Yes`.toLowerCase()];
+    const no = ['0', 'no', 'false', this.fyo.t`No`.toLowerCase()];
+    if (yes.includes(text) || no.includes(text)) {
+      return { value: yes.includes(text), rawValue };
+    }
+
+    return { error: true, value: null, rawValue };
   }
 
   getOptionFieldVmi(

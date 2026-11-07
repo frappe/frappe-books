@@ -92,6 +92,20 @@ class IntegrationTestBooksPOSClosingEntry(IntegrationTestCase):
 		self.assertEqual(cash_amounts(draft).expected_amount, 280)
 		self.assertEqual(cash_amounts(draft).difference, 0)
 
+	def test_a_shift_counts_cash_taken_for_a_sale_of_an_earlier_shift(self):
+		earlier = open_shift(0)
+		invoice = self._pos_invoice()
+		close_shift(earlier, 0)
+		later = open_shift(100)
+		pay_pos_invoice(invoice.name, [{"mode_of_payment": "Cash", "amount": invoice.base_grand_total}])
+
+		closing = close_shift(later, 280)
+
+		self.assertEqual((cash_amounts(closing).expected_amount, cash_amounts(closing).difference), (280, 0))
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(credits(entries, self.counter), Decimal("280"))
+		self.assertFalse(debits(entries, self.write_off) or credits(entries, self.write_off))
+
 	def test_shift_cannot_be_closed_twice(self):
 		opening = open_shift(100)
 		close_shift(opening, 100)

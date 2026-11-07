@@ -9,6 +9,10 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import nowdate
 
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
+	open_shift,
+	set_pos_accounts,
+)
 from frappe_books.tests.accounting import (
 	ensure_user,
 	ledger_entries,
@@ -287,15 +291,24 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 					("Pay", paid_from, self.payable.name),
 				)
 
-	def test_pos_cash_defaults_to_the_counter_account(self):
-		counter = make_account("Rules Counter", account_type="Cash")
-		frappe.db.set_single_value("Books POS Settings", "cash_account", counter.name)
+	def test_pos_cash_defaults_to_the_counter_only_during_a_shift(self):
+		counter = set_pos_accounts()
+		set_mode_of_payment_account("Cash", self.cash.name)
 		self.invoice.db_set("is_pos", 1)
-		payment = self._payment(self.invoice, paid_to=None)
+		without_shift = self._payment(self.invoice, paid_to=None)
+		without_shift.set_missing_values()
+		open_shift(0)
+		during_shift = self._payment(self.invoice, paid_to=None)
 
-		payment.set_missing_values()
+		during_shift.set_missing_values()
 
-		self.assertEqual(payment.paid_to, counter.name)
+		self.assertEqual((without_shift.paid_to, during_shift.paid_to), (self.cash.name, counter))
+
+	def test_only_pos_cash_during_a_shift_goes_to_the_counter(self):
+		counter = set_pos_accounts()
+		payment = self._payment(self.invoice, paid_to=counter)
+
+		self.assertRaisesRegex(frappe.ValidationError, "Only cash for POS invoices", payment.insert)
 
 	def test_preview_fills_a_payment_from_its_invoice_without_saving(self):
 		set_mode_of_payment_account("Cash", self.cash.name)

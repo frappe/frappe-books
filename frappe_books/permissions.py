@@ -1,6 +1,8 @@
 import frappe
 
 BOOKS_MODULE = "Frappe Books"
+# Roles that sell outside the POS; a Books Cashier without one sells only through it.
+SELLING_ROLES = ("Books User", "Books Manager", "System Manager")
 
 
 def has_app_permission() -> bool:
@@ -15,3 +17,9 @@ def check_preview_permission(doc) -> None:
 		doc.check_permission("create")
 	else:
 		frappe.has_permission(doc.doctype, "write", doc=doc.name, throw=True)
+
+
+def sells_only_at_pos(user=None) -> bool:
+	"""Books Cashiers sell, and take returns, only through the POS."""
+	roles = frappe.get_roles(user)
+	return "Books Cashier" in roles and not any(role in roles for role in SELLING_ROLES)

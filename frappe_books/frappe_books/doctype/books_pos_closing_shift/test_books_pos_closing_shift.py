@@ -7,6 +7,7 @@ import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, now_datetime
 
+from frappe_books.accounting.returns import map_return
 from frappe_books.commerce.pos import open_shift_name, transacted_amounts
 from frappe_books.frappe_books.doctype.books_pos_opening_shift.test_books_pos_opening_shift import (
 	credits,
@@ -89,6 +90,36 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(invoice.base_grand_total, 180)
 		self.assertEqual(cash_amounts(draft).expected_amount, 280)
 		self.assertEqual(cash_amounts(draft).difference_amount, 0)
+
+	def test_a_shift_counts_cash_taken_for_a_sale_of_an_earlier_shift(self):
+		earlier = open_shift(0)
+		invoice = self._pos_invoice()
+		close_shift(earlier, 0)
+		later = open_shift(100)
+		pay_pos_invoice(invoice.name, [{"payment_method": "Cash", "amount": invoice.base_grand_total}])
+
+		closing = close_shift(later, 280)
+
+		self.assertEqual(
+			(cash_amounts(closing).expected_amount, cash_amounts(closing).difference_amount), (280, 0)
+		)
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(credits(entries, self.counter), Decimal("280"))
+		self.assertFalse(debits(entries, self.write_off) or credits(entries, self.write_off))
+
+	def test_a_refund_in_the_shift_lowers_the_expected_cash(self):
+		opening = open_shift(100)
+		invoice = self._pos_invoice()
+		self._cash_payment([invoice]).submit()
+		refund = map_return(invoice.doctype, invoice.name)
+		refund.append("payments", {"payment_method": "Cash", "amount": invoice.base_grand_total})
+		refund.insert().submit()
+
+		closing = close_shift(opening, 100)
+
+		self.assertEqual(
+			(cash_amounts(closing).expected_amount, cash_amounts(closing).difference_amount), (100, 0)
+		)
 
 	def test_shift_cannot_be_closed_twice(self):
 		opening = open_shift(100)

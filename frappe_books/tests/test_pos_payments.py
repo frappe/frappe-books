@@ -167,6 +167,37 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", self.counter))
 		self.assertEqual(transacted_amounts(invoice.date, now_datetime()), {"Cash": 0})
 
+	def test_pos_cash_without_a_shift_goes_to_the_methods_account(self):
+		invoice = self.make_pos_invoice()
+		invoice.submit()
+		drawer = self.close_the_shift(0)
+
+		payment = make_payment(invoice.name)
+
+		self.assertEqual(payment.payment_account, drawer)
+		payment.payment_account = self.counter
+		self.assertRaisesRegex(frappe.ValidationError, "Only cash for POS invoices", payment.insert)
+
+	def test_a_refund_without_a_shift_comes_from_the_methods_account(self):
+		invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
+		invoice.submit()
+		drawer = self.close_the_shift(180)
+		refund = map_return(invoice.doctype, invoice.name)
+		refund.append("payments", {"payment_method": "Cash", "amount": 180})
+
+		refund.insert().submit()
+
+		payment = frappe.get_doc("Books Payment", counter_payments(refund)[0])
+		self.assertEqual((payment.payment_type, payment.payment_account), ("Pay", drawer))
+
+	def test_paying_a_sale_at_the_counter_needs_an_open_shift(self):
+		invoice = self.make_pos_invoice()
+		invoice.submit()
+		self.close_the_shift(0)
+
+		with self.assertRaisesRegex(frappe.ValidationError, "Open a POS shift"):
+			pay_pos_invoice(invoice.name, [{"payment_method": "Cash", "amount": 180}])
+
 	def test_a_cashier_sells_and_refunds_at_the_counter_but_cannot_cancel_or_pay(self):
 		with self.set_user(self.make_cashier()):
 			invoice = self.make_pos_invoice(payments=[{"payment_method": "Cash", "amount": 180}])
@@ -219,6 +250,14 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		self.assertEqual(getdate(held.reload().date), getdate(now_datetime()))
 		self.assertEqual(getdate(invoice.reload().date), getdate(yesterday))
+
+	def close_the_shift(self, counted_cash):
+		"""Close the open shift and return the Cash method's own account, which cash takes without a shift."""
+		close_shift(frappe.get_doc("Books Pos Opening Shift", open_shift_name()), counted_cash)
+		drawer = make_account("POS Drawer Cash", account_type="Cash").name
+		frappe.db.set_value("Books Payment Method", "Cash", "account", drawer)
+		frappe.db.set_single_value("Books Defaults", "sales_payment_account", None)
+		return drawer
 
 	def make_cashier(self):
 		# A cashier cannot pick the account, so a POS sale takes this one, as set up.

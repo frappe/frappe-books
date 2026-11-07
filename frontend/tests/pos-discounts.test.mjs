@@ -31,12 +31,15 @@ const coupons = [{ name: 'Diwali Offer', coupon_code: 'DIWALIOF' }];
 
 await loadFrappeModels(frappeModels, ({ path, body }) => {
   if (path.endsWith('run_doc_method')) {
-    // Each redeemed point pays 1, on a sale of 30.
+    // Each redeemed point pays 1, on a sale of 30; the server fills the follow-ups it was sent empty.
     const { document } = body;
     const loyalty_amount = document.redeem_loyalty_points
       ? document.loyalty_points
       : 0;
-    return { docs: [{ ...document, base_grand_total: 30, loyalty_amount }] };
+    const filled = { make_auto_payment: 0, make_auto_stock_transfer: 1 };
+    return {
+      docs: [{ ...document, ...filled, base_grand_total: 30, loyalty_amount }],
+    };
   }
 
   if (
@@ -56,9 +59,16 @@ await loadFrappeModels(frappeModels, ({ path, body }) => {
   return held ? { data: toSavedSale(name, held) } : { data: [] };
 });
 
+// Coupons work only with pricing rules, which need discounts.
+const couponSwitches = {
+  enable_discounts_and_margin: true,
+  enable_pricing_rule: true,
+  enable_coupon_code: true,
+};
+
 beforeEach(() => {
   fyo.singles.AccountingSettings = {
-    enable_coupon_code: true,
+    ...couponSwitches,
     enable_loyalty_point_program: true,
   };
 });
@@ -132,7 +142,7 @@ test('another price list is offered while the sale can change', () => {
 });
 
 test('each gate follows its own feature', () => {
-  fyo.singles.AccountingSettings = { enable_coupon_code: true };
+  fyo.singles.AccountingSettings = { ...couponSwitches };
   assert.deepEqual(getGates(makeSale()), [true, false]);
 
   fyo.singles.AccountingSettings = { enable_loyalty_point_program: true };

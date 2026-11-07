@@ -258,6 +258,8 @@ def pay_pos_invoice(invoice: str, payments: list[dict]) -> list[str]:
 	doc.check_permission("submit")
 	if not (doc.is_pos and doc.docstatus == 1):
 		frappe.throw(_("Only submitted POS invoices can be paid at the counter."))
+	if not doc.return_against and not open_shift_name():
+		frappe.throw(_("Open a POS shift before taking payment for a POS invoice."))
 	return doc.pay_at_counter([frappe._dict(row) for row in payments])
 
 

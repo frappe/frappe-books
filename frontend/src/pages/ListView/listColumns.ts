@@ -38,7 +38,7 @@ export function getEmptyState(
 
 /**
  * The list view's columns, or the name and quick edit fields without them.
- * Columns the DocType lacks are left out.
+ * Columns the DocType lacks, or the user cannot read, are left out.
  */
 export function getListColumns(
   schemaName: string,
@@ -59,7 +59,7 @@ export function getListColumns(
     }
 
     const fieldname = column === 'name' && title ? title : column;
-    return getFields(schemaName, [fieldname]);
+    return getFields(schemaName, [fieldname]).filter((f) => !f.unreadable);
   });
   return shown;
 }

@@ -15,6 +15,7 @@ const {
   isCouponOffered,
   isLoyaltyOffered,
   isPriceListOffered,
+  redeemLoyaltyPoints,
 } = posDiscounts;
 
 /** Held sales as the server saved them, with what their previews filled. */
@@ -23,7 +24,19 @@ const heldSales = {
   'SINV-1002': { party: 'Ravi', loyalty_program: null, points: 0 },
 };
 
-await loadFrappeModels(frappeModels, ({ path }) => {
+await loadFrappeModels(frappeModels, ({ path, body }) => {
+  if (path.endsWith('run_doc_method')) {
+    // Each redeemed point pays 1, on a sale of 30; the server fills the follow-ups it was sent empty.
+    const { document } = body;
+    const redeemed = document.redeem_loyalty_points
+      ? document.loyalty_points
+      : 0;
+    const filled = { make_auto_payment: 0, make_auto_stock_transfer: 1 };
+    return {
+      docs: [{ ...document, ...filled, grand_total: 30 - redeemed }],
+    };
+  }
+
   const name = decodeURIComponent(path).split('/').pop();
   const held = heldSales[name];
   return held ? { data: toSavedSale(name, held) } : { data: [] };
@@ -117,4 +130,19 @@ test('loyalty also needs points to redeem on a sale, not a return', () => {
   for (const sale of [noPoints, noProgram, refund]) {
     assert.deepEqual(getGates(sale), [true, false]);
   }
+});
+
+test('a redemption above the sale total or the points left is refused', async () => {
+  const sale = makeSale();
+  await assert.rejects(
+    redeemLoyaltyPoints(sale, 50),
+    /has only 40 available loyalty points/
+  );
+  await assert.rejects(
+    redeemLoyaltyPoints(sale, 35),
+    /cannot exceed the invoice total/
+  );
+
+  await redeemLoyaltyPoints(sale, 30);
+  assert.equal(sale.grand_total.float, 0);
 });

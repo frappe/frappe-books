@@ -109,13 +109,15 @@ def _is_settings_table(doctype: str) -> bool:
 
 
 def _validate_unique_fieldnames(rows):
+	"""By their Custom Field's fieldname, which ignores case."""
 	first_rows = {}
 	for row in rows:
-		if first := first_rows.get(row.fieldname):
+		target = custom_target_field(row.fieldname)
+		if first := first_rows.get(target):
 			frappe.throw(
 				_("Fieldname {0} already used for Custom Field {1}").format(row.fieldname, first.idx)
 			)
-		first_rows[row.fieldname] = row
+		first_rows[target] = row
 
 
 def _validate_custom_field(meta, row):

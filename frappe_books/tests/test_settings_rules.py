@@ -88,6 +88,13 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 					settings.set(fieldname, 0)
 					self.assertRaisesRegex(frappe.ValidationError, "cannot be disabled", settings.save)
 
+	def test_only_the_setup_changes_setup_complete(self):
+		for before in (1, 0):
+			with self.subTest(before=before):
+				settings = _accounting_settings(setup_complete=before)
+				settings.setup_complete = int(not before)
+				self.assertRaisesRegex(frappe.ValidationError, "Only the setup wizard", settings.save)
+
 	def test_email_and_phone_values_must_be_valid(self):
 		invalid_values = [
 			("Books Party", {"role": "Customer", "email": "not-an-email"}, frappe.InvalidEmailAddressError),

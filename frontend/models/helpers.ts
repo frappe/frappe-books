@@ -361,11 +361,12 @@ export function getDocStatus(doc?: RenderData | FrappeDoc): string {
     return doc.status as string;
   }
 
-  if (doc.cancelled) {
+  // A list row has only its docstatus.
+  if (doc.cancelled || doc.docstatus === 2) {
     return 'Cancelled';
   }
 
-  return doc.submitted ? 'Submitted' : 'Saved';
+  return doc.submitted || doc.docstatus === 1 ? 'Submitted' : 'Saved';
 }
 
 export function getSerialNumberStatusColumn(): ColumnConfig {

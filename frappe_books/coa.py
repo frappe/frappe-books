@@ -89,11 +89,18 @@ def bank_account_parent(accounts, country=None):
 
 
 def ensure_default_account(accounts, default: DefaultAccount, name=None):
-	"""Return the chart's ledger for a default, else make it in the chart's first group of its type,
-	else under its root."""
+	"""Return the chart's ledger for a default, else make it in the chart's first group of its type
+	under its root type, else under that root."""
 	if account := find_default_account(accounts, default, name):
 		return account
-	groups = _type_groups(accounts, default.account_type) if default.account_type else []
+	# Some charts type a group of another root, e.g. Guatemala's Round Off group under assets.
+	groups = [
+		account.name
+		for account in accounts
+		if default.account_type
+		and account.is_group
+		and (account.account_type, account.root_type) == (default.account_type, default.root_type)
+	]
 	parent = groups[0] if groups else _root_account(default.root_type, accounts)
 	return _create_account(default.name, parent, default.root_type, default.account_type, is_group=False).name
 

@@ -175,6 +175,8 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 		defaults.sales_invoice_number_series = make_number_series("PurchaseInvoice")
 		self.assertRaisesRegex(frappe.ValidationError, "is not for Books Sales Invoice", defaults.save)
 
+		# A refused save has stamped the document, so a later save starts from the stored one.
+		defaults = frappe.get_single("Books Defaults")
 		defaults.sales_invoice_number_series = make_number_series("SalesInvoice")
 		defaults.save()
 

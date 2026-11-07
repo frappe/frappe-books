@@ -17,6 +17,7 @@ from frappe_books.accounting.accounts import (
 	validate_account,
 	validate_party_account,
 	validate_payment_account,
+	validate_row_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
@@ -192,6 +193,8 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		if not self.party:
 			frappe.throw(_("Party is mandatory."))
 		validate_party_account(self, party_account_field(self.payment_type), self.party_type)
+		# A deduction writes off what is not paid, as an expense or a reduced income.
+		validate_row_accounts(self.deductions, "account", root_types=("Expense", "Income"))
 
 	def validate_transfer(self):
 		"""A transfer moves money between the company's own cash and bank accounts."""

@@ -12,7 +12,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint
 
-from frappe_books.accounting.ledger import validate_leaf_accounts
+from frappe_books.accounting.accounts import validate_tax_accounts
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 
 CHARGE_TYPES = ("On Net Total", "Actual", "On Previous Row Amount", "On Previous Row Total")
@@ -77,8 +77,7 @@ class TaxesTemplateController(Document):
 
 	def validate(self):
 		validate_tax_rows(self, self.taxes)
-		# Documents post to these accounts.
-		validate_leaf_accounts({row.account_head for row in self.taxes})
+		validate_tax_accounts(self.taxes)
 
 	def on_update(self):
 		"""One template of each kind is the default, as in ERPNext."""

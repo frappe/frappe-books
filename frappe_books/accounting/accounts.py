@@ -5,6 +5,16 @@ from frappe_books.company import default_company
 
 PARTY_ACCOUNT_TYPES = {"Books Customer": "Receivable", "Books Supplier": "Payable"}
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
+# Taxes and charges post to tax, charge, income or expense ledgers; never to money, parties, stock or equity.
+TAX_ACCOUNT_TYPES = (
+	"",
+	"Tax",
+	"Chargeable",
+	"Income Account",
+	"Expense Account",
+	"Expenses Included In Valuation",
+)
+TAX_ROOT_TYPES = ("Asset", "Liability", "Income", "Expense")
 
 
 def validate_account(doc, fieldname, account_types=(), root_types=()):
@@ -41,6 +51,10 @@ def _check_account(row, fieldname, account, account_types, root_types):
 		if allowed and value not in allowed:
 			options = " or ".join(_(option) for option in allowed if option)
 			frappe.throw(_("{0} must be of type {1}, but {2} is not.").format(label, options, account.name))
+
+
+def validate_tax_accounts(rows, fieldname="account_head"):
+	validate_row_accounts(rows, fieldname, TAX_ACCOUNT_TYPES, TAX_ROOT_TYPES)
 
 
 def validate_payment_account(doc, fieldname, method_type):

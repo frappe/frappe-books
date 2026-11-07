@@ -10,6 +10,7 @@ from frappe_books.accounting.accounts import (
 	latest_ledger_account,
 	validate_account,
 	validate_row_accounts,
+	validate_tax_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
@@ -341,6 +342,7 @@ def validate_invoice(invoice):
 	for row in invoice.items:
 		_validate_row(invoice, row)
 	_validate_row_accounts(invoice)
+	validate_tax_accounts(invoice.taxes)
 	_validate_total_sign(invoice)
 	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):

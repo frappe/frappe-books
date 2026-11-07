@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting import ledger
-from frappe_books.accounting.money import as_decimal, rounded
+from frappe_books.accounting.money import as_decimal
 from frappe_books.company import company_value
 from frappe_books.inventory import valuation
 from frappe_books.inventory.stock import parse_serial_numbers
@@ -233,7 +233,7 @@ def _revalue_returns(references):
 	costs = valuation.outgoing_rates("Books Delivery Note", list(set(returns.values())))
 	entries = valuation.transaction_entries("Books Delivery Note", list(returns))
 	rates = {
-		entry.name: rounded(costs[returns[entry.voucher_no], entry.item_code, entry.batch_no or ""])
+		entry.name: costs[returns[entry.voucher_no], entry.item_code, entry.batch_no or ""]
 		for entry in entries
 	}
 	return valuation.revalue_entries(entries, rates)

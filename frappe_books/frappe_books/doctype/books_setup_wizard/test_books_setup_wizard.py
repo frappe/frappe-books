@@ -351,6 +351,12 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		with self.set_user(ensure_user("books-wizard-user@example.com", "Books User")):
 			self.assertRaises(frappe.PermissionError, wizard.preview)
 
+	def test_only_a_system_manager_sets_up_books(self):
+		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
+		with self.set_user(ensure_user("books-wizard-manager@example.com", "Books Manager")):
+			self.assertRaises(frappe.PermissionError, complete_setup)
+			self.assertRaises(frappe.PermissionError, self._wizard().save)
+
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		self._wizard().save()

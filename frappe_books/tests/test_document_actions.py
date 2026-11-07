@@ -198,15 +198,17 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				partial = map_return(doctype, invoice.name)
 				partial.items[0].qty = -1
 				partial.insert().submit()
-				self.assertEqual(invoice.db_get("status"), returned)
+				# A partly returned invoice shows what it still owes.
+				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 				remaining = map_return(doctype, invoice.name)
 				remaining.items[0].qty = -1
 				remaining.insert().submit()
+				self.assertEqual(invoice.db_get("status"), returned)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 1)
 				remaining.cancel()
-				self.assertEqual(invoice.db_get("status"), returned)
+				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 				partial.cancel()
 				self.assertEqual(invoice.db_get("status"), "Unpaid")

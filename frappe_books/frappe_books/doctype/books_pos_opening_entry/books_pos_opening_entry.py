@@ -53,6 +53,7 @@ class BooksPOSOpeningEntry(StatusMixin, Document):
 			# The shift opens when it is submitted, as its closing shift closes it.
 			self.period_start_date = now_datetime()
 		self.set_pos_profile()
+		self.validate_no_open_shift()
 		if cash_total(self.opening_cash) < 0:
 			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
@@ -90,6 +91,10 @@ class BooksPOSOpeningEntry(StatusMixin, Document):
 
 	def before_submit(self):
 		lock_pos_settings()
+		self.validate_no_open_shift()
+
+	def validate_no_open_shift(self):
+		"""A cashier has one open shift at a time; a draft of another would only linger."""
 		if open_shift_name(self.owner):
 			frappe.throw(_("{0} already has an open POS shift.").format(get_fullname(self.owner)))
 

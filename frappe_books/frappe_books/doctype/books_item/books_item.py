@@ -9,7 +9,7 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt
 
-from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.accounts import item_account_root_types, latest_ledger_account, validate_account
 from frappe_books.permissions import check_preview_permission
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, validate_prefix
@@ -114,9 +114,9 @@ class BooksItem(Document):
 				validate_prefix(self.get(fieldname), message.format(label, INVALID_PREFIX_CHARACTERS))
 
 	def validate_accounts(self):
-		"""A tracked item is bought into stock received but not billed, a liability."""
-		validate_account(self, "income_account", root_types=("Income",))
-		validate_account(self, "expense_account", root_types=("Liability" if self.track_item else "Expense",))
+		"""The accounts are of the kinds its invoices post to."""
+		for fieldname in ("income_account", "expense_account"):
+			validate_account(self, fieldname, root_types=item_account_root_types(fieldname, self.track_item))
 
 
 def _default_income_account(item_type):

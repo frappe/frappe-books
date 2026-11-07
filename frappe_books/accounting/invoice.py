@@ -8,10 +8,12 @@ from frappe.utils import getdate
 
 from frappe_books.accounting import returns, settlement
 from frappe_books.accounting.accounts import (
+	item_account_root_types,
 	latest_ledger_account,
 	validate_account,
 	validate_item_usage,
 	validate_party_role,
+	validate_row_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
 from frappe_books.accounting.money import (
@@ -319,6 +321,7 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	_validate_row_accounts(invoice)
 	validate_number_sizes(invoice)
 	validate_hsn_codes(invoice.items)
 	validate_item_usage(invoice, invoice.is_purchase)
@@ -350,6 +353,21 @@ def _validate_party_and_account(invoice):
 		validate_party_role(invoice, invoice.is_purchase)
 	if invoice.party_account_type:
 		validate_account(invoice, "account", (invoice.party_account_type,))
+
+
+def _validate_row_accounts(invoice):
+	"""Rows post to the kinds of ledger their items' defaults may hold."""
+	tracked = set(
+		frappe.get_all(
+			"Books Item",
+			filters={"name": ["in", list({row.item for row in invoice.items})], "track_item": 1},
+			pluck="name",
+		)
+	)
+	for track_item in (True, False):
+		rows = [row for row in invoice.items if (row.item in tracked) == track_item]
+		root_types = item_account_root_types(invoice.item_account_field, track_item)
+		validate_row_accounts(rows, "account", root_types=root_types)
 
 
 def _validate_row(invoice, row):

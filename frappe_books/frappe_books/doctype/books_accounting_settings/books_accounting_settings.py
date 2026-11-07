@@ -8,6 +8,7 @@ from frappe.utils import cint
 
 from frappe_books.coa import ensure_discount_account
 from frappe_books.company import company_value, default_company
+from frappe_books.dates import validate_fiscal_year
 from frappe_books.regional import validate_gstin
 from frappe_books.settings import company_country, validate_one_way_switches
 
@@ -81,6 +82,7 @@ class BooksAccountingSettings(Document):
 	def validate(self):
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		self.validate_setup_complete()
+		validate_fiscal_year(self.year_start_date, self.year_end_date)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)
 

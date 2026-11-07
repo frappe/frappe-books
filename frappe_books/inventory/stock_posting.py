@@ -15,6 +15,12 @@ STOCK_COUNTER_ACCOUNTS = {
 	"Books Stock Movement": "stock_adjustment",
 }
 
+# The rates of a return's original and the row field they value the return by.
+RETURN_RATES = {
+	"Books Shipment": (valuation.outgoing_rates, "rate"),
+	"Books Purchase Receipt": (valuation.incoming_rates, "outgoing_rate"),
+}
+
 
 def post(transaction):
 	"""Add a submitted transaction's stock ledger entries and post their value, then repost what they restated."""
@@ -39,12 +45,19 @@ def delete(transaction):
 
 
 def _valued_rows(transaction):
-	"""Return the transaction's rows, with a sales return valued at the cost its shipment took out."""
+	"""Return the transaction's rows, with a return valued at the cost its original moved.
+
+	A sales return takes stock back at the cost its shipment took out; a purchase
+	return sends it back at the cost it was received at, as ERPNext does.
+	"""
 	rows = transaction.transfer_rows()
-	if transaction.doctype == "Books Shipment" and transaction.return_against:
-		rates = valuation.outgoing_rates(transaction.doctype, [transaction.return_against])
-		for row in rows:
-			row["rate"] = rates[transaction.return_against, row["item"], row["batch"] or ""]
+	original = transaction.get("return_against")
+	if not original:
+		return rows
+	original_rates, field = RETURN_RATES[transaction.doctype]
+	rates = original_rates(transaction.doctype, [original])
+	for row in rows:
+		row[field] = rates[original, row["item"], row["batch"] or ""]
 	return rows
 
 
@@ -86,6 +99,8 @@ def _create_entry(transaction, row, location, quantity, serial_number, rate):
 			"serial_number": serial_number,
 			"item": row["item"],
 			"rate": rate,
+			# Only stock leaving takes a fixed outgoing rate.
+			"outgoing_rate": row.get("outgoing_rate") if quantity < 0 else None,
 			"quantity": quantity,
 			"reference_type": transaction.doctype,
 			"reference_name": transaction.name,

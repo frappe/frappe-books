@@ -20,6 +20,7 @@ class BooksStockLedgerEntry(Document):
 		date: DF.Datetime | None
 		item: DF.Link | None
 		location: DF.Link | None
+		outgoing_rate: DF.Currency
 		name: DF.Int | None
 		quantity: DF.Float
 		rate: DF.Currency

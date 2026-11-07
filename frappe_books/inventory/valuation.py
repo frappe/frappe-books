@@ -17,7 +17,8 @@ STATE_FIELDS = ["name", "date", "quantity", "rate", "balance_quantity", "balance
 def insert_entry(values):
 	"""Insert a stock ledger entry with its FIFO state and restate later entries; return it and the restated transactions."""
 	values = frappe._dict(values)
-	state = next_state(_entry_before(values, values.date), values.quantity, values.rate, currency_unit())
+	previous = _entry_before(values, values.date)
+	state = next_state(previous, values.quantity, values.rate, currency_unit(), values.get("outgoing_rate"))
 	entry = frappe.get_doc({"doctype": DOCTYPE, **values, **state}).insert(ignore_permissions=True)
 	return entry, restate_after(entry, entry)
 
@@ -46,7 +47,7 @@ def restate_after(anchor, previous):
 	restated = set()
 	unit = currency_unit()
 	for entry in _entries_after(anchor):
-		state = next_state(previous, entry.quantity, entry.rate, unit)
+		state = next_state(previous, entry.quantity, entry.rate, unit, entry.outgoing_rate)
 		if state["value_change"] != as_decimal(entry.value_change):
 			restated.add((entry.reference_type, entry.reference_name))
 		frappe.db.set_value(DOCTYPE, entry.name, state, update_modified=False)
@@ -73,8 +74,11 @@ def revalue_entries(entries, rates):
 	return restated
 
 
-def next_state(previous, quantity, rate, unit):
-	"""Return the FIFO state after an entry of `quantity` at `rate`, with its value rounded to `unit`."""
+def next_state(previous, quantity, rate, unit, outgoing_rate=None):
+	"""Return the FIFO state after an entry of `quantity` at `rate`, with its value rounded to `unit`.
+
+	Stock with an `outgoing_rate` leaves at that rate, not at the FIFO cost.
+	"""
 	quantity = as_decimal(quantity)
 	opening_value = as_decimal(previous.balance_value) if previous else as_decimal(0)
 	balance_quantity = (as_decimal(previous.balance_quantity) if previous else as_decimal(0)) + quantity
@@ -82,7 +86,11 @@ def next_state(previous, quantity, rate, unit):
 		[as_decimal(layer_quantity), as_decimal(layer_rate)]
 		for layer_quantity, layer_rate in json.loads(previous.stock_queue if previous else "[]")
 	)
-	value_change = _consume_layers(layers, quantity, as_decimal(rate)).quantize(unit, rounding=ROUND_HALF_UP)
+	if quantity < 0 and as_decimal(outgoing_rate) > 0:
+		value_change = _remove_at_rate(layers, -quantity, as_decimal(outgoing_rate))
+	else:
+		value_change = _consume_layers(layers, quantity, as_decimal(rate))
+	value_change = value_change.quantize(unit, rounding=ROUND_HALF_UP)
 	if quantity < 0 and balance_quantity == 0:
 		# Clear the cents left behind by rounding each outgoing entry.
 		value_change = -opening_value
@@ -116,12 +124,21 @@ def transaction_entries(reference_type, reference_names):
 
 def outgoing_rates(reference_type, reference_names):
 	"""Map (transaction, item, batch) to the average rate at which each transaction took stock out."""
+	return _average_rates(reference_type, reference_names, ["<", 0])
+
+
+def incoming_rates(reference_type, reference_names):
+	"""Map (transaction, item, batch) to the average rate at which each transaction brought stock in."""
+	return _average_rates(reference_type, reference_names, [">", 0])
+
+
+def _average_rates(reference_type, reference_names, direction):
 	entries = frappe.get_all(
 		DOCTYPE,
 		filters={
 			"reference_type": reference_type,
 			"reference_name": ["in", reference_names],
-			"quantity": ["<", 0],
+			"quantity": direction,
 		},
 		fields=["reference_name", "item", "batch", "value_change", "quantity"],
 	)
@@ -155,7 +172,7 @@ def _entries_after(anchor):
 	sle = frappe.qb.DocType(DOCTYPE)
 	return (
 		_key_query(sle, anchor)
-		.select(*STATE_FIELDS, sle.value_change, sle.reference_type, sle.reference_name)
+		.select(*STATE_FIELDS, sle.outgoing_rate, sle.value_change, sle.reference_type, sle.reference_name)
 		.where((sle.date > anchor.date) | ((sle.date == anchor.date) & (sle.name > anchor.name)))
 		.orderby(sle.date)
 		.orderby(sle.name)
@@ -184,3 +201,24 @@ def _consume_layers(queue, quantity, rate):
 			queue.popleft()
 	# Stock that was never received is valued at the entry's own rate.
 	return value_change - remaining * rate
+
+
+def _remove_at_rate(queue, quantity, rate):
+	"""Take stock out at a fixed rate from the layers at that rate, as ERPNext does.
+
+	When too little stock is at that rate, the layers merge into one at the average cost left.
+	"""
+	remaining = quantity
+	for layer in queue:
+		if layer[1] == rate and remaining:
+			taken = min(remaining, layer[0])
+			layer[0] -= taken
+			remaining -= taken
+	layers = [layer for layer in queue if layer[0]]
+	if remaining:
+		quantity_left = sum(layer[0] for layer in layers) - remaining
+		value_left = sum(layer[0] * layer[1] for layer in layers) - remaining * rate
+		layers = [[quantity_left, value_left / quantity_left]] if quantity_left > 0 else []
+	queue.clear()
+	queue.extend(layers)
+	return -quantity * rate

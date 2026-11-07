@@ -173,6 +173,7 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		item.reload()
 		self.assertEqual(item.item_defaults[0].income_account, income.name)
 		self.assertEqual(invoice.debit_to, receivable.name)
+		self.assertEqual(invoice.items[0].income_account, income.name)
 		self.assertIsNone(read_back["debit_to"])
 		self.assertIsNone(read_back["items"][0]["income_account"])
 

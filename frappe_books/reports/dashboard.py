@@ -80,25 +80,23 @@ def get_top_expenses(period: str) -> list[dict]:
 
 @frappe.whitelist()
 def get_invoice_summary(doctype: str, period: str) -> dict:
-	"""Return the paid and unpaid amounts and counts of the period's submitted invoices.
+	"""Return the period's submitted invoices that are paid and unpaid: their counts and amounts.
 
-	Credit notes are negative, so they reduce the amounts. `from_date` and `before_date` bound the invoice dates.
+	Each amount adds up the list its card opens: the grand totals of the paid invoices and the
+	outstanding of the unpaid ones. Credit notes are negative. `from_date` and `before_date`
+	bound the invoice dates.
 	"""
 	if doctype not in INVOICE_DOCTYPES:
 		frappe.throw(_("{0} is not an invoice.").format(doctype))
 	from_date, to_date = get_period_dates(period)
 	conditions = [["docstatus", "=", 1], *datetime_conditions("date", from_date, to_date)]
-	totals = _invoice_totals(doctype, conditions)
-	total, unpaid = as_decimal(totals.total), as_decimal(totals.outstanding)
-	paid_count, unpaid_count = (
-		_count(doctype, [*conditions, ["outstanding_amount", operator, 0]]) for operator in ("=", "!=")
-	)
+	paid = _invoice_totals(doctype, [*conditions, ["outstanding_amount", "=", 0]], "base_grand_total")
+	unpaid = _invoice_totals(doctype, [*conditions, ["outstanding_amount", "!=", 0]], "outstanding_amount")
 	return {
-		"total": rounded(total),
-		"paid": rounded(total - unpaid),
-		"unpaid": rounded(unpaid),
-		"paid_count": paid_count,
-		"unpaid_count": unpaid_count,
+		"paid": rounded(as_decimal(paid.amount)),
+		"unpaid": rounded(as_decimal(unpaid.amount)),
+		"paid_count": paid.count,
+		"unpaid_count": unpaid.count,
 		"from_date": from_date,
 		"before_date": add_days(to_date, 1),
 	}
@@ -127,10 +125,6 @@ def _ledger_filters(from_date, to_date, filters):
 	return {"reverted": 0, "posting_date": ["between", [from_date, to_date]], **filters}
 
 
-def _invoice_totals(doctype, conditions):
-	fields = [{"SUM": "base_grand_total", "as": "total"}, {"SUM": "outstanding_amount", "as": "outstanding"}]
+def _invoice_totals(doctype, conditions, amount_field):
+	fields = [{"SUM": amount_field, "as": "amount"}, {"COUNT": "*", "as": "count"}]
 	return frappe.get_list(doctype, filters=conditions, fields=fields)[0]
-
-
-def _count(doctype, conditions):
-	return frappe.get_list(doctype, filters=conditions, fields=[{"COUNT": "*", "as": "count"}])[0].count

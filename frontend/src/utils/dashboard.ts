@@ -14,7 +14,6 @@ export interface MonthlyBalance {
 }
 
 export interface InvoiceSummary {
-  total: number;
   paid: number;
   unpaid: number;
   paid_count: number;

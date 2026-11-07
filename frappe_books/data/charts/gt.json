@@ -1,6 +1,11 @@
 {
   "countryCode": "gt",
   "name": "Guatemala - Cuentas",
+  "defaultAccounts": {
+    "receivable": "Compa\u00f1\u00eda No Afiliada (EJEMPLO) - 1.8.3.1.1",
+    "payable": "Acreedores 1",
+    "income": "Productos"
+  },
   "tree": {
     "Activos": {
       "Activo Corriente": {

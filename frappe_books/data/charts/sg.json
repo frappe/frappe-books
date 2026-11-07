@@ -1,6 +1,12 @@
 {
   "countryCode": "sg",
   "name": "Singapore - Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "Debtors",
+    "payable": "Creditors",
+    "income": "Sales Income",
+    "cash": "Petty Cash"
+  },
   "tree": {
     "Assets": {
       "Current assets": {

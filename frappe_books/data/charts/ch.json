@@ -1,6 +1,11 @@
 {
   "countryCode": "ch",
   "name": "Switzerland - General Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "1100-Trade Receivables (Debtors)",
+    "payable": "2000-Trade Payables (Creditors)",
+    "income": "3200-Trade Revenue"
+  },
   "tree": {
     "1-Assets": {
       "10-Current Assets": {

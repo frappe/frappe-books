@@ -1,6 +1,12 @@
 {
   "countryCode": "ni",
   "name": "Nicaragua - Catalogo de Cuentas",
+  "defaultAccounts": {
+    "receivable": "Cuentas por Cobrar Moneda Nacional",
+    "payable": "Cuentas por Pagar Moneda Nacional",
+    "income": "Venta de Bienes o Prestacion de Servicios Grabados",
+    "cash": "Caja General Moneda Nacional"
+  },
   "tree": {
     "Activo": {
       "Activo Corriente": {

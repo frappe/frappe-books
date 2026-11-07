@@ -12,7 +12,7 @@ from frappe_books.accounting.ledger import (
 	throw_unbalanced,
 	validate_leaf_accounts,
 )
-from frappe_books.accounting.money import as_decimal
+from frappe_books.accounting.money import as_decimal, validate_number_sizes
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.status import StatusMixin
@@ -69,6 +69,7 @@ class BooksJournalEntry(StatusMixin, SeriesNamingMixin, Document):
 		if len(self.accounts) < 2:
 			frappe.throw(_("Journal entry requires at least two account rows."))
 		validate_leaf_accounts({row.account for row in self.accounts})
+		validate_number_sizes(self)
 		for row in self.accounts:
 			_validate_amounts(row)
 		self.total_debit = sum((as_decimal(row.debit) for row in self.accounts), as_decimal(0))

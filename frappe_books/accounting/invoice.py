@@ -13,7 +13,13 @@ from frappe_books.accounting.accounts import (
 	validate_party_role,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
+from frappe_books.accounting.money import (
+	as_decimal,
+	company_currency,
+	rounded,
+	sum_decimal,
+	validate_number_sizes,
+)
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
@@ -310,6 +316,7 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	validate_number_sizes(invoice)
 	validate_hsn_codes(invoice.items)
 	validate_item_usage(invoice, invoice.is_purchase)
 	if invoice.get("return_against"):

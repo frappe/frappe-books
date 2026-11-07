@@ -14,7 +14,7 @@ from frappe_books.accounting.accounts import (
 	validate_payment_account,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal, validate_number_sizes
 from frappe_books.commerce.pos import counter_cash_account, is_cash_method
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
@@ -95,6 +95,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		return invoice and frappe._dict(invoice, doctype=row.reference_type)
 
 	def validate(self):
+		validate_number_sizes(self)
 		if as_decimal(self.amount) <= 0:
 			frappe.throw(_("Payment amount must be greater than zero."))
 		if as_decimal(self.writeoff) < 0 or as_decimal(self.writeoff) > as_decimal(self.amount):

@@ -232,6 +232,13 @@ def _apply_rule(invoice, row, rule):
 		_apply_price_discount(invoice, row, rule)
 
 
+def coupon_uses(coupon):
+	"""How many submitted sales use the coupon; returns give none back, cancelling does."""
+	return frappe.db.count(
+		"Books Sales Invoice", {"coupon_code": coupon, "docstatus": 1, "return_against": ["is", "not set"]}
+	)
+
+
 def update_coupon_usage(invoice, delta):
 	name = invoice.get("coupon_code")
 	if not name:

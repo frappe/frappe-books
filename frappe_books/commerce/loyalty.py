@@ -129,6 +129,12 @@ def update_customer_points(customer):
 	frappe.db.set_value("Books Customer", customer, "loyalty_points", get_available_points(customer))
 
 
+def program_uses(program):
+	"""How many submitted sales redeem points of the program; returns give none back, cancelling does."""
+	filters = {"loyalty_program": program, "redeem_loyalty_points": 1, "docstatus": 1}
+	return frappe.db.count("Books Sales Invoice", {**filters, "return_against": ["is", "not set"]})
+
+
 def program_status(program):
 	"""Expired after its last day, Maxed at its use limit, else Active while enabled."""
 	if getdate(program.to_date) < getdate(nowdate()):

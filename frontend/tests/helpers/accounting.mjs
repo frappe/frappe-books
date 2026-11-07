@@ -34,6 +34,7 @@ await build({
       export { findScannedPOSItem } from './src/utils/posItemSearch';
       export { getReportCellColorClass } from './src/components/Report/cellColor';
       export { getDateRangePresets, getFilterItems } from './src/components/Report/filterToolbar';
+      export { getCellTypeStyle, getPrintedFilters } from './src/pages/PrintView/reportPrint';
       export { getLinkedEntries, linkOnSave } from './src/utils/doc';
       export { showReport } from './src/utils/misc';
       export { fyo as appFyo } from './src/initFyo';
@@ -108,6 +109,8 @@ export const {
   getReportCellColorClass,
   getDateRangePresets,
   getFilterItems,
+  getCellTypeStyle,
+  getPrintedFilters,
   getDashboardData,
   getInvoiceListFilters,
   getInvoiceSummary,

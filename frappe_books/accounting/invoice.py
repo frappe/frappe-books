@@ -6,22 +6,41 @@ from frappe.desk.form import linked_with
 from frappe.model.document import Document
 
 from frappe_books.accounting import returns, settlement
-from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.accounts import (
+	default_party_account,
+	validate_account,
+	validate_row_accounts,
+	validate_tax_accounts,
+)
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, company_currency, rounded, sum_decimal
+from frappe_books.accounting.money import (
+	as_decimal,
+	company_currency,
+	rounded,
+	sum_decimal,
+	validate_number_sizes,
+)
 from frappe_books.accounting.party import PartyDocumentMixin, party_account
 from frappe_books.accounting.payment import default_payment_account, map_invoice_payment
 from frappe_books.accounting.taxes import calculate_taxes, set_taxes
 from frappe_books.commerce import pricing
 from frappe_books.commerce.pos import pos_customer
 from frappe_books.company import company_value
-from frappe_books.currency import get_exchange_rate
-from frappe_books.frappe_books.doctype.books_item.books_item import company_item_defaults, item_tax_templates
+from frappe_books.currency import exchange_rate
+from frappe_books.frappe_books.doctype.books_item.books_item import (
+	company_item_defaults,
+	item_account_root_types,
+	item_tax_templates,
+)
 from frappe_books.inventory import invoice_transfer
 from frappe_books.inventory.availability import validate_sale_batch_stock
-from frappe_books.inventory.stock import validate_batches
+from frappe_books.inventory.stock import (
+	validate_batches,
+	validate_listed_serial_numbers,
+	validate_serial_numbers_not_gone,
+)
 from frappe_books.inventory.units import populate_units
-from frappe_books.permissions import check_preview_permission
+from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import SeriesNamingMixin
 from frappe_books.settings import require_feature, require_features, set_default_terms
@@ -47,6 +66,10 @@ class InvoiceController(PartyDocumentMixin, StatusMixin, SeriesNamingMixin, Docu
 	date_field = "posting_date"
 	# The party fields that fill an invoice's defaults.
 	party_default_fields = ("default_currency",)
+
+	def before_insert(self):
+		# Row accounts are the server's to fill for users who cannot write them.
+		reset_new_rows_above_permlevel(self)
 
 	def before_validate(self):
 		set_default_terms(self)
@@ -128,6 +151,11 @@ class PostingInvoiceController(InvoiceController):
 		# Frappe sets missing checks to 0 before any hook; `calculate` defaults these from the settings.
 		self.dont_update_if_missing.extend(self.follow_up_fields)
 
+	def before_validate(self):
+		# Its submitted returns mark an invoice returned, and an unsubmitted one has none.
+		self.is_fully_returned = 0
+		super().before_validate()
+
 	def calculate(self, drop_invalid_coupons=False):
 		self.is_return = int(bool(self.return_against))
 		super().calculate(drop_invalid_coupons)
@@ -155,6 +183,16 @@ class PostingInvoiceController(InvoiceController):
 		self.create_batches()
 		validate_batches([{"item_code": row.item_code, "batch_no": row.batch_no} for row in self.items])
 		validate_sale_batch_stock(self)
+		self.validate_serial_numbers()
+
+	def validate_serial_numbers(self):
+		"""Check the rows' serial numbers as a transfer would; a sale cannot list ones that already left stock.
+
+		Serial numbers not yet received pass: a sale may be invoiced before its stock arrives.
+		"""
+		validate_listed_serial_numbers(self.items)
+		if self.transaction_type == "sales" and not self.return_against:
+			validate_serial_numbers_not_gone([row for row in self.items if not row.get("delivery_note")])
 
 	def create_batches(self):
 		"""Create the batches the rows need before they are checked; purchases create series batches."""
@@ -190,8 +228,10 @@ class PostingInvoiceController(InvoiceController):
 		# The submit makes the payment, so it needs no right to make payments.
 		payment = map_invoice_payment(self.doctype, self.name, ignore_permissions=True)
 		payment.flags.ignore_permissions = True
-		# No one enters a bank reference for an automatic payment, so it refers to the invoice.
+		# No one enters a bank reference or clearance for an automatic payment: it refers to
+		# the invoice and clears as it is made.
 		payment.reference_no = self.name
+		payment.clearance_date = payment.posting_date
 		payment.insert()
 		payment.submit()
 		settlement.reload_balance(self)
@@ -327,9 +367,41 @@ def validate_invoice(invoice):
 		)
 	for row in invoice.items:
 		_validate_row(invoice, row)
+	_validate_row_accounts(invoice)
+	validate_tax_accounts(invoice.taxes)
+	_validate_total_sign(invoice)
+	validate_number_sizes(invoice)
 	validate_hsn_codes(invoice.items, "gst_hsn_code")
 	if invoice.get("return_against"):
 		returns.validate_return(invoice)
+
+
+def _validate_row_accounts(invoice):
+	"""Rows post to the kinds of ledger their items' defaults may hold."""
+	fieldname = invoice.item_account_field
+	if not fieldname:
+		return
+	stock_items = set(
+		frappe.get_all(
+			"Books Item",
+			filters={"name": ["in", list({row.item_code for row in invoice.items})], "is_stock_item": 1},
+			pluck="name",
+		)
+	)
+	for is_stock_item in (True, False):
+		rows = [row for row in invoice.items if (row.item_code in stock_items) == is_stock_item]
+		root_types = item_account_root_types(fieldname, is_stock_item)
+		validate_row_accounts(rows, fieldname, root_types=root_types)
+
+
+def _validate_total_sign(invoice):
+	"""Rebates cannot take a sale below zero, nor charges a return above it."""
+	total = as_decimal(invoice.grand_total)
+	if invoice.get("return_against"):
+		if total > 0:
+			frappe.throw(_("Charges cannot make a return's grand total positive."))
+	elif total < 0:
+		frappe.throw(_("Rebates cannot make the grand total negative."))
 
 
 def _validate_features(invoice):
@@ -379,7 +451,7 @@ class InvoicePosting(LedgerPosting):
 	def __init__(self, invoice):
 		super().__init__(invoice)
 		self.exchange_rate = as_decimal(invoice.conversion_rate or 1)
-		self.is_party_credited = invoice.is_purchase != bool(invoice.get("return_against"))
+		self.is_party_credited = invoice.is_purchase
 
 	def on_party_side(self, account, amount, party=None):
 		"""Post an invoice-currency amount on the party's side, as the discount is."""
@@ -390,8 +462,10 @@ class InvoicePosting(LedgerPosting):
 		self.add_entry(account, amount, party, credit=not self.is_party_credited)
 
 	def add_entry(self, account, amount, party, credit):
-		base_amount = abs(as_decimal(amount)) * self.exchange_rate
-		(self.credit if credit else self.debit)(account, base_amount, party)
+		"""A negative amount, like a return's or a rebate, posts on the other side."""
+		base_amount = as_decimal(amount) * self.exchange_rate
+		is_credit = credit if base_amount >= 0 else not credit
+		(self.credit if is_credit else self.debit)(account, abs(base_amount), party)
 
 
 def _discount_account():
@@ -412,11 +486,11 @@ def _populate_pos_defaults(invoice):
 
 
 def _party_account(invoice, account):
-	"""The party's ledger if it suits the invoice, else the newest that does."""
+	"""The party's ledger if it suits the invoice, else the company's default one."""
 	account_type = invoice.party_account_type
 	if account and frappe.db.get_value("Books Account", account, "account_type") == account_type:
 		return account
-	return latest_ledger_account(account_type)
+	return default_party_account(account_type)
 
 
 def _party_defaults(invoice):
@@ -434,7 +508,7 @@ def _populate_currency(invoice, party_currency):
 	if invoice.currency == company:
 		invoice.conversion_rate = 1
 	elif not invoice.get("conversion_rate"):
-		invoice.conversion_rate = get_exchange_rate(invoice.currency, company, invoice.document_date)
+		invoice.conversion_rate = exchange_rate(invoice.currency, company, invoice.document_date)
 
 
 def _populate_row(invoice, row, item, rates):

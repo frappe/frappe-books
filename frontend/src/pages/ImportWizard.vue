@@ -775,9 +775,12 @@ export default defineComponent({
       ]);
       const failedRows = failed.map(({ rows }) => getGridRows(file, rows));
       this.success = imported.map(({ docname }) => docname ?? '');
+      // Server messages name the DocType, e.g. `Books Customer`, where /books shows its label.
+      const doctype = this.getDoctype();
+      const label = getDoctypeLabel(doctype);
       this.failed = failed.map(({ message }, index) => ({
         name: this.importer.getRowName(failedRows[index][0]),
-        message,
+        message: serverHtmlToText(message).replaceAll(doctype, label),
       }));
       this.failedRows = failedRows.flat();
     },

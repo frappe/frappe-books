@@ -45,7 +45,7 @@ await build({
       export { default as ListView } from './src/pages/ListView/ListView.vue';
       export { default as POS } from './src/pages/POS/POS.vue';
       export { default as LinkedRecordsSection } from './src/pages/CommonForm/LinkedRecordsSection.vue';
-      export { getEmptyState } from './src/pages/ListView/listColumns';
+      export { getEmptyState, getListColumns } from './src/pages/ListView/listColumns';
       export { default as router } from 'src/router';
       export { getSearchFilters, ListFilters } from './src/utils/listFilters';
       export * as pos from './src/utils/pos';
@@ -234,6 +234,7 @@ export const {
   POS,
   LinkedRecordsSection,
   getEmptyState,
+  getListColumns,
   router,
 } = createRequire(import.meta.url)(output);
 

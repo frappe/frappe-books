@@ -134,6 +134,23 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
   const JournalEntryAccount = frappeModels.JournalEntry.rowModels.accounts;
   const { Customer, Company, POSSettings } = frappeModels;
   const ledger = ['is_group', '=', 0];
+  // Taxes and charges take tax, charge, income or expense ledgers, as the server checks.
+  const taxAccount = [
+    ledger,
+    ['root_type', '!=', 'Equity'],
+    [
+      'account_type',
+      'in',
+      [
+        '',
+        'Tax',
+        'Chargeable',
+        'Income Account',
+        'Expense Account',
+        'Expenses Included In Valuation',
+      ],
+    ],
+  ];
   const customer = newFrappeDoc('Customer');
   await customer.append('accounts');
   const [row] = customer.accounts;
@@ -150,7 +167,7 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     getSchema('SalesTaxesandCharges').fields.find(
       (f) => f.fieldname === 'account_head'
     ).linkFilters,
-    [ledger]
+    taxAccount
   );
   assert.deepEqual(JournalEntryAccount.filters.account(), [ledger]);
   assert.deepEqual(Company.filters.default_discount_account(), [
@@ -164,9 +181,12 @@ test('account links in other forms filter by Frappe fieldnames', async () => {
     [ledger, ['account_type', 'in', ['Cash', 'Bank']]]
   );
   const taxRow = getSchema('ItemTaxTemplateDetail').fields;
-  for (const fieldname of ['tax_type', 'payment_account']) {
+  for (const [fieldname, filters] of [
+    ['tax_type', taxAccount],
+    ['payment_account', [ledger]],
+  ]) {
     const field = taxRow.find((f) => f.fieldname === fieldname);
-    assert.deepEqual(field.linkFilters, [ledger], fieldname);
+    assert.deepEqual(field.linkFilters, filters, fieldname);
   }
   assert.deepEqual(Company.filters.default_inventory_account(), [
     ledger,

@@ -54,6 +54,26 @@ test('the Custom Form asks for a form type among the forms Books can customize',
   }
 });
 
+test('form types have labels of their own', () => {
+  const types = Object.fromEntries(
+    CustomForm.lists
+      .name(newFrappeDoc('CustomForm'))
+      .map(({ value, label }) => [value, label])
+  );
+  assert.equal(
+    types['Books Sales Taxes and Charges'],
+    'Sales Taxes and Charges'
+  );
+  assert.equal(
+    types['Books Purchase Taxes and Charges'],
+    'Purchase Taxes and Charges'
+  );
+  assert.equal(
+    frappeModels.DeliveryNote.rowModels.items.presentation.label,
+    'Delivery Note Item'
+  );
+});
+
 test('custom field rows open in the row editor', () => {
   const table = getSchema('CustomForm').fields.find(
     (f) => f.fieldname === 'custom_fields'
@@ -121,6 +141,11 @@ test('custom field names still reject another row and built-in fields', async ()
     form.custom_fields[1].set('fieldname', 'myNote'),
     /Fieldname myNote already used for Custom Field 1/
   );
+  // Both would share the Custom Field custom_books_mynote.
+  await assert.rejects(
+    form.custom_fields[1].set('fieldname', 'mynote'),
+    /Fieldname mynote already used for Custom Field 1/
+  );
 });
 
 test('a row links to other forms and references select fields of the form', async () => {
@@ -161,6 +186,15 @@ test('a Table field targets only child tables', async () => {
   assert.ok(targets('Table').includes('Books Sales Invoice Item'));
   assert.equal(targets('Table').includes('Books Customer'), false);
   assert.ok(targets('Link').includes('Books Customer'));
+  assert.equal(targets('Link').includes('Books Sales Invoice Item'), false);
+});
+
+test('custom fields target only Books doctypes, as the server allows', async () => {
+  const [row] = (await newForm()).custom_fields;
+  const targets = CustomField.lists.target(row).map(({ value }) => value);
+  for (const doctype of ['Currency', 'Country', 'Address', 'Print Format']) {
+    assert.equal(targets.includes(doctype), false, doctype);
+  }
 });
 
 test('editing a row previews its name from the server', async () => {

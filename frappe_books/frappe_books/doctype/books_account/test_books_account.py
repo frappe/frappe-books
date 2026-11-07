@@ -49,6 +49,26 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 
 		self.assertEqual(child.root_type, "Asset")
 
+	def test_account_type_suits_the_root_type(self):
+		for root_type, account_type in (
+			("Expense", "Receivable"),
+			("Income", "Bank"),
+			("Asset", "Income Account"),
+		):
+			with self.subTest(root_type=root_type, account_type=account_type):
+				with self.assertRaisesRegex(frappe.ValidationError, "needs a root type of"):
+					make_account("Mismatched", root_type=root_type, account_type=account_type)
+		for root_type, account_type in (
+			("Liability", "Bank"),
+			("Expense", "Expense Account"),
+			("Asset", "Tax"),
+		):
+			with self.subTest(root_type=root_type, account_type=account_type):
+				self.assertEqual(
+					make_account("Matched", root_type=root_type, account_type=account_type).account_type,
+					account_type,
+				)
+
 	def test_account_without_a_type_has_none(self):
 		self.assertFalse(make_account("Untyped").account_type)
 
@@ -57,6 +77,10 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		self.assertEqual(make_account("Test Current", parent_account=parent.name).account_type, "Bank")
 		child = make_account("Test Petty Cash", parent_account=parent.name, account_type="Cash")
 		self.assertEqual(child.account_type, "Cash")
+
+	def test_a_chart_may_keep_payables_under_assets(self):
+		# The Dutch chart's Crediteuren sit in an asset class.
+		self.assertEqual(make_account("Asset Payable", account_type="Payable").root_type, "Asset")
 
 	def test_leaf_account_cannot_be_parent(self):
 		parent = make_account("Test Cash")

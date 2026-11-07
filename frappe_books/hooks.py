@@ -42,6 +42,7 @@ jinja = {
 		"frappe_books.printing.get_print_settings",
 		"frappe_books.printing.get_print_totals",
 		"frappe_books.printing.books_format",
+		"frappe_books.accounting.invoice.gross_amount",
 	]
 }
 

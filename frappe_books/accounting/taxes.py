@@ -12,7 +12,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import cint
 
-from frappe_books.accounting.ledger import validate_leaf_accounts
+from frappe_books.accounting.accounts import validate_tax_accounts
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 
 CHARGE_TYPES = ("On Net Total", "Actual", "On Previous Row Amount", "On Previous Row Total")
@@ -77,8 +77,7 @@ class TaxesTemplateController(Document):
 
 	def validate(self):
 		validate_tax_rows(self, self.taxes)
-		# Documents post to these accounts.
-		validate_leaf_accounts({row.account_head for row in self.taxes})
+		validate_tax_accounts(self.taxes)
 
 	def on_update(self):
 		"""One template of each kind is the default, as in ERPNext."""
@@ -92,7 +91,6 @@ class TaxCalculation:
 	def __init__(self, invoice):
 		self.invoice = invoice
 		self.currency = invoice.get("currency")
-		self.sign = -1 if invoice.get("return_against") else 1
 		self.items = list(invoice.items)
 		self.rates = item_tax_rates(self.items)
 		self.net_total = sum_decimal(row.net_amount for row in self.items)
@@ -167,8 +165,8 @@ class TaxCalculation:
 		return as_decimal(self.rates[id(row)].get(tax.account_head, default))
 
 	def _actual(self, tax):
-		"""An actual charge, signed like the document: a return gives it back."""
-		return self.sign * abs(as_decimal(tax.tax_amount))
+		"""An actual charge as entered: a negative one is a rebate; a return's gives its original's back."""
+		return as_decimal(tax.tax_amount)
 
 
 def _apply_template(invoice):

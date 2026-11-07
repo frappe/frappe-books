@@ -219,13 +219,17 @@ export abstract class Invoice extends FrappeDoc {
     );
   }
 
+  /** Without inventory nothing is shipped or received. */
+  get isInventoryOff(): boolean {
+    return !this.fyo.isFeatureOn('enable_inventory');
+  }
+
   /** Rules of the fields invoices have and quotes lack: follow-ups on submit, and returns. */
   get postingHidden(): HiddenMap {
     return {
       make_auto_payment: () => !this.autoPaymentAccount,
       make_auto_stock_transfer: () =>
-        !this.fyo.isFeatureOn('enable_inventory') ||
-        !this.autoStockTransferLocation,
+        this.isInventoryOff || !this.autoStockTransferLocation,
       return_against: () =>
         !this.fyo.isFeatureOn('enable_invoice_returns') && !this.return_against,
     };

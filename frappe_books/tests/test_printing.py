@@ -41,6 +41,7 @@ from frappe_books.tests.test_units import make_uom
 
 MANAGER = "books-print-manager@example.com"
 USER = "books-print-user@example.com"
+SYSTEM_MANAGER = "books-print-system-manager@example.com"
 
 
 class IntegrationTestPrinting(IntegrationTestCase):
@@ -123,6 +124,34 @@ class IntegrationTestPrinting(IntegrationTestCase):
 
 				self.assertIn(books_format(3100, "Currency", doc.currency), html)
 				self.assertNotIn(books_format(62, "Currency", doc.currency), html)
+
+	def test_invoice_rows_print_their_amount_before_the_discount(self):
+		row = {"item_code": self.item.name, "qty": 3, "price_list_rate": 100, "discount_percentage": 10}
+		invoice = frappe.get_doc(
+			{"doctype": "Books Sales Invoice", "customer": self.party.name, "items": [row]}
+		).insert()
+
+		for print_format in ("Business - Sales Invoice", "Business-POS - Sales Invoice"):
+			with self.subTest(print_format=print_format):
+				html = get_print(invoice.doctype, invoice.name, print_format=print_format)
+
+				self.assertIn(books_format(300, "Currency", invoice.currency), html)
+				self.assertNotIn(books_format(270, "Currency", invoice.currency), html)
+
+	def test_a_quote_to_a_lead_prints_the_lead_as_its_party(self):
+		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Print Lead")}).insert()
+		quote = frappe.get_doc(
+			{
+				"doctype": "Books Quotation",
+				"quotation_to": "Books Lead",
+				"party_name": lead.name,
+				"items": [{"item_code": self.item.name, "qty": 1, "price_list_rate": 10}],
+			}
+		).insert()
+		html = get_print(quote.doctype, quote.name, print_format="Business - Quotation")
+
+		self.assertIn("<th>Lead</th>", html)
+		self.assertNotIn("<th>Customer</th>", html)
 
 	def test_invoice_prints_the_hsn_code_with_its_leading_zero(self):
 		item = make_item(self.income.name, self.expense.name, gst_hsn_code="0902")
@@ -311,7 +340,7 @@ class IntegrationTestPrinting(IntegrationTestCase):
 	def test_preview_renders_unsaved_html_for_a_document(self):
 		invoice = self.make_invoice()
 
-		with self.set_user(ensure_user(MANAGER, "Books Manager")):
+		with self.set_user(ensure_user(SYSTEM_MANAGER, "System Manager")):
 			preview = preview_print_format(
 				invoice.doctype,
 				invoice.name,
@@ -322,16 +351,16 @@ class IntegrationTestPrinting(IntegrationTestCase):
 		self.assertIn(f"<p>{invoice.name} {self.party.name}</p>", preview["html"])
 		self.assertIn("@page { size: 8cm 22cm; }", preview["style"])
 
-	def test_preview_needs_print_format_and_document_rights(self):
+	def test_only_print_format_writers_preview_templates(self):
 		invoice = self.make_invoice()
-		log = frappe.get_doc({"doctype": "Error Log", "error": "Print preview test"}).insert()
+		# Template Jinja reads any table, so a Books Manager must not run it.
+		html = '<p>{{ frappe.db.sql("select name from tabUser") }}</p>'
 
-		with self.set_user(ensure_user(USER, "Books User")):
-			self.assertRaises(
-				frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, "<p></p>"
-			)
-		with self.set_user(ensure_user(MANAGER, "Books Manager")):
-			self.assertRaises(frappe.PermissionError, preview_print_format, log.doctype, log.name, "<p></p>")
+		for user, role in ((USER, "Books User"), (MANAGER, "Books Manager")):
+			with self.subTest(role=role), self.set_user(ensure_user(user, role)):
+				self.assertRaises(
+					frappe.PermissionError, preview_print_format, invoice.doctype, invoice.name, html
+				)
 
 	def test_preview_reports_the_template_error_line(self):
 		invoice = self.make_invoice()

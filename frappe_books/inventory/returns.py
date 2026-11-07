@@ -7,7 +7,7 @@ from frappe.utils import flt
 
 from frappe_books.accounting.money import as_decimal
 from frappe_books.accounting.returns import return_unreturned_rows
-from frappe_books.inventory.stock import parse_serial_numbers
+from frappe_books.inventory.stock import format_quantity, parse_serial_numbers
 from frappe_books.settings import require_feature
 
 
@@ -89,7 +89,7 @@ def validate_moved_quantities(transfer, rows, message):
 	for (item, batch), quantity in batch_quantities(rows).items():
 		if quantity > moved[(item, batch)]:
 			label = f"{item} ({batch})" if batch else item
-			frappe.throw(message.format(label, moved[(item, batch)], transfer.name))
+			frappe.throw(message.format(label, format_quantity(moved[(item, batch)]), transfer.name))
 
 
 def _validate_serial_numbers(original, returned, rows):

@@ -56,6 +56,22 @@ test("a Frappe-backed schema's standard columns filter its list", () => {
   );
 });
 
+test('a doctype named by a field filters by that field once', () => {
+  const fields = [
+    { fieldname: 'customer_name', fieldtype: 'Data', label: 'Customer Name' },
+    {
+      fieldname: 'name',
+      fieldtype: 'Data',
+      label: 'Customer Name',
+      meta: true,
+    },
+  ];
+  assert.deepEqual(
+    getFilterFields(fields).map((field) => field.fieldname),
+    ['customer_name']
+  );
+});
+
 test('stored Select fields retain all configured choices and labels', async () => {
   await loadFrappeModels();
   const schemas = getStandaloneModelNames().flatMap((schemaName) => {

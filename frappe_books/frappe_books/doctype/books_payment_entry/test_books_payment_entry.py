@@ -9,6 +9,10 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import nowdate
 
 from frappe_books.accounting.returns import map_return
+from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
+	open_shift,
+	set_pos_accounts,
+)
 from frappe_books.tests.accounting import (
 	ensure_user,
 	ledger_entries,
@@ -287,15 +291,24 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 					("Pay", paid_from, self.payable.name),
 				)
 
-	def test_pos_cash_defaults_to_the_counter_account(self):
-		counter = make_account("Rules Counter", account_type="Cash")
-		frappe.db.set_single_value("Books POS Settings", "cash_account", counter.name)
+	def test_pos_cash_defaults_to_the_counter_only_during_a_shift(self):
+		counter = set_pos_accounts()
+		set_mode_of_payment_account("Cash", self.cash.name)
 		self.invoice.db_set("is_pos", 1)
-		payment = self._payment(self.invoice, paid_to=None)
+		without_shift = self._payment(self.invoice, paid_to=None)
+		without_shift.set_missing_values()
+		open_shift(0)
+		during_shift = self._payment(self.invoice, paid_to=None)
 
-		payment.set_missing_values()
+		during_shift.set_missing_values()
 
-		self.assertEqual(payment.paid_to, counter.name)
+		self.assertEqual((without_shift.paid_to, during_shift.paid_to), (self.cash.name, counter))
+
+	def test_only_pos_cash_during_a_shift_goes_to_the_counter(self):
+		counter = set_pos_accounts()
+		payment = self._payment(self.invoice, paid_to=counter)
+
+		self.assertRaisesRegex(frappe.ValidationError, "Only cash for POS invoices", payment.insert)
 
 	def test_preview_fills_a_payment_from_its_invoice_without_saving(self):
 		set_mode_of_payment_account("Cash", self.cash.name)
@@ -324,6 +337,12 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		payment.append("references", {"reference_name": self.invoice.name, "allocated_amount": 180})
 		payment.preview()
 		self.assertEqual([row.allocated_amount for row in payment.references], [100, 180])
+
+	def test_preview_takes_a_write_off_off_the_paid_amount(self):
+		set_company_value("write_off_account", make_account("Rules Write Off", root_type="Expense").name)
+		payment = self._payment(self.invoice, deductions=[{"amount": 10}])
+		payment.preview()
+		self.assertEqual((payment.paid_amount, payment.references[0].allocated_amount), (170, 180))
 
 	def test_a_payment_party_is_a_customer_or_a_supplier(self):
 		lead = frappe.get_doc({"doctype": "Books Lead", "lead_name": unique_name("Lead")}).insert()
@@ -491,6 +510,18 @@ class IntegrationTestPaymentRules(IntegrationTestCase):
 		self.assertEqual(
 			[(row.debit, row.credit) for row in entries if row.account == writeoff.name], [(10, 0)]
 		)
+
+	def test_a_write_off_posts_only_to_an_income_or_expense_account(self):
+		equity = make_account("Rules Capital", root_type="Equity")
+		payment = self._payment(
+			self.invoice, paid_amount=170, deductions=[{"account": equity.name, "amount": 10}]
+		)
+		payment.references[0].allocated_amount = 180
+
+		with self.assertRaisesRegex(
+			frappe.ValidationError, "Row #1: Account must be of type Expense or Income"
+		):
+			payment.insert()
 
 	def test_a_payment_write_off_credits_the_company_write_off_account(self):
 		writeoff = make_account("Rules Write Off", root_type="Expense")

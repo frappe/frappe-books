@@ -1,5 +1,6 @@
 import { Fyo } from 'fyo';
 import type { DocValueMap } from 'fyo/core/types';
+import { DocPermission, hasDocTypePermission } from 'fyo/utils/permissions';
 import {
   Action,
   FiltersMap,
@@ -84,6 +85,7 @@ export class SalesInvoice extends Invoice {
   override hidden: HiddenMap = {
     ...this.hidden,
     ...this.postingHidden,
+    stock_not_transferred: () => this.isInventoryOff,
     coupon_code: () => !this.fyo.isFeatureOn('enable_coupon_code'),
     pricing_rules: () => !this.fyo.isFeatureOn('enable_pricing_rule'),
     redeem_loyalty_points: () =>
@@ -93,6 +95,19 @@ export class SalesInvoice extends Invoice {
   /** Books counts the stock no transfer moved. */
   override get hasStockToTransfer(): boolean {
     return (this.stock_not_transferred ?? 0) > 0;
+  }
+
+  /** A cashier makes sales only through the POS, so a new POS sale needs only the right to create sales. */
+  override can(permission: DocPermission): boolean {
+    if (permission === 'create' && this.notInserted && this.is_pos) {
+      return hasDocTypePermission(
+        this.fyo.store.permissions,
+        SalesInvoice.doctype,
+        'create'
+      );
+    }
+
+    return super.can(permission);
   }
 
   override applyPreview(previewed: DocValueMap) {

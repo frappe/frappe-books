@@ -10,6 +10,9 @@ from frappe_books.company import default_company
 from frappe_books.settings import company_country
 
 ACCOUNT_TYPES = {
+	"default_receivable_account": {"account_types": ("Receivable",)},
+	"default_payable_account": {"account_types": ("Payable",)},
+	"default_income_account": {"root_types": ("Income",)},
 	"write_off_account": {"root_types": ("Expense",)},
 	"round_off_account": {"root_types": ("Expense",)},
 	"default_discount_account": {"root_types": ("Income",)},
@@ -35,7 +38,10 @@ class BooksCompany(Document):
 		default_currency: DF.Link | None
 		default_discount_account: DF.Link | None
 		default_expense_account: DF.Link | None
+		default_income_account: DF.Link | None
 		default_inventory_account: DF.Link | None
+		default_payable_account: DF.Link | None
+		default_receivable_account: DF.Link | None
 		default_warehouse: DF.Link | None
 		email: DF.Data
 		round_off_account: DF.Link | None

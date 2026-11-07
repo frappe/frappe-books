@@ -346,9 +346,10 @@ export class Importer {
     return [...documents.values()];
   }
 
-  /** The name a grid row gives its document. */
+  /** The name a grid row gives its document, else the row's number, e.g. for an Address. */
   getRowName(index: number): string {
-    return String(this.valueMatrix[index]?.[this.getNameIndex()]?.value ?? '');
+    const name = this.valueMatrix[index]?.[this.getNameIndex()]?.value;
+    return name ? String(name) : this.fyo.t`Row ${index + 1}`;
   }
 
   /** The column of the field that names a document: its naming field, or its name. */
@@ -486,6 +487,10 @@ export class Importer {
       return this.getOptionFieldVmi(vmi, tf);
     }
 
+    if (tf.fieldtype === FieldTypeEnum.Check) {
+      return this.getCheckVmi(vmi);
+    }
+
     try {
       vmi.value = toDocValue(rawValue, tf, this.fyo);
     } catch {
@@ -493,6 +498,18 @@ export class Importer {
     }
 
     return vmi;
+  }
+
+  /** A Check as a file or a list shows it: 1/0, Yes/No or True/False; other text is an error. */
+  getCheckVmi({ rawValue }: ValueMatrixItem): ValueMatrixItem {
+    const text = String(rawValue).trim().toLowerCase();
+    const yes = ['1', 'yes', 'true', this.fyo.t`Yes`.toLowerCase()];
+    const no = ['0', 'no', 'false', this.fyo.t`No`.toLowerCase()];
+    if (yes.includes(text) || no.includes(text)) {
+      return { value: yes.includes(text), rawValue };
+    }
+
+    return { error: true, value: null, rawValue };
   }
 
   getOptionFieldVmi(
@@ -540,12 +557,15 @@ export class Importer {
     return true;
   }
 
+  /** A row of field keys, or one whose cells mostly name fields: a file may add columns of its own. */
   isHeaderRow(row: string[]): boolean {
     const values = row.filter(Boolean);
+    const headers = values.filter((value) =>
+      this.templateFieldKeysByHeader.has(value)
+    );
     return (
       row.some((value) => this.templateFieldsMap.has(value)) ||
-      (values.length > 0 &&
-        values.every((value) => this.templateFieldKeysByHeader.has(value)))
+      headers.length * 2 > values.length
     );
   }
 
@@ -742,9 +762,9 @@ function isCompanyTable(field: Field, schema: Schema): boolean {
   );
 }
 
-/** Whether a file must give the field. */
+/** Whether a file must give the field: a required field the server has no default for. */
 function isFilledByUser(field: Field): boolean {
-  return !!field.required;
+  return !!field.required && (field.default ?? '') === '';
 }
 
 /**

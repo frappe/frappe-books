@@ -12,16 +12,18 @@ from frappe_books.accounting import settlement
 from frappe_books.accounting.accounts import (
 	PARTY_ACCOUNT_TYPES,
 	PAYMENT_ACCOUNT_TYPES,
+	default_party_account,
 	latest_ledger_account,
 	mode_of_payment_account,
 	validate_account,
 	validate_party_account,
 	validate_payment_account,
+	validate_row_accounts,
 )
 from frappe_books.accounting.ledger import LedgerPosting, delete_entries, reverse_entries
-from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.accounting.money import as_decimal, rounded, sum_decimal, validate_number_sizes
 from frappe_books.accounting.party import party_account
-from frappe_books.commerce.pos import counter_cash_account, is_cash_method
+from frappe_books.commerce.pos import counter_cash_account, open_shift_name, takes_counter_cash
 from frappe_books.company import company_value
 from frappe_books.permissions import check_preview_permission
 from frappe_books.series import SeriesNamingMixin
@@ -74,9 +76,18 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		return as_decimal(self.paid_amount) + DEDUCTION_SIGNS.get(self.payment_type, 0) * deducted
 
 	def settle_only_reference(self):
-		"""In the form, a payment's only reference takes all it settles, as the Books app kept them equal."""
-		if len(self.references) == 1 and self.paid_amount:
-			self.references[0].allocated_amount = rounded(self.party_amount)
+		"""In the form, a payment's only reference takes all it settles, as the Books app kept them equal.
+
+		A write-off that would settle more than the invoice owes comes off the paid amount, as in the Books app.
+		"""
+		if len(self.references) != 1 or not self.paid_amount:
+			return
+		row = self.references[0]
+		outstanding = as_decimal(row.outstanding_amount)
+		excess = self.party_amount - outstanding
+		if row.reference_name and excess > 0 and as_decimal(self.paid_amount) <= outstanding:
+			self.paid_amount = rounded(as_decimal(self.paid_amount) - excess)
+		row.allocated_amount = rounded(self.party_amount)
 
 	def set_missing_values(self):
 		"""Fill the party, payment type, accounts and amounts the way the Books app does while editing."""
@@ -102,7 +113,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 			account = _default_party_account(self.get_party_account(), invoice, self.payment_type)
 			self.set(fieldname, self.get(fieldname) or account)
 		fieldname = payment_account_field(self.payment_type)
-		self.set(fieldname, self.get(fieldname) or _default_payment_account(self.mode_of_payment, invoice))
+		self.set(
+			fieldname, self.get(fieldname) or mode_payment_account(self.mode_of_payment, invoice, self.owner)
+		)
 
 	def get_party_account(self):
 		if self.party_type in PARTY_ACCOUNT_TYPES and self.party:
@@ -165,6 +178,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		)
 
 	def validate(self):
+		validate_number_sizes(self)
 		if as_decimal(self.paid_amount) <= 0:
 			frappe.throw(_("Payment amount must be greater than zero."))
 		if self.party_amount <= 0:
@@ -192,6 +206,8 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		if not self.party:
 			frappe.throw(_("Party is mandatory."))
 		validate_party_account(self, party_account_field(self.payment_type), self.party_type)
+		# A deduction writes off what is not paid, as an expense or a reduced income.
+		validate_row_accounts(self.deductions, "account", root_types=("Expense", "Income"))
 
 	def validate_transfer(self):
 		"""A transfer moves money between the company's own cash and bank accounts."""
@@ -200,15 +216,21 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		validate_account(self, "paid_to", PAYMENT_ACCOUNT_TYPES)
 
 	def validate_counter_account(self, invoices):
-		"""Cash for POS sales goes through the counter, which closing the POS shift reconciles."""
-		if not any(invoice.get("is_pos") for invoice in invoices):
+		"""The counter takes the cash for POS invoices paid during the payer's open shift, and only that."""
+		if self.payment_type == INTERNAL_TRANSFER:
 			return
-		if not is_cash_method(self.mode_of_payment):
-			return
-		counter = counter_cash_account()
-		if self.get(payment_account_field(self.payment_type)) != counter:
+		account = self.get(payment_account_field(self.payment_type))
+		if takes_counter_cash(invoices, self.mode_of_payment, self.owner):
+			counter = counter_cash_account()
+			if account != counter:
+				frappe.throw(
+					_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+				)
+		elif _is_counter_only(account, self.mode_of_payment):
 			frappe.throw(
-				_("Cash payments for POS invoices must use the counter cash account {0}.").format(counter)
+				_(
+					"Only cash for POS invoices, paid during your open POS shift, goes to the counter cash account {0}."
+				).format(account)
 			)
 
 	def on_submit(self):
@@ -278,25 +300,31 @@ def _default_payment_type(party_type, invoice):
 
 
 def _default_party_account(party_account, invoice, payment_type):
-	"""The party's ledger, else the invoice's, else the newest payable or receivable ledger."""
+	"""The party's ledger, else the invoice's, else the company's default payable or receivable one."""
 	if party_account:
 		return party_account
 	if invoice:
 		return invoice.account
-	return latest_ledger_account("Payable" if payment_type == "Pay" else "Receivable")
+	return default_party_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
-def _default_payment_account(mode_of_payment, invoice):
-	"""POS cash goes to the counter, other payments to the mode's account, else the newest ledger
-	of the mode's kind."""
+def mode_payment_account(mode_of_payment, invoice=None, payer=None):
+	"""POS cash goes to the counter during the payer's open shift, other payments to the mode's account,
+	else the newest ledger of the mode's kind."""
 	method_type = mode_of_payment and frappe.db.get_value("Books Mode of Payment", mode_of_payment, "type")
 	if not method_type:
 		return None
-	if method_type == "Cash" and invoice and invoice.get("is_pos"):
+	if invoice and takes_counter_cash([invoice], mode_of_payment, payer):
 		return counter_cash_account()
 	return mode_of_payment_account(mode_of_payment) or latest_ledger_account(
 		"Cash" if method_type == "Cash" else "Bank"
 	)
+
+
+def _is_counter_only(account, mode_of_payment):
+	"""Whether the account is the POS counter and not also the mode's own account, which a counter can be."""
+	counter = frappe.db.get_single_value("Books POS Settings", "cash_account")
+	return bool(counter) and account == counter and account != mode_of_payment_account(mode_of_payment)
 
 
 def _validate_allocations(payment):
@@ -470,7 +498,7 @@ def default_payment_account(invoice_doctype) -> str | None:
 
 
 def _settling_account(invoice):
-	if invoice.get("is_pos"):
+	if invoice.get("is_pos") and open_shift_name():
 		return counter_cash_account()
 	account = default_payment_account(invoice.doctype) or mode_of_payment_account("Cash")
 	if not account:

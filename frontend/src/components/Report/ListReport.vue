@@ -33,7 +33,7 @@
             <FrappeListRow
               v-if="!row.folded"
               :value="value"
-              :on-click="row.isGroup ? () => onRowClick(row, index) : undefined"
+              :on-click="getRowClick(row, index)"
             >
               <FrappeListCell
                 v-for="(cell, cellIndex) in row.cells"
@@ -95,6 +95,7 @@ import ReportColumnHeader from './ReportColumnHeader.vue';
 import { getReportCellColorClass } from './cellColor';
 import { ReportColumnWidths } from './ReportColumnWidths';
 import ReportOverflowText from './ReportOverflowText.vue';
+import { getRowReference } from './Mobile/mobileRows';
 
 export default defineComponent({
   components: {
@@ -112,6 +113,8 @@ export default defineComponent({
   props: {
     report: Report,
   },
+  // The page opens the row's document; the router imports the page.
+  emits: ['openDocument'],
   setup() {
     return {
       languageDirection: inject(languageDirectionKey),
@@ -179,6 +182,17 @@ export default defineComponent({
     setPageIndices({ start, end }) {
       this.pageStart = start;
       this.pageEnd = end;
+    },
+    /** A group folds; a ledger row opens its document, as on phones. */
+    getRowClick(row, index) {
+      if (row.isGroup) {
+        return () => this.onRowClick(row, index);
+      }
+
+      const reference = getRowReference(this.report, row);
+      return reference
+        ? () => this.$emit('openDocument', reference)
+        : undefined;
     },
     onRowClick(clickedRow, r) {
       if (!clickedRow.isGroup) {

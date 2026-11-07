@@ -2,6 +2,11 @@
   "countryCode": "ca",
   "language": "fr",
   "name": "Canada - Plan comptable pour les provinces francophones",
+  "defaultAccounts": {
+    "receivable": "Comptes clients",
+    "payable": "Comptes fournisseurs",
+    "income": "Ventes"
+  },
   "tree": {
     "Actif": {
       "Actif \u00e0 court terme": {

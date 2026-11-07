@@ -6,7 +6,11 @@ from frappe.contacts.doctype.address.address import get_address_display
 from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 
-from frappe_books.accounting.accounts import validate_party_account
+from frappe_books.accounting.accounts import (
+	PARTY_ACCOUNT_TYPES,
+	company_party_account,
+	validate_party_account,
+)
 from frappe_books.accounting.money import company_currency
 from frappe_books.accounting.party_contacts import (
 	delete_primary_records,
@@ -14,11 +18,9 @@ from frappe_books.accounting.party_contacts import (
 	party_field,
 	validate_primary_records,
 )
+from frappe_books.accounting.settlement import party_outstanding
 from frappe_books.company import default_company
 from frappe_books.regional import validate_gstin
-
-# The account a new party's ledger defaults to, when the chart has it.
-CHART_ACCOUNTS = {"Books Customer": "Debtors", "Books Supplier": "Creditors"}
 
 
 class PartyController(Document):
@@ -27,6 +29,11 @@ class PartyController(Document):
 	def before_validate(self):
 		self.default_currency = self.default_currency or company_currency()
 		self.set_company_account()
+		self.set_balances()
+
+	def set_balances(self):
+		"""What the party owes comes from its invoices, whatever a save sends."""
+		self.outstanding_amount = 0 if self.is_new() else party_outstanding(self.doctype, self.name)
 
 	def validate(self):
 		self.validate_accounts()
@@ -46,11 +53,13 @@ class PartyController(Document):
 		delete_primary_records(self)
 
 	def set_company_account(self):
-		"""Rows belong to the one company, which takes the chart's party account when it has no row."""
+		"""Rows belong to the one company, which takes its default party account when it has no row."""
 		company = default_company()
 		for row in self.accounts:
 			row.company = row.company or company
-		account = not self.get("accounts", {"company": company}) and _chart_account(self.doctype)
+		account = not self.get("accounts", {"company": company}) and company_party_account(
+			PARTY_ACCOUNT_TYPES[self.doctype]
+		)
 		if account:
 			self.append("accounts", {"company": company, "account": account})
 
@@ -84,11 +93,6 @@ def party_account(party_type, party):
 	"""The party's ledger account for the one company, if it has one."""
 	filters = {"parenttype": party_type, "parent": party, "company": default_company()}
 	return frappe.db.get_value("Books Party Account", filters, "account")
-
-
-def _chart_account(party_type):
-	account = CHART_ACCOUNTS[party_type]
-	return account if frappe.db.exists("Books Account", account) else None
 
 
 def map_invoice(party_type, party, invoice_doctype):

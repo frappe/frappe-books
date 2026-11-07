@@ -198,27 +198,32 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 				partial = map_return(doctype, invoice.name)
 				partial.items[0].qty = -1
 				partial.insert().submit()
-				self.assertEqual(invoice.db_get("status"), returned)
+				# A partly returned invoice shows what it still owes.
+				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 				remaining = map_return(doctype, invoice.name)
 				remaining.items[0].qty = -1
 				remaining.insert().submit()
+				self.assertEqual(invoice.db_get("status"), returned)
 				self.assertEqual(invoice.db_get("is_fully_returned"), 1)
 				remaining.cancel()
-				self.assertEqual(invoice.db_get("status"), returned)
+				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 				partial.cancel()
 				self.assertEqual(invoice.db_get("status"), "Unpaid")
 				self.assertEqual(invoice.db_get("is_fully_returned"), 0)
 
 	def test_return_offers_only_what_is_not_yet_returned(self):
+		received = make_account("Action Received", root_type="Liability")
+		serial_item = make_item(self.income.name, received.name, is_stock_item=1, has_serial_no=1)
 		invoice = make_invoice(
 			"Books Sales Invoice",
 			self.party.name,
 			self.receivable.name,
-			self.item.name,
+			serial_item.name,
 			self.income.name,
+			make_auto_stock_transfer=0,
 		)
 		invoice.items[0].update({"discount_percentage": 0, "discount_amount": 0, "serial_no": "S-1\nS-2"})
 		other_item = make_item(self.income.name, self.expense.name)
@@ -227,6 +232,7 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 		partial = map_return(invoice.doctype, invoice.name)
 		partial.items[0].update({"qty": -1, "serial_no": "S-1"})
 		partial.remove(partial.items[1])
+		partial.make_auto_stock_transfer = 0
 		partial.insert().submit()
 
 		remaining = map_return(invoice.doctype, invoice.name)
@@ -455,6 +461,30 @@ class IntegrationTestDocumentActions(IntegrationTestCase):
 					frappe.db.get_value("Books Payment Entry", payment, ["mode_of_payment", "reference_no"]),
 					(method, invoice.name),
 				)
+
+	def test_automatic_payment_clears_when_its_method_needs_a_clearance_date(self):
+		payable = make_account("Clearing Payable", root_type="Liability", account_type="Payable")
+		bank = make_account("Clearing Bank", account_type="Bank")
+		frappe.db.set_single_value("Books Defaults", "purchase_payment_account", bank.name)
+		frappe.db.set_value("Books Mode of Payment", "Bank", "requires_clearance_date", 1)
+		set_company_value("default_discount_account", self.expense.name)
+		invoice = make_invoice(
+			"Books Purchase Invoice",
+			make_supplier(payable.name).name,
+			payable.name,
+			self.item.name,
+			self.expense.name,
+			make_auto_payment=1,
+		).submit()
+
+		self.assertEqual(invoice.db_get("outstanding_amount"), 0)
+		payment = frappe.db.get_value(
+			"Books Payment Entry Reference", {"reference_name": invoice.name}, "parent"
+		)
+		dates = frappe.db.get_value(
+			"Books Payment Entry", payment, ["clearance_date", "posting_date"], as_dict=True
+		)
+		self.assertEqual(dates.clearance_date, dates.posting_date)
 
 	def test_mapped_payment_needs_a_method_of_the_account_type(self):
 		frappe.db.set_single_value(

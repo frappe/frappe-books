@@ -152,6 +152,7 @@
 
 <script lang="ts">
 import { Button as FrappeButton } from 'frappe-ui';
+import { getErrorMessage } from 'src/utils';
 import Modal from 'src/components/POS/POSDialog.vue';
 import CashCountTable from 'src/components/POS/CashCountTable.vue';
 import FormControl from 'src/components/Controls/FormControl.vue';
@@ -269,7 +270,7 @@ export default defineComponent({
       try {
         await this.posClosingShiftDoc?.preview();
       } catch (error) {
-        showToast({ type: 'error', message: t`${error as string}` });
+        showToast({ type: 'error', message: getErrorMessage(error as Error) });
       }
     },
     /** Colours a difference by its sign; an exact count stays gray. */
@@ -298,7 +299,7 @@ export default defineComponent({
       } catch (error) {
         return showToast({
           type: 'error',
-          message: t`${error as string}`,
+          message: getErrorMessage(error as Error),
           duration: 'short',
         });
       }

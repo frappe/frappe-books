@@ -273,6 +273,18 @@ test('a cart discount edit picks a percentage or an amount per unit', async () =
   );
 });
 
+test('a cart discount amount cannot exceed the rate, as the server checks', async () => {
+  const [row] = makeSale([
+    { item_code: tea, stock_qty: 1, price_list_rate: 40 },
+  ]).items;
+  await assert.rejects(
+    posCart.setPOSRowValue(row, 'discount_amount', fyo.pesa(50)),
+    /cannot exceed the row rate/
+  );
+  await posCart.setPOSRowValue(row, 'discount_amount', fyo.pesa(40));
+  assert.equal(row.discount_amount.float, 40);
+});
+
 function setUOMConversions(isEnabled) {
   fyo.singles.InventorySettings = { enable_uom_conversions: isEnabled };
 }

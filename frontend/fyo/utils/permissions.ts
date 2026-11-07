@@ -23,6 +23,9 @@ export type Permissions = {
   user: BootUserPermissions;
 };
 
+// Roles that sell outside the POS, as frappe_books.permissions lists them.
+const SELLING_ROLES = ['Books User', 'Books Manager', 'System Manager'];
+
 /** Without boot permissions (tests and scripts), nothing is restricted. */
 export function hasPermission(
   permissions: Permissions | null,
@@ -41,8 +44,26 @@ export function hasPermission(
     return true;
   }
 
+  // The POS makes a cashier's sales; the server refuses any other.
+  if (
+    schemaName === 'SalesInvoice' &&
+    permission === 'create' &&
+    sellsOnlyAtPOS(permissions)
+  ) {
+    return false;
+  }
+
   const doctype = permissions.doctypes[schemaName];
   return !!doctype && hasDocTypePermission(permissions, doctype, permission);
+}
+
+/** Books Cashiers sell only through the POS, unless another role lets them sell, as the server checks. */
+function sellsOnlyAtPOS(permissions: Permissions): boolean {
+  const roles = permissions.user.roles ?? [];
+  return (
+    roles.includes('Books Cashier') &&
+    !roles.some((role) => SELLING_ROLES.includes(role))
+  );
 }
 
 /** A right on a Frappe doctype by name, such as System Settings, which has no schema. */

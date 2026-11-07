@@ -53,18 +53,20 @@ class IntegrationTestDashboard(IntegrationTestCase):
 		)
 		self.assertTrue(profit["has_data"])
 
-	def test_returns_reduce_the_paid_and_unpaid_totals(self):
-		for total, outstanding, return_against in ((100, 40, None), (-30, -30, "Dashboard Original")):
+	def test_amounts_add_up_the_lists_their_cards_open(self):
+		for total, outstanding, return_against in (
+			(100, 0, None),
+			(100, 40, None),
+			(-30, -30, "Dashboard Original"),
+		):
 			_invoice("2031-03-01", total, outstanding, return_against=return_against)
 
 		with self.freeze_time(TODAY):
 			summary = get_invoice_summary("Books Sales Invoice", "This Year")
 
-		self.assertEqual(
-			(summary["total"], summary["paid"], summary["unpaid"]),
-			(Decimal("70.00"), Decimal("60.00"), Decimal("10.00")),
-		)
-		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (0, 2))
+		# Paid adds up the grand totals of fully paid invoices; unpaid what the others still owe.
+		self.assertEqual((summary["paid"], summary["unpaid"]), (Decimal("100.00"), Decimal("10.00")))
+		self.assertEqual((summary["paid_count"], summary["unpaid_count"]), (1, 2))
 
 
 class IntegrationTestCashflow(IntegrationTestCase):
@@ -121,7 +123,7 @@ class IntegrationTestDashboardPeriods(IntegrationTestCase):
 		with self.freeze_time("2031-09-30 18:00:00"):
 			summary = get_invoice_summary("Books Sales Invoice", "This Month")
 
-		self.assertEqual((summary["paid_count"], summary["total"]), (1, Decimal("100.00")))
+		self.assertEqual((summary["paid_count"], summary["paid"]), (1, Decimal("100.00")))
 
 
 class IntegrationTestInvoiceDrillDown(IntegrationTestCase):

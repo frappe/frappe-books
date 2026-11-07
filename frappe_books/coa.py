@@ -22,6 +22,15 @@ class ChartAccount:
 	is_group: bool
 
 
+@dataclass(frozen=True)
+class DefaultAccount:
+	"""A ledger a setting defaults to, and the one setup makes when the chart has none."""
+
+	name: str
+	root_type: str
+	account_type: str | None = None
+
+
 def chart_options() -> list[dict]:
 	"""Return the charts the setup wizard offers, the standard chart first."""
 	charts = [{"name": STANDARD_CHART, "countryCode": ""}, *_country_charts()]
@@ -40,10 +49,14 @@ def load_chart(chart_name) -> list[ChartAccount]:
 	"""Return the named chart's accounts in tree order."""
 	if chart_name == STANDARD_CHART:
 		return _flatten(json.loads((CHART_DIRECTORY / "standardCOA.json").read_text()))
-	for chart in _country_charts():
-		if chart["name"] == chart_name:
-			return _flatten(chart["tree"])
-	frappe.throw(_("Unknown chart of accounts: {0}").format(chart_name))
+	return _flatten(_country_chart(chart_name)["tree"])
+
+
+def chart_default_names(chart_name) -> dict[str, str]:
+	"""The ledgers a country chart names for settings defaults, by DEFAULT_ACCOUNTS key."""
+	if chart_name == STANDARD_CHART:
+		return {}
+	return _country_chart(chart_name).get("defaultAccounts", {})
 
 
 def ensure_chart(accounts: list[ChartAccount]):
@@ -75,13 +88,21 @@ def bank_account_parent(accounts, country=None):
 	return _ensure_group("Bank Accounts", "Asset", accounts, account_type="Bank")
 
 
-def ensure_cash_account(accounts):
-	"""Return the chart's cash ledger, creating one in its first cash group, else the Asset root."""
-	if cash := find_ledger_account(accounts, ["Cash"], "Cash"):
-		return cash
-	groups = _type_groups(accounts, "Cash")
-	parent = groups[0] if groups else _root_account("Asset", accounts)
-	return _create_account("Cash", parent, root_type="Asset", account_type="Cash", is_group=False).name
+def ensure_default_account(accounts, default: DefaultAccount, name=None):
+	"""Return the chart's ledger for a default, else make it in the chart's first group of its type
+	under its root type, else under that root."""
+	if account := find_default_account(accounts, default, name):
+		return account
+	# Some charts type a group of another root, e.g. Guatemala's Round Off group under assets.
+	groups = [
+		account.name
+		for account in accounts
+		if default.account_type
+		and account.is_group
+		and (account.account_type, account.root_type) == (default.account_type, default.root_type)
+	]
+	parent = groups[0] if groups else _root_account(default.root_type, accounts)
+	return _create_account(default.name, parent, default.root_type, default.account_type, is_group=False).name
 
 
 def ensure_discount_account(accounts=()):
@@ -108,17 +129,33 @@ def ensure_account(label, parent, root_type, account_type=None, is_group=False):
 	return _create_account(label, parent, root_type, account_type, is_group)
 
 
-def find_ledger_account(accounts, names=(), account_type=None):
-	"""Return the chart's ledger of the account type named first in `names`, else its first of the type."""
+def find_default_account(accounts, default: DefaultAccount, name=None):
+	"""Return the chart's ledger named `name` or the default's name, else its first of the account type.
+
+	A typed default matches by type alone, as some charts keep payables under assets; an untyped one
+	needs its root type.
+	"""
 	ledgers = [
 		account.name
 		for account in accounts
-		if not account.is_group and account_type in (None, account.account_type)
+		if not account.is_group
+		and (
+			account.account_type == default.account_type
+			if default.account_type
+			else account.root_type == default.root_type
+		)
 	]
-	named = [name for name in names if name in ledgers]
+	named = [candidate for candidate in (name, default.name) if candidate in ledgers]
 	if named:
 		return named[0]
-	return ledgers[0] if account_type and ledgers else None
+	return ledgers[0] if default.account_type and ledgers else None
+
+
+def _country_chart(chart_name):
+	for chart in _country_charts():
+		if chart["name"] == chart_name:
+			return chart
+	frappe.throw(_("Unknown chart of accounts: {0}").format(chart_name))
 
 
 @lru_cache(maxsize=1)

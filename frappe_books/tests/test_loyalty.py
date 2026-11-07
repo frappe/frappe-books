@@ -11,6 +11,7 @@ from frappe_books.commerce.loyalty import (
 	get_loyalty_program_details_with_points,
 )
 from frappe_books.tests.accounting import (
+	foreign_currency,
 	ledger_entries,
 	make_account,
 	make_customer,
@@ -129,14 +130,18 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				self.assertEqual(self._loyalty_program(**values).status, status)
 
 	def test_usage_says_what_books_says_at_its_fields(self):
-		for values, message in (
-			({"used": -1}, "Used count cannot be negative"),
-			({"maximum_use": -1}, "Maximum use cannot be negative"),
-			({"maximum_use": 2, "used": 3}, "Used count cannot exceed maximum use limit"),
-		):
-			with self.subTest(message=message), self.assertRaises(frappe.ValidationError) as raised:
-				self._loyalty_program(**values)
-			self.assertEqual(str(raised.exception), message)
+		with self.assertRaises(frappe.ValidationError) as raised:
+			self._loyalty_program(maximum_use=-1)
+		self.assertEqual(str(raised.exception), "Maximum use cannot be negative")
+
+	def test_a_save_counts_the_programs_redemptions(self):
+		program = self._loyalty_program()
+		self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+
+		program.reload().used = 0
+		program.save()
+		self.assertEqual(program.db_get("used"), 1)
 
 	def test_status_is_maxed_at_the_use_limit(self):
 		program = self._loyalty_program(maximum_use=1)
@@ -300,6 +305,33 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 				"expiry_date": expiry_date,
 			}
 		).insert()
+
+	def test_foreign_currency_sales_earn_on_the_company_currency_total(self):
+		self.party = make_customer(self.receivable.name, default_currency=foreign_currency())
+		rules = [
+			{"tier_name": "Base", "collection_factor": 1, "min_spent": 0},
+			{"tier_name": "Big", "collection_factor": 2, "min_spent": 1000},
+		]
+		program = self._loyalty_program(collection_rules=rules)
+		invoice = make_invoice(
+			"Books Sales Invoice",
+			self.party.name,
+			self.receivable.name,
+			self.item.name,
+			self.income.name,
+			loyalty_program=program.name,
+			conversion_rate=10,
+		).submit()
+		self.assertEqual((invoice.grand_total, invoice.base_grand_total), (180, 1800))
+
+		entry = frappe.get_all(
+			"Books Loyalty Point Entry",
+			filters={"invoice": invoice.name},
+			fields=["loyalty_points", "loyalty_program_tier", "purchase_amount"],
+		)[0]
+		self.assertEqual(
+			(entry.loyalty_points, entry.loyalty_program_tier, entry.purchase_amount), (900, "Big", 1800)
+		)
 
 	def _loyalty_program(self, **values):
 		"""Make a program and give it to the test customer."""

@@ -1,6 +1,11 @@
 {
   "countryCode": "in",
   "name": "India - Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "Debtors",
+    "payable": "Creditors",
+    "income": "Sales"
+  },
   "tree": {
     "Application of Funds (Assets)": {
       "Current Assets": {

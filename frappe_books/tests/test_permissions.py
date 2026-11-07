@@ -22,7 +22,9 @@ from frappe_books.tests.accounting import (
 	make_customer,
 	make_invoice,
 	make_item,
+	make_item_default_sources,
 	make_tax,
+	make_warehouse,
 	set_company_value,
 	unique_name,
 )
@@ -53,7 +55,7 @@ ROLE_MATRIX = {
 	"Books Account": (FULL, FULL, NONE, NONE),
 	"Books Item Tax Template": (FULL, FULL, READ, READ),
 	"Books Defaults": (FULL, FULL, READ, READ),
-	"Print Format": (FULL, FULL, READ, READ),
+	"Print Format": (FULL, READ, READ, READ),
 	"Books Custom Form": (FULL, READ, READ, READ),
 	"Books GL Entry": (READ, READ, NONE, NONE),
 	"Books Stock Ledger Entry": (READ, READ, READ, READ),
@@ -172,25 +174,60 @@ class IntegrationTestPermissions(IntegrationTestCase):
 		item.reload()
 		self.assertEqual(item.item_defaults[0].income_account, income.name)
 		self.assertEqual(invoice.debit_to, receivable.name)
+		self.assertEqual(invoice.items[0].income_account, income.name)
 		self.assertIsNone(read_back["debit_to"])
 		self.assertIsNone(read_back["items"][0]["income_account"])
+
+	def test_books_user_sets_an_items_default_warehouse_but_not_its_accounts(self):
+		income = make_account("Warehouse Income", root_type="Income", account_type="Income Account")
+		other_income = make_account(
+			"Warehouse Other Income", root_type="Income", account_type="Income Account"
+		)
+		expense = make_account("Warehouse Expense", root_type="Expense", account_type="Expense Account")
+		warehouse = make_warehouse("Rights Warehouse").name
+		item = make_item(income.name, expense.name)
+		# A new item's accounts come from the defaults the server fills.
+		make_item_default_sources()
+
+		with self.set_user(BOOKS_USER):
+			edited = frappe.get_doc("Books Item", item.name)
+			edited.item_defaults[0].default_warehouse = warehouse
+			edited.item_defaults[0].income_account = other_income.name
+			edited.save()
+			new = frappe.get_doc(
+				{
+					"doctype": "Books Item",
+					"item_code": unique_name("Rights Item"),
+					"stock_uom": "Unit",
+					"item_defaults": [{"default_warehouse": warehouse, "income_account": other_income.name}],
+				}
+			).insert()
+
+		item.reload()
+		self.assertEqual(
+			[item.item_defaults[0].default_warehouse, item.item_defaults[0].income_account],
+			[warehouse, income.name],
+		)
+		self.assertEqual(new.item_defaults[0].default_warehouse, warehouse)
+		self.assertEqual(new.item_defaults[0].income_account, "Sales")
 
 	def test_books_user_cannot_write_config(self):
 		account = make_account("Permission Tax", account_type="Tax")
 		with self.set_user(BOOKS_USER):
 			self.assertRaises(frappe.PermissionError, make_tax, account.name)
 
-	def test_books_manager_writes_print_formats_books_user_prints(self):
+	def test_only_system_manager_writes_print_formats_books_roles_print(self):
+		values = {
+			"doctype": "Print Format",
+			"name": unique_name("Manager Format"),
+			"doc_type": "Books Sales Invoice",
+			"custom_format": 1,
+			"html": "<div>{{ doc.name }}</div>",
+		}
 		with self.set_user(MANAGER):
-			print_format = frappe.get_doc(
-				{
-					"doctype": "Print Format",
-					"name": unique_name("Manager Format"),
-					"doc_type": "Books Sales Invoice",
-					"custom_format": 1,
-					"html": "<div>{{ doc.name }}</div>",
-				}
-			).insert()
+			self.assertRaises(frappe.PermissionError, frappe.get_doc(values).insert)
+		with self.set_user(SYSTEM_MANAGER):
+			print_format = frappe.get_doc(values).insert()
 		with self.set_user(BOOKS_USER):
 			self.assertTrue(frappe.has_permission("Print Format", "print"))
 			print_format.html = "<p>{{ doc.name }}</p>"

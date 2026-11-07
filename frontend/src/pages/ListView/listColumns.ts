@@ -38,7 +38,7 @@ export function getEmptyState(
 
 /**
  * The list view's columns, or the name and quick edit fields without them.
- * Columns the DocType lacks are left out.
+ * Columns the DocType lacks, or the user cannot read, are left out.
  */
 export function getListColumns(
   schemaName: string,
@@ -59,12 +59,15 @@ export function getListColumns(
     }
 
     const fieldname = column === 'name' && title ? title : column;
-    return getFields(schemaName, [fieldname]);
+    return getFields(schemaName, [fieldname]).filter((f) => !f.unreadable);
   });
   return shown;
 }
 
-/** Fixed tracks for dates, numbers and badges; text shares what is left. */
+/**
+ * Fixed tracks for dates, numbers and badges; text shares what is left but
+ * keeps room to name the row, and a narrower list scrolls sideways.
+ */
 export function getColumnTrack(column: ListColumn): string {
   if ((column as ColumnConfig).badge) {
     return '7rem';
@@ -75,7 +78,7 @@ export function getColumnTrack(column: ListColumn): string {
   if (isNumeric(column.fieldtype)) {
     return '9rem';
   }
-  return 'minmax(0, 1fr)';
+  return 'minmax(8rem, 1fr)';
 }
 
 export function isField(column: ListColumn): column is Field {

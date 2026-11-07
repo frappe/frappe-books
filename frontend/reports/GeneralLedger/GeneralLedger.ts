@@ -26,6 +26,8 @@ export class GeneralLedger extends Report {
   isCancelled = false;
   /** The doctype of the entries' documents, or `All`. */
   voucherType = 'All';
+  /** The doctype of the entries' parties, or `All`. */
+  partyType = 'All';
   groupBy: 'none' | 'party' | 'account' | 'voucher_no' = 'none';
 
   async setDefaultFilters() {
@@ -102,6 +104,7 @@ export class GeneralLedger extends Report {
       {
         fieldtype: 'Select',
         options: [
+          { label: t`All`, value: 'All' },
           { label: t`Customer`, value: 'Books Customer' },
           { label: t`Supplier`, value: 'Books Supplier' },
         ],

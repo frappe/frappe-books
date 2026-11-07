@@ -63,6 +63,17 @@ export const ADDRESS_FIELDNAMES = ADDRESS_FIELDS.map(
 );
 
 /**
+ * A new record's address values make an Address, as ERPNext's quick entry
+ * does, which needs a line, a city and a country; a country alone makes none.
+ */
+export function getAddressRequired(doc: FrappeDoc): RequiredMap {
+  const hasAddress = () =>
+    doc.notInserted &&
+    ADDRESS_FIELDNAMES.some((field) => field !== 'country' && !!doc[field]);
+  return { address_line1: hasAddress, city: hasAddress, country: hasAddress };
+}
+
+/**
  * What a customer and a supplier share, served by Frappe. The server fills
  * the default account and currency on save, and makes a new party's primary
  * Contact and Address from its email, mobile and address.
@@ -89,11 +100,7 @@ export abstract class Party extends FrappeDoc {
     [this.primaryAddressField]: () => this.notInserted,
   };
 
-  // As Desk's quick entry asks: an address line needs its city and country.
-  required: RequiredMap = {
-    city: () => this.notInserted && !!this.address_line1,
-    country: () => this.notInserted && !!this.address_line1,
-  };
+  required: RequiredMap = getAddressRequired(this);
 
   /** The Account field shows the current company's `accounts` row; rows of other companies stay as they are. */
   get account(): DocValue {

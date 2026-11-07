@@ -310,7 +310,7 @@ export const previousForms = {
         'rate | Rate |  | Default | ',
         'amount | Amount |  | Default | ',
         'discount_amount | Discount Amount |  | Default | ',
-        'discount_percentage | Discount (%) on Price List Rate with Margin |  | Default | ',
+        'discount_percentage | Discount on Price List Rate (%) |  | Default | ',
         'gst_hsn_code | HSN/SAC | HSN/SAC Code | Default | ',
         'against_sales_invoice | Against Sales Invoice |  | Default | ',
       ],
@@ -579,7 +579,7 @@ export const previousForms = {
     ],
     Quotation: [
       'naming_series | Number Series',
-      'party_name | Customer',
+      'party_name | Party',
       'transaction_date | Date',
       'selling_price_list | Price List',
       'taxes_and_charges | Sales Taxes and Charges Template',

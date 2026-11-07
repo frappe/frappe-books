@@ -75,15 +75,15 @@ class IntegrationTestBooksCustomer(IntegrationTestCase):
 		with self.assertRaisesRegex(frappe.ValidationError, "must be of type Receivable,"):
 			make_customer(payable.name)
 
-	def test_customer_defaults_to_debtors_and_company_currency(self):
-		if not frappe.db.exists("Books Account", "Debtors"):
-			make_account("Debtors", account_type="Receivable", account_name="Debtors")
+	def test_customer_defaults_to_the_company_receivable_and_currency(self):
+		receivable = make_account("Company Receivable", account_type="Receivable")
+		set_company_value("default_receivable_account", receivable.name)
 		customer = frappe.get_doc(
 			{"doctype": "Books Customer", "customer_name": unique_name("Customer")}
 		).insert()
 
 		self.assertEqual(
-			(customer.accounts[0].account, customer.default_currency), ("Debtors", company_currency())
+			(customer.accounts[0].account, customer.default_currency), (receivable.name, company_currency())
 		)
 
 	def test_primary_address_prints_as_the_address_template_renders_it(self):

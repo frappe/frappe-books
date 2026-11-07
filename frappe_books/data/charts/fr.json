@@ -1,6 +1,11 @@
 {
   "countryCode": "fr",
   "name": "France - Plan Comptable General",
+  "defaultAccounts": {
+    "receivable": "4111-Clients - Ventes de biens ou de prestations de services",
+    "payable": "4011-Fournisseurs - Achats de biens ou de prestations de services",
+    "income": "7071-Marchandises (ou groupe) A"
+  },
   "tree": {
     "1-Comptes de Capitaux": {
       "10-Capital et R\u00e9serves": {

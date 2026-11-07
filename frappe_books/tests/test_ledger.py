@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 from frappe.utils import nowdate
 
 from frappe_books.accounting.ledger import LedgerPosting
+from frappe_books.accounting.money import format_money
 from frappe_books.tests.accounting import make_account, set_company_value
 
 
@@ -23,3 +24,14 @@ class IntegrationTestLedgerPosting(IntegrationTestCase):
 
 		with self.assertRaisesRegex(frappe.ValidationError, "must equal total credit"):
 			posting.post()
+
+	def test_unbalanced_error_shows_totals_as_money(self):
+		posting = LedgerPosting(self.voucher)
+		posting.debit(self.cash.name, Decimal("10.00000000000"))
+		posting.credit(self.income.name, Decimal("9.50000000000"))
+
+		with self.assertRaises(frappe.ValidationError) as error:
+			posting.post()
+
+		self.assertIn(format_money(10), str(error.exception))
+		self.assertIn(format_money(Decimal("9.5")), str(error.exception))

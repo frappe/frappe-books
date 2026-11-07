@@ -9,7 +9,7 @@ from frappe.model.document import Document
 from frappe.utils import getdate
 
 from frappe_books.accounting.money import as_decimal
-from frappe_books.commerce.pricing import validate_dates, validate_range
+from frappe_books.commerce.pricing import coupon_uses, validate_dates, validate_range
 from frappe_books.settings import require_feature
 
 
@@ -40,9 +40,10 @@ class BooksCouponCode(Document):
 	def validate(self):
 		require_feature("enable_coupon_code")
 		self.set_coupon_code()
+		self.used = 0 if self.is_new() else coupon_uses(self.name)
 		validate_range(self.min_amt, self.max_amt, _("amount"), strict=True)
 		validate_dates(self.valid_from, self.valid_upto)
-		if self.maximum_use < 0 or self.used < 0:
+		if self.maximum_use < 0:
 			frappe.throw(_("Coupon usage counts cannot be negative."))
 		if self.maximum_use and self.used > self.maximum_use:
 			frappe.throw(_("Coupon usage cannot exceed its maximum use limit."))

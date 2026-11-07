@@ -155,7 +155,6 @@ import {
   PageSize,
   PrintHTML,
 } from 'src/utils/printFormats';
-import { getPOSProfileName } from 'src/utils/posSetup';
 import { showSidebar } from 'src/utils/refs';
 import { getFormRoute, openSettings, routeTo } from 'src/utils/ui';
 import { isMobile } from 'src/utils/viewport';
@@ -467,7 +466,8 @@ export default defineComponent({
       if (this.schemaName == ModelNameEnum.SalesInvoice && this.doc?.is_pos) {
         templateName = this.fyo.singles.Defaults?.pos_print_template;
 
-        const posProfileName = await getPOSProfileName();
+        // The profile the sale was made with, so it prints the same for everyone.
+        const posProfileName = this.doc.pos_profile as string | undefined;
         const profileTemplate =
           posProfileName &&
           (await getValue('Books POS Profile', posProfileName, 'print_format'));

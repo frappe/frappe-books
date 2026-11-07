@@ -16,7 +16,8 @@ import { setCurrencies } from './Invoice';
  */
 export class TaxesAndCharges extends FrappeDoc {
   static override presentation = {
-    label: 'Taxes and Charges',
+    // None: the doctype labels it, Sales or Purchase Taxes and Charges, which share this model.
+    label: '',
     fields: {
       ...withoutCreate(['account_head']),
       // As Books' rows start; ERPNext's sales rows have no default.

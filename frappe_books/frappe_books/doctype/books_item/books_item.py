@@ -9,9 +9,9 @@ from frappe.model.document import Document
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, getdate
 
-from frappe_books.accounting.accounts import latest_ledger_account, validate_account
+from frappe_books.accounting.accounts import latest_ledger_account, validate_row_accounts
 from frappe_books.company import company_value, default_company
-from frappe_books.permissions import check_preview_permission
+from frappe_books.permissions import check_preview_permission, reset_new_rows_above_permlevel
 from frappe_books.regional import validate_hsn_codes
 from frappe_books.series import INVALID_PREFIX_CHARACTERS, ITEM_SERIES, item_series_pattern, validate_pattern
 from frappe_books.settings import require_features
@@ -64,6 +64,10 @@ class BooksItem(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Item"
+
+	def before_insert(self):
+		# The accounts of a new item's defaults are the server's to fill for users who cannot write them.
+		reset_new_rows_above_permlevel(self)
 
 	def before_validate(self):
 		# Named by its code, an item is titled by it too unless it has a name of its own.
@@ -152,20 +156,28 @@ class BooksItem(Document):
 			)
 
 	def validate_accounts(self):
-		"""One row per company. A tracked item is bought into stock received but not billed, a liability."""
+		"""One row per company, with accounts of the kinds its invoices post to."""
 		companies = [row.company for row in self.item_defaults]
 		if len(companies) != len(set(companies)):
 			frappe.throw(_("Cannot set multiple Item Defaults for a company."))
-		expense_root = "Liability" if self.is_stock_item else "Expense"
-		for row in self.item_defaults:
-			validate_account(row, "income_account", root_types=("Income",))
-			validate_account(row, "expense_account", root_types=(expense_root,))
+		for fieldname in ("income_account", "expense_account"):
+			root_types = item_account_root_types(fieldname, self.is_stock_item)
+			validate_row_accounts(self.item_defaults, fieldname, root_types=root_types)
+
+
+def item_account_root_types(fieldname, is_stock_item):
+	"""Items sell into income; a tracked item is bought into stock received but not billed, a liability."""
+	if fieldname == "income_account":
+		return ("Income",)
+	return ("Liability",) if is_stock_item else ("Expense",)
 
 
 def _default_income_account(item_type):
-	"""Products sell into Sales and services into Service, when the chart has them."""
-	account = "Sales" if item_type == "Product" else "Service"
-	return account if frappe.db.exists("Books Account", account) else None
+	"""Services sell into the chart's Service ledger when it has one, else items into the company's
+	default income account."""
+	if item_type == "Service" and frappe.db.exists("Books Account", {"name": "Service", "is_group": 0}):
+		return "Service"
+	return company_value("default_income_account")
 
 
 def _default_expense_account(is_stock_item):

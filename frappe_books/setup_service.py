@@ -7,11 +7,12 @@ import frappe
 from frappe.desk.page.setup_wizard.setup_wizard import complete_app_setup
 
 from frappe_books.coa import (
+	DefaultAccount,
+	chart_default_names,
 	ensure_bank_account,
-	ensure_cash_account,
 	ensure_chart,
+	ensure_default_account,
 	ensure_discount_account,
-	find_ledger_account,
 	load_chart,
 )
 from frappe_books.company import default_company, save_company
@@ -20,6 +21,23 @@ from frappe_books.formats import books_date_format
 from frappe_books.regional import ensure_address_template, ensure_regional_records
 from frappe_books.series import NUMBER_SERIES
 from frappe_books.settings import update_frappe_settings
+
+# The ledgers settings default to. A chart names its own in "defaultAccounts", else these are
+# looked for by name, then by account type, and made when missing.
+DEFAULT_ACCOUNTS = {
+	"receivable": DefaultAccount("Debtors", "Asset", "Receivable"),
+	"payable": DefaultAccount("Creditors", "Liability", "Payable"),
+	"income": DefaultAccount("Sales", "Income"),
+	"cash": DefaultAccount("Cash", "Asset", "Cash"),
+	"write_off": DefaultAccount("Write Off", "Expense"),
+	"round_off": DefaultAccount("Round Off", "Expense", "Round Off"),
+	"stock_in_hand": DefaultAccount("Stock In Hand", "Asset", "Stock"),
+	"stock_received_but_not_billed": DefaultAccount(
+		"Stock Received But Not Billed", "Liability", "Stock Received But Not Billed"
+	),
+	"cost_of_goods_sold": DefaultAccount("Cost of Goods Sold", "Expense", "Cost of Goods Sold"),
+	"stock_adjustment": DefaultAccount("Stock Adjustment", "Expense", "Stock Adjustment"),
+}
 
 
 def run_setup(wizard):
@@ -33,7 +51,7 @@ def run_setup(wizard):
 	bank_account = ensure_bank_account(wizard.bank_name, chart, wizard.country)
 	discount_account = ensure_discount_account(chart)
 	enable_currency(wizard.currency)
-	accounts = {**default_accounts(chart), "cash": ensure_cash_account(chart)}
+	accounts = default_accounts(wizard.chart_of_accounts, chart)
 	_update_company_accounts(discount_account, accounts)
 	_update_accounting_settings(wizard)
 	_update_books_system_settings(wizard)
@@ -71,24 +89,21 @@ def enable_currency(currency):
 		doc.save()
 
 
-def default_accounts(chart):
-	"""Pick the chart's ledger accounts for settings by name first, then by account type."""
+def default_accounts(chart_name, chart):
+	"""The chart's ledger for each setting default, made when the chart has none."""
+	names = chart_default_names(chart_name)
 	return {
-		"write_off": find_ledger_account(chart, ["Write Off"]),
-		"round_off": find_ledger_account(chart, ["Rounded Off", "Round Off"]),
-		"receivable": find_ledger_account(chart, ["Debtors"], "Receivable"),
-		"stock_in_hand": find_ledger_account(chart, ["Stock In Hand"], "Stock"),
-		"stock_received_but_not_billed": find_ledger_account(
-			chart, ["Stock Received But Not Billed"], "Stock Received But Not Billed"
-		),
-		"cost_of_goods_sold": find_ledger_account(chart, ["Cost of Goods Sold"], "Cost of Goods Sold"),
-		"stock_adjustment": find_ledger_account(chart, ["Stock Adjustment"], "Stock Adjustment"),
+		key: ensure_default_account(chart, default, names.get(key))
+		for key, default in DEFAULT_ACCOUNTS.items()
 	}
 
 
 def _update_company_accounts(discount_account, accounts):
 	save_company(
 		{
+			"default_receivable_account": accounts["receivable"],
+			"default_payable_account": accounts["payable"],
+			"default_income_account": accounts["income"],
 			"write_off_account": accounts["write_off"],
 			"round_off_account": accounts["round_off"],
 			"default_discount_account": discount_account,
@@ -109,10 +124,11 @@ def _update_accounting_settings(wizard):
 			"bank_name": wizard.bank_name,
 			"year_start_date": wizard.fiscal_year_start,
 			"year_end_date": wizard.fiscal_year_end,
-			"setup_complete": 1,
 		}
 	)
 	settings.save(ignore_permissions=True)
+	# The settings refuse to change it, so it stays set once the setup is done.
+	frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 1)
 
 
 def _update_print_settings(wizard):

@@ -81,6 +81,7 @@ import {
   getSidebarLocation,
   type SidebarEntry,
 } from 'src/utils/sidebarNavigation';
+import { findRecordSidebarEntry } from 'src/utils/sidebarRecord';
 import { SidebarConfig, SidebarItem, SidebarRoot } from 'src/utils/types';
 import { toggleSidebar } from 'src/utils/ui';
 import { defineComponent, inject } from 'vue';
@@ -143,12 +144,17 @@ export default defineComponent({
   },
   methods: {
     toggleSidebar,
-    setCurrentEntry() {
+    async setCurrentEntry() {
+      const route = this.$route;
       this.currentEntry = findSidebarEntry(
         this.groups,
-        this.$route,
+        route,
         this.currentEntry
       );
+      const entry = await findRecordSidebarEntry(this.groups, route);
+      if (entry && route.fullPath === this.$route.fullPath) {
+        this.currentEntry = entry;
+      }
     },
     isActive(entry: SidebarRoot | SidebarItem): boolean {
       return this.currentEntry?.item === entry;

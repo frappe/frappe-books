@@ -2,10 +2,13 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
+from frappe.utils import cint
 
 from frappe_books.coa import ensure_discount_account
 from frappe_books.company import company_value, default_company
+from frappe_books.dates import validate_fiscal_year
 from frappe_books.regional import validate_gstin
 from frappe_books.settings import company_country, validate_one_way_switches
 
@@ -25,6 +28,12 @@ ONE_WAY_SWITCHES = (
 	"enable_point_of_sale_with_out_inventory",
 	"enable_item_group",
 )
+
+# Switches that work only while another is on, in the order they depend on each other
+DEPENDENT_SWITCHES = {
+	"enable_pricing_rule": "enable_discounts_and_margin",
+	"enable_coupon_code": "enable_pricing_rule",
+}
 
 
 class BooksAccountingSettings(Document):
@@ -77,9 +86,24 @@ class BooksAccountingSettings(Document):
 		return bool(self.get(fieldname)) and self.has_value_changed(fieldname)
 
 	def validate(self):
+		self.clear_dependent_switches()
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
+		self.validate_setup_complete()
+		validate_fiscal_year(self.year_start_date, self.year_end_date)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)
+
+	def clear_dependent_switches(self):
+		"""Turn a switch off with the one it needs, as the form then hides it."""
+		for fieldname, needed in DEPENDENT_SWITCHES.items():
+			if not self.get(needed):
+				self.set(fieldname, 0)
+
+	def validate_setup_complete(self):
+		"""Only the setup sets it, as clearing it would let a second setup merge another chart in."""
+		before = self.get_doc_before_save()
+		if cint(self.setup_complete) != cint(before and before.setup_complete):
+			frappe.throw(_("Only the setup wizard can change Setup Complete."))
 
 
 def set_discount_account():

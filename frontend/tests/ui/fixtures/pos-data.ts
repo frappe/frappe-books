@@ -141,6 +141,8 @@ export async function preparePOSData() {
   Object.assign(fyo.singles.SystemSettings!, { currency_precision: 2 });
   Object.assign(fyo.singles.AccountingSettings!, {
     enable_invoice_returns: true,
+    // Coupons work through pricing rules.
+    enable_pricing_rule: true,
     enable_coupon_code: true,
     enable_price_list: true,
     enable_item_enquiry: true,

@@ -53,12 +53,16 @@ PARTY_INVOICES = {
 
 def refresh_party(party_type, party):
 	"""Store what the customer or supplier owes on its invoices."""
-	if not party:
-		return
+	if party:
+		frappe.db.set_value(party_type, party, "outstanding_amount", party_outstanding(party_type, party))
+
+
+def party_outstanding(party_type, party):
+	"""What the customer or supplier owes on its submitted invoices."""
 	doctype, party_field = PARTY_INVOICES[party_type]
 	rows = frappe.get_all(
 		doctype,
 		filters={party_field: party, "docstatus": 1},
 		fields=[{"SUM": "outstanding_amount", "as": "total"}],
 	)
-	frappe.db.set_value(party_type, party, "outstanding_amount", rounded(as_decimal(rows[0].total)))
+	return rounded(as_decimal(rows[0].total))

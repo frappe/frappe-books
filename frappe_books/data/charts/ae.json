@@ -1,6 +1,12 @@
 {
   "countryCode": "ae",
   "name": "U.A.E - Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "Trade Receivable",
+    "payable": "Trade Payable",
+    "income": "Sales Account",
+    "cost_of_goods_sold": "Cost of Goods Sold in Trading"
+  },
   "tree": {
     "Assets": {
       "Current Assets": {

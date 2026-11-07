@@ -4,6 +4,7 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
+from frappe_books.frappe_books.doctype.books_lead.books_lead import make_quotation
 from frappe_books.tests.accounting import make_address, make_customer, unique_name
 
 
@@ -43,6 +44,11 @@ class IntegrationTestBooksLead(IntegrationTestCase):
 
 		self.assertFalse(frappe.db.exists("Address", own.name))
 		self.assertFalse(frappe.get_doc("Address", shared.name).has_link(lead.doctype, lead.name))
+
+	def test_a_quote_from_a_lead_starts_as_draft_whatever_the_lead_status(self):
+		lead = make_lead(status="Interested")
+
+		self.assertEqual(make_quotation(lead.name).status, "Draft")
 
 
 def make_lead(**values):

@@ -1,6 +1,12 @@
 {
   "countryCode": "id",
   "name": "Indonesia - Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "Piutang Dagang - 1131.0010",
+    "payable": "Hutang Dagang Dalam Negeri - 2111.001",
+    "income": "Penjualan - 4110.000",
+    "cash": "Kas Besar - 1111.0020"
+  },
   "tree": {
     "Aktiva": {
       "Aktiva Lancar": {

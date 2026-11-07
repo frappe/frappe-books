@@ -1,4 +1,5 @@
 import { t } from 'fyo';
+import { getErrorMessage } from './index';
 import type { DocValue } from 'fyo/core/types';
 import { ValidationError } from 'fyo/utils/errors';
 import { POSProfile } from 'models/baseModels/POSProfile/PosProfile';
@@ -93,7 +94,7 @@ export function validateIsPosSettingsSet(profile?: POSProfile | null) {
   } catch (error) {
     showToast({
       type: 'error',
-      message: t`${error as string}`,
+      message: getErrorMessage(error as Error),
       duration: 'long',
     });
   }

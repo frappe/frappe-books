@@ -14,7 +14,7 @@ export class StockLedger extends Report {
     date: 'date',
     title: 'item_code',
     amount: 'actual_qty',
-    meta: ['warehouse', 'voucher_no'],
+    meta: ['warehouse', 'batch_no', 'serial_no', 'voucher_no'],
     balance: 'qty_after_transaction',
     chips: ['fromDate', 'toDate', 'itemCode', 'warehouse'],
   };
@@ -25,7 +25,7 @@ export class StockLedger extends Report {
   itemCode?: string;
   warehouse?: string;
   batchNo?: string;
-  serialNumber?: string;
+  serialNo?: string;
   fromDate?: string;
   toDate?: string;
   ascending?: boolean;
@@ -117,6 +117,17 @@ export class StockLedger extends Report {
               placeholder: t`Batch`,
               label: t`Batch`,
               fieldname: 'batchNo',
+            },
+          ] as Field[])
+        : []),
+      ...(this.hasSerialNumbers
+        ? ([
+            {
+              fieldtype: 'Link',
+              target: 'SerialNo',
+              placeholder: t`Serial Number`,
+              label: t`Serial Number`,
+              fieldname: 'serialNo',
             },
           ] as Field[])
         : []),

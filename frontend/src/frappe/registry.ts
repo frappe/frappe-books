@@ -58,20 +58,23 @@ export function getFields(schemaName: string, fieldnames: string[]): Field[] {
 
 /**
  * The fields of export and import files: the schema's `fileFields` in their
- * order, then its custom and meta fields; else all its stored fields.
+ * order, then its custom and meta fields; else all its stored fields. Fields
+ * the user cannot read are left out, as the server sends no values for them.
  */
 export function getFileFields(schemaName: string): Field[] {
   const schema = getSchema(schemaName)!;
   // Insert-only and client values are not the DocType's, so files cannot hold them.
   const fields = schema.fields.filter(
-    (field) => !field.insertOnly && !field.clientOnly
+    (field) => !field.insertOnly && !field.clientOnly && !field.unreadable
   );
   const { fileFields } = schema;
   if (!fileFields) {
     return fields;
   }
 
-  const listed = getFields(schemaName, fileFields);
+  const listed = getFields(schemaName, fileFields).filter(
+    (field) => !field.unreadable
+  );
   const rest = fields.filter(
     (field) => (field.isCustom || field.meta) && !listed.includes(field)
   );
@@ -167,7 +170,23 @@ function buildDocType(
     booksMeta.placements[meta.name]
   );
   docType.tables = getTables(meta, byName, Model, booksMeta);
+  setCompanyRowAccess(docType);
   return docType;
+}
+
+/** A field kept in a company row is as hidden and read only as the row field it shows. */
+function setCompanyRowAccess({ schema, tables }: FrappeDocType) {
+  for (const field of schema.fields) {
+    const rowField =
+      field.companyTable &&
+      tables[field.companyTable]?.schema.fields.find(
+        ({ fieldname }) => fieldname === field.fieldname
+      );
+    if (rowField) {
+      field.hidden ||= rowField.hidden;
+      field.readOnly ||= rowField.readOnly;
+    }
+  }
 }
 
 function getTables(
@@ -189,7 +208,8 @@ function getTables(
         { ...child, permissions: meta.permissions },
         name,
         RowModel,
-        booksMeta.placements[child.name]
+        booksMeta.placements[child.name],
+        field.permlevel
       );
     }
   }
@@ -201,7 +221,8 @@ function toDocType(
   meta: DocTypeMeta,
   schemaName: string,
   Model: FrappeModel,
-  placements: Placements = {}
+  placements: Placements = {},
+  tableLevel?: number
 ): FrappeDocType {
   // Rows without a model of their own are labelled by their doctype.
   const presentation: Presentation = {
@@ -212,6 +233,7 @@ function toDocType(
     schemaNames: getSchemaNames(),
     roles: window.frappe.boot?.user?.roles ?? [],
     placements,
+    tableLevel,
   });
   const languageMap = TranslationString.prototype.languageMap;
   if (languageMap) {

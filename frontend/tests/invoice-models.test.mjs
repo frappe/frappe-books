@@ -60,10 +60,27 @@ test('a new sales invoice shows the fields it showed, in its sections', () => {
       Items: ['items'],
       Taxes: ['taxes_and_charges', 'taxes'],
       Totals: ['net_total', 'total_taxes_and_charges', 'grand_total'],
-      Outstanding: ['outstanding_amount', 'stock_not_transferred'],
+      Outstanding: ['outstanding_amount'],
       References: ['terms'],
     },
   });
+});
+
+test('only inventory shows the stock an invoice has not shipped or received', () => {
+  setSettings({ accounting: { enable_inventory: true } });
+  assert.deepEqual(getLayout(newInvoice('SalesInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+    'stock_not_transferred',
+  ]);
+  assert.deepEqual(getLayout(newInvoice('PurchaseInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+    'per_received',
+  ]);
+
+  setSettings();
+  assert.deepEqual(getLayout(newInvoice('PurchaseInvoice')).Main.Outstanding, [
+    'outstanding_amount',
+  ]);
 });
 
 test('features and totals show the fields that go with them', () => {
@@ -72,6 +89,8 @@ test('features and totals show the fields that go with them', () => {
       enable_discounts_and_margin: true,
       enable_inventory: true,
       enable_price_list: true,
+      // Coupons work through pricing rules.
+      enable_pricing_rule: true,
       enable_coupon_code: true,
     },
     defaults: {
@@ -156,10 +175,11 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
 
   assert.deepEqual(getLayout(quote).Main.Default, [
     'naming_series',
+    'quotation_to',
     'party_name',
     'transaction_date',
-    'quotation_to',
   ]);
+  assert.equal(quote.fieldMap.party_name.label, 'Party');
   const type = quote.fieldMap.quotation_to;
   assert.equal(type.fieldtype, 'Select');
   assert.deepEqual(
@@ -627,6 +647,19 @@ test('a new supplier or quote party leaves the party currency to the server', as
     assert.equal('currency' in sent, false, schemaName);
     assert.equal('price_list_rate' in sent.items[0], false, schemaName);
   }
+});
+
+test("an item tax row shows its items' rate only when they share one", () => {
+  setSettings();
+  const invoice = newInvoice('SalesInvoice');
+  invoice.push('taxes', { account_head: 'CGST', set_by_item_tax_template: 1 });
+  const [row] = invoice.taxes;
+  const state = () => row.getFieldState(row.fieldMap.rate);
+
+  assert.equal(state().hidden, true);
+  row.rate = 9;
+  assert.equal(state().hidden, false);
+  assert.equal(state().readOnly, true);
 });
 
 test('amounts show in the party currency, base amounts in the company one', () => {

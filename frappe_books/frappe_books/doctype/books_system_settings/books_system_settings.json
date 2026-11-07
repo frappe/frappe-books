@@ -89,6 +89,7 @@
    "fieldtype": "Int",
    "hidden": 1,
    "label": "Internal Precision",
+   "max_value": 36,
    "non_negative": 1
   }
  ],
@@ -96,7 +97,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 15:18:16.733504",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books System Settings",

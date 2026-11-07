@@ -142,12 +142,14 @@ test('the quote asks for the Type of its party and hides invoice fields', () => 
   setSettings();
   const quote = newInvoice('SalesQuote');
 
+  // The Type decides what the party is, so it comes first.
   assert.deepEqual(getLayout(quote).Main.Default, [
     'number_series',
+    'reference_type',
     'party',
     'date',
-    'reference_type',
   ]);
+  assert.equal(quote.fieldMap.party.label, 'Party');
   const type = quote.fieldMap.reference_type;
   assert.equal(type.fieldtype, 'Select');
   assert.deepEqual(

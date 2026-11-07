@@ -558,7 +558,8 @@ export const previousForms = {
     ],
     SalesQuote: [
       'number_series | Number Series',
-      'party | Customer',
+      'reference_type | Type',
+      'party | Party',
       'date | Date',
       'price_list | Price List',
       'net_total | Net Total',
@@ -568,7 +569,6 @@ export const previousForms = {
       'discount_after_tax | Apply Discount After Tax',
       'outstanding_amount | Outstanding Amount',
       'terms | Notes',
-      'reference_type | Type',
     ],
   },
 };

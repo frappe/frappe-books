@@ -83,3 +83,15 @@ test('a tax row summary shows its rate only when its items share one', () => {
     ]
   );
 });
+
+test('a phone journal entry row names the side of each amount', () => {
+  const entry = newFrappeDoc('JournalEntry', {
+    accounts: [{ account: 'Cash', debit: fyo.pesa(5000), credit: fyo.pesa(0) }],
+  });
+  const [row] = entry.accounts;
+  const fields = row.schema.tableFields.map((name) => row.fieldMap[name]);
+  const { meta, amountLabel } = getRowSummary(row, fields);
+
+  assert.match(meta, /^Debit .*5,000\.00$/);
+  assert.equal(amountLabel, 'Credit');
+});

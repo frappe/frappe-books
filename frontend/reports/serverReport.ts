@@ -93,8 +93,8 @@ export function canExportReport(reportName: string): boolean {
   return !!doctype && !!boot.user?.can_export?.includes(doctype);
 }
 
-/** Desk lists the reports the user may open in the boot; without one, all open. */
+/** Desk lists the reports the user may open in the boot; without the list, all open. */
 export function canOpenReport(reportName: string): boolean {
   const boot = globalThis.window?.frappe?.boot as ReportBoot | undefined;
-  return !boot || !!boot.allowed_reports?.[reportName];
+  return !boot?.allowed_reports || !!boot.allowed_reports[reportName];
 }

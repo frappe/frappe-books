@@ -6,7 +6,13 @@ from frappe.desk.page.setup_wizard.setup_wizard import get_setup_wizard_url
 from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.accounts import mode_of_payment_account
-from frappe_books.coa import STANDARD_CHART, chart_options, find_ledger_account, load_chart
+from frappe_books.coa import (
+	STANDARD_CHART,
+	chart_default_names,
+	chart_options,
+	find_default_account,
+	load_chart,
+)
 from frappe_books.company import company_value, default_company
 from frappe_books.frappe_books.doctype.books_company.books_company import (
 	ACCOUNT_TYPES as COMPANY_RULES,
@@ -15,7 +21,7 @@ from frappe_books.frappe_books.doctype.books_pos_settings.books_pos_settings imp
 	ACCOUNT_TYPES as POS_RULES,
 )
 from frappe_books.frappe_books.doctype.books_setup_wizard.books_setup_wizard import complete_setup
-from frappe_books.setup_service import default_accounts, run_setup
+from frappe_books.setup_service import DEFAULT_ACCOUNTS, run_setup
 from frappe_books.tests.accounting import ensure_user, unique_name
 
 # System Settings fields Frappe's setup fills; tests restore them so cached defaults stay right.
@@ -34,6 +40,8 @@ FRAPPE_SETUP_FIELDS = (
 	"backup_limit",
 )
 SETUP_ACCOUNT_RULES = {
+	"payable": COMPANY_RULES["default_payable_account"],
+	"income": COMPANY_RULES["default_income_account"],
 	"write_off": POS_RULES["write_off_account"],
 	"round_off": COMPANY_RULES["round_off_account"],
 	"cash": POS_RULES["cash_account"],
@@ -132,10 +140,11 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		# The chart's first cash and receivable accounts are empty groups.
 		self.assert_pos_accounts_are_ledgers()
 		self.assertEqual(frappe.db.get_value("Books Account", "Discounts", "root_type"), "Income")
-		self.assertFalse(company_value("write_off_account"))
-		# The chart has no postable round-off or stock account, only groups or other types.
-		self.assertFalse(company_value("round_off_account"))
-		self.assertFalse(company_value("default_inventory_account"))
+		# The chart has no postable write-off, round-off or stock account, so setup makes them.
+		self.assertEqual(
+			company_value(["write_off_account", "round_off_account", "default_inventory_account"]),
+			("Write Off", "Round Off", "Stock In Hand"),
+		)
 
 	def test_setup_makes_a_cash_ledger_for_a_chart_without_one(self):
 		wizard = self._wizard(
@@ -156,8 +165,46 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		self.assertEqual(charts["Switzerland - General Chart of Accounts"]["country_code"], "ch")
 		for name in charts:
 			with self.subTest(chart=name):
-				self.assert_settings_accept_default_accounts(load_chart(name))
+				self.assert_settings_accept_default_accounts(name)
 		self.assertRaisesRegex(frappe.ValidationError, "Unknown chart of accounts", load_chart, "Standard")
+
+	def test_every_country_chart_names_its_own_default_ledgers(self):
+		for chart in chart_options()[1:]:
+			with self.subTest(chart=chart["name"]):
+				accounts = load_chart(chart["name"])
+				names = chart_default_names(chart["name"])
+				self.assertLessEqual({"receivable", "payable", "income"}, set(names))
+				for key, name in names.items():
+					self.assertEqual(find_default_account(accounts, DEFAULT_ACCOUNTS[key], name), name, key)
+
+	def test_setup_leaves_a_country_chart_ready_to_invoice(self):
+		for country, currency, chart, accounts in (
+			(
+				"Switzerland",
+				"CHF",
+				"Switzerland - General Chart of Accounts",
+				("1100-Trade Receivables (Debtors)", "2000-Trade Payables (Creditors)", "3200-Trade Revenue"),
+			),
+			# Its Sales account is a group, which no item can sell into.
+			(
+				"United Arab Emirates",
+				"AED",
+				"U.A.E - Chart of Accounts",
+				("Trade Receivable", "Trade Payable", "Sales Account"),
+			),
+		):
+			with self.subTest(chart=chart), self.restored_system_settings():
+				wizard = self._wizard(country=country, currency=currency, chart_of_accounts=chart)
+				wizard.save(ignore_permissions=True)
+				run_setup(wizard)
+
+				self.assertEqual(
+					company_value(
+						["default_receivable_account", "default_payable_account", "default_income_account"]
+					),
+					accounts,
+				)
+				self.assert_first_invoice_takes(accounts[0], accounts[2])
 
 	def test_setup_completes_frappe_setup_on_a_fresh_site(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
@@ -232,6 +279,18 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			(str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), ("2026-04-01", "2027-03-31")
 		)
 
+	def test_preview_suggests_the_fiscal_year_that_holds_today(self):
+		for today, country, year in (
+			("2026-05-15", "Australia", ("2025-07-01", "2026-06-30")),
+			("2026-07-01", "Australia", ("2026-07-01", "2027-06-30")),
+			("2026-09-01", "Thailand", ("2025-10-01", "2026-09-30")),
+			("2027-03-01", "South Africa", ("2027-03-01", "2028-02-29")),
+		):
+			with self.subTest(today=today, country=country), self.freeze_time(today):
+				wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": country})
+				wizard.preview()
+				self.assertEqual((str(wizard.fiscal_year_start), str(wizard.fiscal_year_end)), year)
+
 	def test_preview_suggests_the_currency_from_frappe_country_data(self):
 		# Books' own copy had Croatia's old kuna, which is no Frappe Currency.
 		wizard = frappe.get_doc({"doctype": "Books Setup Wizard", "country": "Croatia"})
@@ -292,6 +351,12 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 		with self.set_user(ensure_user("books-wizard-user@example.com", "Books User")):
 			self.assertRaises(frappe.PermissionError, wizard.preview)
 
+	def test_only_a_system_manager_sets_up_books(self):
+		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
+		with self.set_user(ensure_user("books-wizard-manager@example.com", "Books Manager")):
+			self.assertRaises(frappe.PermissionError, complete_setup)
+			self.assertRaises(frappe.PermissionError, self._wizard().save)
+
 	def test_setup_completes_only_once(self):
 		frappe.db.set_single_value("Books Accounting Settings", "setup_complete", 0)
 		self._wizard().save()
@@ -307,16 +372,32 @@ class IntegrationTestBooksSetupWizard(IntegrationTestCase):
 			"System Settings", {field: settings.get(field) for field in FRAPPE_SETUP_FIELDS}
 		)
 
-	def assert_settings_accept_default_accounts(self, chart):
+	def assert_settings_accept_default_accounts(self, chart_name):
+		chart = load_chart(chart_name)
 		by_name = {account.name: account for account in chart}
-		picks = {**default_accounts(chart), "cash": find_ledger_account(chart, ["Cash"], "Cash")}
-		for key, name in picks.items():
+		names = chart_default_names(chart_name)
+		for key, default in DEFAULT_ACCOUNTS.items():
+			name = find_default_account(chart, default, names.get(key))
 			if not name:
 				continue
 			account, rules = by_name[name], SETUP_ACCOUNT_RULES[key]
 			self.assertFalse(account.is_group, name)
 			self.assertIn(account.account_type, rules.get("account_types", (account.account_type,)), name)
 			self.assertIn(account.root_type, rules.get("root_types", (account.root_type,)), name)
+
+	def assert_first_invoice_takes(self, receivable, income):
+		customer = frappe.get_doc(
+			{"doctype": "Books Customer", "customer_name": unique_name("First Customer")}
+		).insert()
+		item = frappe.get_doc({"doctype": "Books Item", "item_code": unique_name("First Item")}).insert()
+		invoice = frappe.get_doc(
+			{
+				"doctype": "Books Sales Invoice",
+				"customer": customer.name,
+				"items": [{"item_code": item.name, "qty": 1, "price_list_rate": 100}],
+			}
+		).insert()
+		self.assertEqual((invoice.debit_to, invoice.items[0].income_account), (receivable, income))
 
 	def assert_gst_heads(self):
 		accounts = ("CGST", "SGST", "IGST", "Exempt")

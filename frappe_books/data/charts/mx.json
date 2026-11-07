@@ -1,6 +1,12 @@
 {
   "countryCode": "mx",
   "name": "Mexico - Plan de Cuentas",
+  "defaultAccounts": {
+    "receivable": "CUENTAS POR COBRAR CLIENTES",
+    "payable": "CUENTAS POR PAGAR PROVEEDORES",
+    "income": "VENTAS NACIONALES",
+    "cash": "CAJA PRINCIPAL"
+  },
   "tree": {
     "ACTIVO": {
       "ACTIVO CIRCULANTE": {

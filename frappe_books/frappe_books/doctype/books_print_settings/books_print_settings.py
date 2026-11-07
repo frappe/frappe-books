@@ -4,7 +4,7 @@
 import frappe
 from frappe.model.document import Document
 
-from frappe_books.settings import update_frappe_settings
+from frappe_books.settings import update_frappe_settings, validate_colors
 
 
 class BooksPrintSettings(Document):
@@ -32,6 +32,9 @@ class BooksPrintSettings(Document):
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Print Settings"
+
+	def validate(self):
+		validate_colors(self)
 
 	@property
 	def font(self):

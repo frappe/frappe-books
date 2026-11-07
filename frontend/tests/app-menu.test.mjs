@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
   deskTheme,
   docsPathRef,
+  fyo,
   getAppMenuItems,
   getColorScheme,
   stubFrappe,
@@ -64,4 +65,16 @@ test('Documentation opens the Books docs on a page that has none of its own', ()
     'https://docs.frappe.io/books',
     'https://docs.frappe.io/books/sales-invoices',
   ]);
+});
+
+test('the menu names the Books version, as support asks for it', () => {
+  fyo.store.appVersion = '17.0.0';
+  const [help] = getAppMenuItems();
+  assert.deepEqual(
+    [help.group, help.hideLabel],
+    ['Frappe Books 17.0.0', false]
+  );
+
+  fyo.store.appVersion = '';
+  assert.equal(getAppMenuItems()[0].hideLabel, true);
 });

@@ -88,6 +88,33 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 					settings.set(fieldname, 0)
 					self.assertRaisesRegex(frappe.ValidationError, "cannot be disabled", settings.save)
 
+	def test_coupon_code_turns_off_with_pricing_rule(self):
+		settings = _accounting_settings(
+			enable_discounts_and_margin=1, enable_pricing_rule=1, enable_coupon_code=1
+		)
+		settings.enable_pricing_rule = 0
+		settings.save()
+
+		self.assertFalse(frappe.db.get_single_value("Books Accounting Settings", "enable_coupon_code"))
+
+	def test_only_the_setup_changes_setup_complete(self):
+		for before in (1, 0):
+			with self.subTest(before=before):
+				settings = _accounting_settings(setup_complete=before)
+				settings.setup_complete = int(not before)
+				self.assertRaisesRegex(frappe.ValidationError, "Only the setup wizard", settings.save)
+
+	def test_the_fiscal_year_ends_after_it_starts_within_a_year(self):
+		for end, error in (("2026-03-31", "must be after"), ("2027-04-01", "longer than one year")):
+			with self.subTest(end=end):
+				settings = _accounting_settings()
+				settings.year_end_date = end
+				self.assertRaisesRegex(frappe.ValidationError, error, settings.save)
+
+		settings = _accounting_settings()
+		settings.year_end_date = "2026-12-31"
+		settings.save()
+
 	def test_email_and_phone_values_must_be_valid(self):
 		invalid_values = [
 			(
@@ -142,6 +169,39 @@ class IntegrationTestSettingsRules(IntegrationTestCase):
 			],
 			[series, "PAY-", "PRLE-"],
 		)
+
+	def test_a_default_number_series_must_number_its_document_type(self):
+		defaults = frappe.get_single("Books Defaults")
+		defaults.sales_invoice_number_series = make_number_series("PurchaseInvoice")
+		self.assertRaisesRegex(frappe.ValidationError, "is not for Books Sales Invoice", defaults.save)
+
+		defaults.sales_invoice_number_series = make_number_series("SalesInvoice")
+		defaults.save()
+
+	def test_settings_refuse_values_books_cannot_use(self):
+		weighted = {"weight_enabled_barcode": 1, "check_digits": 21}
+		for doctype, values, error in (
+			("Books System Settings", {"date_format": "qq/zz"}, "not a date format"),
+			("Books System Settings", {"internal_precision": 50}, "cannot be more than"),
+			("Books Print Settings", {"email": "bad"}, "not a valid Email"),
+			("Books Print Settings", {"phone": "abc!!"}, "not a valid Phone"),
+			("Books Print Settings", {"color": "notacolor"}, "must be a colour"),
+			("Books Defaults", {"pay_button_colour": "red"}, "must be a colour"),
+			("Books POS Settings", {**weighted, "check_digits": -5}, "cannot be negative"),
+			("Books POS Settings", {**weighted, "item_code_digits": 0, "item_weight_digits": 5}, "needs"),
+			("Books POS Settings", {**weighted, "item_code_digits": 5, "item_weight_digits": 100}, "at most"),
+		):
+			with self.subTest(doctype=doctype, values=values):
+				settings = frappe.get_single(doctype)
+				settings.update(values)
+				self.assertRaisesRegex(frappe.ValidationError, error, settings.save)
+
+	def test_a_weighted_barcode_takes_a_prefix_code_and_weight(self):
+		settings = frappe.get_single("Books POS Settings")
+		settings.update(
+			{"weight_enabled_barcode": 1, "check_digits": 21, "item_code_digits": 5, "item_weight_digits": 5}
+		)
+		settings.save()
 
 
 def _accounting_settings(**values):

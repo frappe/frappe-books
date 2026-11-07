@@ -1,6 +1,11 @@
 {
   "countryCode": "ch",
   "name": "Switzerland - General Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "1100-Trade Receivables (Debtors)",
+    "payable": "2000-Trade Payables (Creditors)",
+    "income": "3200-Trade Revenue"
+  },
   "tree": {
     "1-Assets": {
       "10-Current Assets": {
@@ -17,7 +22,9 @@
           "1069-Valuation Adjustments – Securities": {}
         },
         "110-Trade Receivables": {
-          "1100-Trade Receivables (Debtors)": {},
+          "1100-Trade Receivables (Debtors)": {
+            "accountType": "Receivable"
+          },
           "1109-Allowance for Doubtful Accounts": {}
         },
         "114-Other Current Receivables": {
@@ -32,7 +39,9 @@
           "1199-Valuation Adjustments – Miscellaneous Current Receivables": {}
         },
         "120-Inventory & Unbilled Services": {
-          "1200-Merchandise": {},
+          "1200-Merchandise": {
+            "accountType": "Stock"
+          },
           "1210-Raw Materials": {},
           "1220-Semi‑Finished Goods": {},
           "1230-Consumables & Supplies": {},
@@ -89,7 +98,9 @@
     "2-Liabilities": {
       "20-Short-Term Liabilities": {
         "200-Trade Payables": {
-          "2000-Trade Payables (Creditors)": {},
+          "2000-Trade Payables (Creditors)": {
+            "accountType": "Payable"
+          },
           "2030-Received Advances": {}
         },
         "210-Short-Term Interest-Bearing Liabilities": {
@@ -175,7 +186,9 @@
     },
     "4-Expense for Materials, Merchandise, Services and Energy": {
       "4000-Production Material Expense": {},
-      "4200-Merchandise Expense": {},
+      "4200-Merchandise Expense": {
+        "accountType": "Cost of Goods Sold"
+      },
       "4400-Expense for Purchased Services": {},
       "4500-Energy Expense for Production": {},
       "4900-Expense Reductions": {},

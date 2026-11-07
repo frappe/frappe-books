@@ -13,6 +13,9 @@
   "email",
   "tax_id",
   "accounts_section_break",
+  "default_receivable_account",
+  "default_payable_account",
+  "default_income_account",
   "write_off_account",
   "round_off_account",
   "default_discount_account",
@@ -83,6 +86,24 @@
    "label": "Accounts"
   },
   {
+   "fieldname": "default_receivable_account",
+   "fieldtype": "Link",
+   "label": "Default Receivable Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_payable_account",
+   "fieldtype": "Link",
+   "label": "Default Payable Account",
+   "options": "Books Account"
+  },
+  {
+   "fieldname": "default_income_account",
+   "fieldtype": "Link",
+   "label": "Default Income Account",
+   "options": "Books Account"
+  },
+  {
    "fieldname": "write_off_account",
    "fieldtype": "Link",
    "label": "Write Off Account",
@@ -137,7 +158,7 @@
   }
  ],
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 15:23:22.647968",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Company",

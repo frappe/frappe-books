@@ -38,6 +38,11 @@ class BooksSystemSettings(Document):
 
 	_DOCTYPE_NAME = "Books System Settings"
 
+	def validate(self):
+		# Only the offered formats have a Frappe date format to follow.
+		if self.date_format not in self.meta.get_options("date_format").split("\n"):
+			frappe.throw(_("{0} is not a date format Books offers.").format(self.date_format))
+
 	@property
 	def currency(self):
 		"""The company currency, which Frappe's System Settings holds."""

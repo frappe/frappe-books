@@ -1,6 +1,12 @@
 {
   "countryCode": "nl",
   "name": "Netherlands - Grootboekschema",
+  "defaultAccounts": {
+    "receivable": "Debiteuren",
+    "payable": "Crediteuren",
+    "income": "Verkopen handel hoog",
+    "cash": "Kas"
+  },
   "tree": {
     "FABRIKAGEREKENINGEN": {
       "isGroup": true,

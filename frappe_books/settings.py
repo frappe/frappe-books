@@ -1,3 +1,5 @@
+import re
+
 import frappe
 from frappe import _
 from frappe.utils import cstr
@@ -20,6 +22,8 @@ FEATURES = {
 	"enable_point_of_sale": "Books Inventory Settings",
 }
 
+
+HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 # The Books Defaults terms each new document starts with.
 DEFAULT_TERMS = {
@@ -58,6 +62,14 @@ def validate_one_way_switches(doc, fieldnames):
 	for fieldname in fieldnames:
 		if before and before.get(fieldname) and not doc.get(fieldname):
 			frappe.throw(_("{0} cannot be disabled once enabled.").format(_(doc.meta.get_label(fieldname))))
+
+
+def validate_colors(doc):
+	"""Colour fields hold a hex colour, as the Books colour picker sets them."""
+	for df in doc.meta.get("fields", {"fieldtype": "Color"}):
+		value = doc.get(df.fieldname)
+		if value and doc.has_value_changed(df.fieldname) and not HEX_COLOR.match(value):
+			frappe.throw(_("{0} must be a colour such as #112B42, not {1}.").format(_(df.label), value))
 
 
 def company_country() -> str | None:

@@ -78,6 +78,18 @@ class IntegrationTestBooksAccount(IntegrationTestCase):
 		child = make_account("Test Petty Cash", parent_account=parent.name, account_type="Cash")
 		self.assertEqual(child.account_type, "Cash")
 
+	def test_balance_account_types_stay_out_of_income_and_expense_roots(self):
+		for root_type, account_type in (("Expense", "Receivable"), ("Income", "Bank")):
+			with (
+				self.subTest(account_type=account_type),
+				self.assertRaisesRegex(
+					frappe.ValidationError, "must be under an Asset, Liability or Equity root"
+				),
+			):
+				make_account("Misplaced", root_type=root_type, account_type=account_type)
+		# Some charts keep payables in an asset class, as the Dutch one does.
+		self.assertEqual(make_account("Asset Payable", account_type="Payable").root_type, "Asset")
+
 	def test_leaf_account_cannot_be_parent(self):
 		parent = make_account("Test Cash")
 		child = frappe.get_doc(

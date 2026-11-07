@@ -6,6 +6,9 @@ import { withoutCreate } from 'src/frappe/schema';
 import { validateEmail } from 'src/frappe/validation';
 
 const ACCOUNT_FIELDS = [
+  'default_receivable_account',
+  'default_payable_account',
+  'default_income_account',
   'write_off_account',
   'round_off_account',
   'default_discount_account',
@@ -40,6 +43,9 @@ export class Company extends FrappeDoc {
   declare default_currency?: string;
   declare email?: string;
   declare tax_id?: string;
+  declare default_receivable_account?: string;
+  declare default_payable_account?: string;
+  declare default_income_account?: string;
   declare write_off_account?: string;
   declare round_off_account?: string;
   declare default_discount_account?: string;
@@ -50,6 +56,9 @@ export class Company extends FrappeDoc {
   declare stock_adjustment_account?: string;
 
   static filters: FiltersMap = {
+    default_receivable_account: () => ledgersOfType(AccountTypeEnum.Receivable),
+    default_payable_account: () => ledgersOfType(AccountTypeEnum.Payable),
+    default_income_account: () => ledgersOfRootType('Income'),
     write_off_account: () => ledgersOfRootType('Expense'),
     round_off_account: () => ledgersOfRootType('Expense'),
     default_discount_account: () => ledgersOfRootType('Income'),

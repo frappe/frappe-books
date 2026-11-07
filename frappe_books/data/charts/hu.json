@@ -1,6 +1,11 @@
 {
   "countryCode": "hu",
   "name": "Hungary - Chart of Accounts",
+  "defaultAccounts": {
+    "receivable": "311. Belf\u00f6ldi k\u00f6vetel\u00e9sek (forintban)",
+    "payable": "4541. Belf\u00f6ldi anyag- \u00e9s \u00e1rusz\u00e1ll\u00edt\u00f3k",
+    "income": "912. Belf\u00f6ldinek \u00e9rt\u00e9kes\u00edtett v\u00e1s\u00e1rolt k\u00e9szletek \u00e1rbev\u00e9tele"
+  },
   "tree": {
     "1. SZ\u00c1MLAOSZT\u00c1LY BEFEKTETETT ESZK\u00d6Z\u00d6K": {
       "11. IMMATERI\u00c1LIS JAVAK": {

@@ -126,6 +126,7 @@ class BooksAccount(NestedSet):
 				frappe.CannotChangeConstantError,
 			)
 
+
 	def on_trash(self):
 		# The /books chart checks these too, before it asks the server; NestedSet words them differently.
 		if not self.parent_account:

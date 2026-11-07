@@ -40,6 +40,7 @@ await build({
       export { docsPathRef } from './src/utils/refs';
       export { deskTheme, getColorScheme } from './src/utils/theme';
       export { default as ListView } from './src/pages/ListView/ListView.vue';
+      export { getListColumns } from './src/pages/ListView/listColumns';
       export { default as POS } from './src/pages/POS/POS.vue';
       export { default as router } from 'src/router';
       export { ListFilters } from './src/utils/listFilters';
@@ -210,6 +211,7 @@ export const {
   deskTheme,
   getColorScheme,
   ListView,
+  getListColumns,
   POS,
   router,
 } = createRequire(import.meta.url)(output);

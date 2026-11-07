@@ -134,6 +134,15 @@ class IntegrationTestLoyalty(IntegrationTestCase):
 			self._loyalty_program(maximum_use=-1)
 		self.assertEqual(str(raised.exception), "Maximum use cannot be negative")
 
+	def test_a_save_counts_the_programs_redemptions(self):
+		program = self._loyalty_program()
+		self._loyalty_invoice(program).submit()
+		self._loyalty_invoice(program, redeem_loyalty_points=1, loyalty_points=10).submit()
+
+		program.reload().used = 0
+		program.save()
+		self.assertEqual(program.db_get("used"), 1)
+
 	def test_status_is_maxed_at_the_use_limit(self):
 		program = self._loyalty_program(maximum_use=1)
 		self._loyalty_invoice(program).submit()

@@ -8,6 +8,7 @@
  "engine": "InnoDB",
  "field_order": [
   "opening_date",
+  "pos_profile",
   "opening_cash",
   "opening_amounts",
   "journal_entry",
@@ -19,6 +20,12 @@
    "fieldtype": "Datetime",
    "label": "Opening Date",
    "search_index": 1
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "label": "POS Profile",
+   "options": "Books Pos Profile"
   },
   {
    "fieldname": "opening_cash",
@@ -55,7 +62,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-07 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Opening Shift",
@@ -108,6 +115,7 @@
    "create": 1,
    "email": 1,
    "export": 1,
+   "if_owner": 1,
    "print": 1,
    "read": 1,
    "report": 1,

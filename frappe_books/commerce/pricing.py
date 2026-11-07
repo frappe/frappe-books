@@ -7,6 +7,7 @@ import frappe
 from frappe import _
 
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
+from frappe_books.commerce.pos import pos_profile
 from frappe_books.settings import require_feature
 
 
@@ -106,8 +107,7 @@ def _stock_unit_rate(row, rates):
 
 def pos_setting(fieldname):
 	"""Read a POS setting from the POS profile in use, or from POS settings without one."""
-	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
-	if profile:
+	if profile := pos_profile():
 		return frappe.db.get_value("Books Pos Profile", profile, fieldname)
 	return frappe.db.get_single_value("Books Pos Settings", fieldname)
 

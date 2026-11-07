@@ -57,7 +57,7 @@ class BooksPosClosingShift(Document):
 
 	def before_submit(self):
 		lock_pos_settings()
-		if open_shift_name() != self.opening_shift:
+		if open_shift_name(self.shift_owner()) != self.opening_shift:
 			frappe.throw(_("POS shift {0} is not open.").format(self.opening_shift))
 		self.set_closing_amounts()
 
@@ -74,7 +74,7 @@ class BooksPosClosingShift(Document):
 
 	def before_cancel(self):
 		lock_pos_settings()
-		if open_shift := open_shift_name():
+		if open_shift := open_shift_name(self.shift_owner()):
 			frappe.throw(_("Close POS shift {0} before reopening another shift.").format(open_shift))
 
 	def on_cancel(self):
@@ -93,6 +93,11 @@ class BooksPosClosingShift(Document):
 			self.opening_shift = open_shift_name()
 		if not self.opening_shift:
 			frappe.throw(_("There is no open POS shift to close."))
+		frappe.has_permission("Books Pos Opening Shift", "read", doc=self.opening_shift, throw=True)
+
+	def shift_owner(self):
+		"""The cashier whose shift this closes."""
+		return frappe.db.get_value("Books Pos Opening Shift", self.opening_shift, "owner")
 
 	def set_closing_amounts(self):
 		"""Close the shift now: a row per opening amount, expecting it plus the shift's POS payments.
@@ -101,7 +106,7 @@ class BooksPosClosingShift(Document):
 		"""
 		self.closing_date = now_datetime()
 		opening = frappe.get_doc("Books Pos Opening Shift", self.opening_shift)
-		transactions = transacted_amounts(opening.opening_date, self.closing_date)
+		transactions = transacted_amounts(opening.opening_date, self.closing_date, opening.owner)
 		counted = {row.payment_method: row for row in self.closing_amounts}
 		rows = []
 		for row in opening.opening_amounts:

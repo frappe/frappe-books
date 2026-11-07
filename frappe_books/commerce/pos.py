@@ -10,11 +10,20 @@ from frappe.utils import get_datetime, getdate
 from frappe_books.accounting.money import as_decimal, rounded
 
 
-def open_shift_name():
-	"""Return the submitted opening shift that has no submitted closing shift."""
+def open_shift_name(user=None):
+	"""Return the user's submitted opening shift that has no submitted closing shift."""
+	return _open_shift(user or frappe.session.user)
+
+
+def any_open_shift():
+	"""Return an open shift of any user."""
+	return _open_shift()
+
+
+def _open_shift(user=None):
 	opening = frappe.qb.DocType("Books Pos Opening Shift")
 	closing = frappe.qb.DocType("Books Pos Closing Shift")
-	names = (
+	query = (
 		frappe.qb.from_(opening)
 		.left_join(closing)
 		.on((closing.opening_shift == opening.name) & (closing.docstatus == 1))
@@ -22,13 +31,23 @@ def open_shift_name():
 		.where((opening.docstatus == 1) & closing.name.isnull())
 		.orderby(opening.opening_date, order=Order.desc)
 		.limit(1)
-	).run(pluck=True)
+	)
+	if user:
+		query = query.where(opening.owner == user)
+	names = query.run(pluck=True)
 	return names[0] if names else None
+
+
+def pos_profile():
+	"""Return the POS profile of the user's open shift, else that of POS Settings."""
+	shift = open_shift_name()
+	profile = shift and frappe.db.get_value("Books Pos Opening Shift", shift, "pos_profile")
+	return profile or frappe.db.get_single_value("Books Pos Settings", "pos_profile")
 
 
 def pos_customer():
 	"""Return the customer of the POS profile in use, else the Books Defaults POS customer."""
-	profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
+	profile = pos_profile()
 	customer = profile and frappe.db.get_value("Books Pos Profile", profile, "pos_customer")
 	return customer or frappe.db.get_single_value("Books Defaults", "pos_customer")
 
@@ -46,13 +65,13 @@ def is_cash_method(payment_method):
 	return frappe.get_cached_value("Books Payment Method", payment_method, "type") == "Cash"
 
 
-def takes_counter_cash(invoices, payment_method):
-	"""Cash for POS invoices goes through the counter while a shift is open, which closing it reconciles."""
+def takes_counter_cash(invoices, payment_method, user=None):
+	"""Cash for POS invoices goes through the counter while the payer has an open shift, which closing it reconciles."""
 	return (
 		any(invoice.get("is_pos") for invoice in invoices)
 		and bool(payment_method)
 		and is_cash_method(payment_method)
-		and bool(open_shift_name())
+		and bool(open_shift_name(user))
 	)
 
 
@@ -79,14 +98,15 @@ def lock_pos_settings():
 	return settings
 
 
-def transacted_amounts(from_date, to_date):
-	"""Sum the submitted POS payments made from `from_date` to `to_date`, by payment method; refunds count against."""
+def transacted_amounts(from_date, to_date, user):
+	"""Sum the user's submitted POS payments made from `from_date` to `to_date`, by payment method; refunds count against."""
 	payment = frappe.qb.DocType("Books Payment")
 	payments = (
 		frappe.qb.from_(payment)
 		.select(payment.payment_method, payment.payment_type, payment.amount_paid)
 		.where(
 			(payment.docstatus == 1)
+			& (payment.owner == user)
 			& payment.creation[get_datetime(from_date) : get_datetime(to_date)]
 			& payment.name.isin(_pos_payment_names())
 		)

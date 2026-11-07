@@ -63,7 +63,9 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		self.payment_type = self.payment_type or _default_payment_type(party, invoice)
 		self.reference_type = _reference_type(invoice, self.payment_type) or self.reference_type
 		self.account = self.account or _default_party_account(party, invoice, self.payment_type)
-		self.payment_account = self.payment_account or method_payment_account(self.payment_method, invoice)
+		self.payment_account = self.payment_account or method_payment_account(
+			self.payment_method, invoice, self.owner
+		)
 		self.set_amounts()
 
 	def get_party(self):
@@ -121,8 +123,8 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		validate_payment_details(self.payment_method, self.reference_id, self.clearance_date)
 
 	def validate_counter_account(self, invoices):
-		"""The counter takes the cash for POS invoices paid during an open shift, and only that."""
-		if takes_counter_cash(invoices, self.payment_method):
+		"""The counter takes the cash for POS invoices paid during the payer's open shift, and only that."""
+		if takes_counter_cash(invoices, self.payment_method, self.owner):
 			counter = counter_cash_account()
 			if self.payment_account != counter:
 				frappe.throw(
@@ -131,7 +133,7 @@ class PaymentController(StatusMixin, SeriesNamingMixin, Document):
 		elif _is_counter_only(self.payment_account, self.payment_method):
 			frappe.throw(
 				_(
-					"Only cash for POS invoices, paid during an open POS shift, goes to the counter cash account {0}."
+					"Only cash for POS invoices, paid during your open POS shift, goes to the counter cash account {0}."
 				).format(self.payment_account)
 			)
 
@@ -197,8 +199,8 @@ def _default_party_account(party, invoice, payment_type):
 	return default_party_account("Payable" if payment_type == "Pay" else "Receivable")
 
 
-def method_payment_account(payment_method, invoice=None):
-	"""POS cash goes to the counter during an open shift, other payments to the method's account, else
+def method_payment_account(payment_method, invoice=None, payer=None):
+	"""POS cash goes to the counter during the payer's open shift, other payments to the method's account, else
 	the newest ledger of the method's kind."""
 	fields = ["type", "account"]
 	method = payment_method and frappe.db.get_value(
@@ -206,7 +208,7 @@ def method_payment_account(payment_method, invoice=None):
 	)
 	if not method:
 		return None
-	if invoice and takes_counter_cash([invoice], payment_method):
+	if invoice and takes_counter_cash([invoice], payment_method, payer):
 		return counter_cash_account()
 	if method.account:
 		return method.account

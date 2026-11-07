@@ -72,7 +72,14 @@ def make_quotation(source_name: str):
 	return get_mapped_doc(
 		"Books Lead",
 		source_name,
-		{"Books Lead": {"doctype": "Books Quotation", "field_map": {"name": "party_name"}}},
+		{
+			"Books Lead": {
+				"doctype": "Books Quotation",
+				"field_map": {"name": "party_name"},
+				# A lead's status means nothing to a quote.
+				"field_no_map": ["status"],
+			}
+		},
 		postprocess=_quote_the_lead,
 	)
 

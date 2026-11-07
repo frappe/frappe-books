@@ -12,6 +12,7 @@ from frappe_books.frappe_books.doctype.books_pos_closing_entry.test_books_pos_cl
 	close_shift,
 )
 from frappe_books.frappe_books.doctype.books_pos_opening_entry.test_books_pos_opening_entry import (
+	make_profile,
 	open_shift,
 	start_pos_shift,
 )
@@ -299,6 +300,19 @@ class IntegrationTestPosPayments(IntegrationTestCase):
 
 		self.assertEqual(cash_amounts(closing).difference, 0)
 		self.assertEqual(account_balance(self.counter), 0)
+
+	def test_a_pos_sale_keeps_the_profile_it_was_sold_with(self):
+		profile = make_profile(allow_rate_change=1, allow_discount_change=1)
+		shift = open_shift_name()
+		frappe.db.set_value("Books POS Opening Entry", shift, "pos_profile", profile)
+		invoice = self.make_pos_invoice(payments=[{"mode_of_payment": "Cash", "amount": 180}])
+		invoice.submit()
+		# The return is made with another profile.
+		frappe.db.set_value("Books POS Opening Entry", shift, "pos_profile", make_profile())
+
+		refund = map_return(invoice.doctype, invoice.name).insert()
+
+		self.assertEqual((invoice.pos_profile, refund.pos_profile), (profile, profile))
 
 	def test_pos_invoice_is_dated_at_checkout(self):
 		yesterday = getdate(add_days(now_datetime(), -1))

@@ -31,7 +31,7 @@ const requests = await loadFrappeModels(frappeModels, ({ path }) => {
 test('the POS profile form shows the fields and quick edit fields it showed', () => {
   assert.deepEqual(getLayout('POSProfile').slice(0, 4), [
     'name | Profile |  | Default',
-    'customer | Customer |  | Default',
+    'customer | POS Customer |  | Default',
     'warehouse | Warehouse |  | Default',
     'print_format | Print Format |  | Default',
   ]);

@@ -6,6 +6,7 @@
 # Patches added in this section will be executed after doctypes are migrated
 frappe_books.patches.grant_cashier_core_permissions
 frappe_books.patches.revoke_manager_print_format_write
+frappe_books.patches.type_swiss_trade_accounts
 
 [post_fixture_sync]
 # Patches added in this section will be executed after fixtures and customizations

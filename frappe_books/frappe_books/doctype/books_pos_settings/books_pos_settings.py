@@ -1,10 +1,14 @@
 # Copyright (c) 2026, Frappe Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from frappe_books.accounting.accounts import validate_changed_accounts
 
+# The longest GS1 item barcode, GTIN-14
+MAX_BARCODE_DIGITS = 14
 ACCOUNT_TYPES = {
 	"cash_account": {"account_types": ("Cash",), "root_types": ("Asset",)},
 	"write_off_account": {"root_types": ("Expense",)},
@@ -41,3 +45,14 @@ class BooksPosSettings(Document):
 
 	def validate(self):
 		validate_changed_accounts(self, ACCOUNT_TYPES)
+		self.validate_weight_barcode()
+
+	def validate_weight_barcode(self):
+		"""A scale barcode holds the prefix, an item code and a weight."""
+		if not self.weight_enabled_barcode:
+			return
+		if not (self.item_code_digits and self.item_weight_digits):
+			frappe.throw(_("A weighted barcode needs Item Code Digits and Item Weight Digits."))
+		prefix_digits = len(str(self.check_digits)) if self.check_digits else 0
+		if prefix_digits + self.item_code_digits + self.item_weight_digits > MAX_BARCODE_DIGITS:
+			frappe.throw(_("A weighted barcode has at most {0} digits.").format(MAX_BARCODE_DIGITS))

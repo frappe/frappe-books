@@ -265,7 +265,7 @@ import {
   stepCartQuantity,
   validateSerialNumberCount,
 } from 'src/utils/posCart';
-import { getPOSPermissions, POSPermissions } from 'src/utils/posSetup';
+import { posPermissionsKey } from 'src/utils/posSetup';
 import { usePOSBatchQuantity } from 'src/utils/usePOSBatchQuantity';
 import { defineComponent, inject, PropType } from 'vue';
 import { POSLayout, POS_ITEM_TOAST_ID } from './types';
@@ -294,16 +294,13 @@ export default defineComponent({
   setup(props) {
     return {
       isDiscountingEnabled: inject('isDiscountingEnabled') as boolean,
+      permissions: inject(posPermissionsKey)!,
       batchQuantity: usePOSBatchQuantity(() => props.row),
     };
   },
   data() {
     return {
       isExpanded: false,
-      permissions: {
-        canChangeRate: false,
-        canEditDiscount: false,
-      } as POSPermissions,
       itemSettings: {
         hasBatch: false,
         hasSerialNumber: false,
@@ -375,9 +372,6 @@ export default defineComponent({
       },
       immediate: true,
     },
-  },
-  async mounted() {
-    this.permissions = await getPOSPermissions();
   },
   methods: {
     toggleExpand() {

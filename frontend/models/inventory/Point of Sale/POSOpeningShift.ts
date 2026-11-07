@@ -36,6 +36,7 @@ export class POSOpeningShift extends FrappeDoc {
   static override previewMethod = 'preview';
 
   declare opening_date?: Date;
+  declare pos_profile?: string;
   declare opening_cash?: CashCount[];
   declare opening_amounts?: ShiftAmount[];
 

@@ -140,7 +140,7 @@
     <OpenPOSShiftModal
       v-if="shift.isLoaded && !shift.isOpen"
       :shift="shift"
-      @opened="shift.refresh()"
+      @opened="loadPOS()"
     />
     <ClosePOSShiftModal
       :open-modal="openShiftCloseModal"
@@ -266,7 +266,9 @@ import {
 } from 'src/utils/posCart';
 import {
   getItemVisibility,
+  getPOSPermissions,
   getPOSProfile,
+  posPermissionsKey,
   validateIsPosSettingsSet,
 } from 'src/utils/posSetup';
 import { usePOSShift } from 'src/utils/posShift';
@@ -317,6 +319,9 @@ export default defineComponent({
       sinvDoc: computed(() => this.sinvDoc),
       appliedCoupons: computed(() => this.sinvDoc.coupons ?? []),
       isDiscountingEnabled: computed(() => this.isDiscountingEnabled),
+      [posPermissionsKey]: computed(() =>
+        getPOSPermissions(this.posProfile as POSProfile | null)
+      ),
       [posCheckoutKey]: this.posCheckout,
     };
   },
@@ -455,11 +460,7 @@ export default defineComponent({
   },
 
   async mounted() {
-    await this.shift.refresh();
-    await this.loadPOSProfile();
-    await this.setDefaultCustomer();
-    await this.setItemQtyMap();
-    await this.setItems();
+    await this.loadPOS();
   },
   async activated() {
     toggleSidebar(false);
@@ -566,6 +567,14 @@ export default defineComponent({
       await this.sinvDoc.set('party', value);
     },
 
+    /** The shift, its profile, a new sale, and the stock and items the profile lists. */
+    async loadPOS() {
+      await this.shift.refresh();
+      await this.loadPOSProfile();
+      await this.setDefaultCustomer();
+      await this.setItemQtyMap();
+      await this.setItems();
+    },
     async loadPOSProfile() {
       this.posProfile = (await getPOSProfile()) ?? null;
     },

@@ -164,6 +164,7 @@ function answer(path: string, body: Row, params: Row): unknown {
       ),
     'frappe.desk.search.search_widget': () => getList(body.doctype),
     get_open_shift: () => (shift.open ? openingShift.name : null),
+    get_pos_profile: () => null,
     get_stock_location: () => inventory,
     get_sale_shortfalls: () => [],
   };

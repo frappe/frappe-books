@@ -5,6 +5,7 @@ from frappe.tests import IntegrationTestCase
 
 from frappe_books.accounting.returns import map_return
 from frappe_books.tests.accounting import (
+	ledger_entries,
 	make_account,
 	make_customer,
 	make_item,
@@ -101,6 +102,23 @@ class IntegrationTestInvoiceTaxes(IntegrationTestCase):
 		self.assertEqual(credit_note.taxes[0].tax_amount, Decimal("-25"))
 		self.assertEqual(credit_note.grand_total, Decimal("-275"))
 
+	def test_a_negative_actual_charge_is_a_rebate_and_a_return_gives_it_back(self):
+		rebate = [{"charge_type": "Actual", "account_head": self.freight, "tax_amount": -25}]
+		invoice = self.make_invoice(taxes=rebate, items=[self.row(self.item)]).submit()
+		self.assertEqual((invoice.taxes[0].tax_amount, invoice.grand_total), (Decimal("-25"), Decimal("225")))
+		self.assertIn((self.freight, 25, 0), self.ledger(invoice))
+
+		credit_note = map_return(invoice.doctype, invoice.name).update(NO_FOLLOW_UPS).insert().submit()
+		self.assertEqual(
+			(credit_note.taxes[0].tax_amount, credit_note.grand_total), (Decimal("25"), Decimal("-225"))
+		)
+		self.assertIn((self.freight, 0, 25), self.ledger(credit_note))
+
+	def test_a_rebate_cannot_take_the_total_below_zero(self):
+		rebate = [{"charge_type": "Actual", "account_head": self.freight, "tax_amount": -300}]
+		with self.assertRaisesRegex(frappe.ValidationError, "cannot make the grand total negative"):
+			self.make_invoice(taxes=rebate, items=[self.row(self.item)])
+
 	def test_purchase_rows_add_to_the_total(self):
 		payable = make_account("Payable", root_type="Liability", account_type="Payable").name
 		invoice = frappe.get_doc(
@@ -121,6 +139,10 @@ class IntegrationTestInvoiceTaxes(IntegrationTestCase):
 		return frappe.get_doc(
 			{"doctype": "Books Sales Invoice", "customer": self.customer, **NO_FOLLOW_UPS, **values}
 		).insert()
+
+	@staticmethod
+	def ledger(invoice):
+		return [(row.account, row.debit, row.credit) for row in ledger_entries(invoice.doctype, invoice.name)]
 
 	def make_template(self, taxes, **values):
 		return (

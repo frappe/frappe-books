@@ -169,6 +169,19 @@ test('a file with fewer columns than the template has only its own columns', () 
   assert.deepEqual(headless.assignedTemplateFields, [null, null]);
 });
 
+test('a header row with a column of the file’s own maps the columns it names', () => {
+  const importer = new Importer('Party', fyo);
+  const [first, second] = importer.assignedTemplateFields;
+  const header = (key) => importer.templateHeadersByFieldKey.get(key);
+
+  importer.selectFile(
+    [`${header(first)},${header(second)},Comments`, 'a,b,c'].join('\n')
+  );
+
+  assert.deepEqual(importer.assignedTemplateFields, [first, second, null]);
+  assert.equal(importer.valueMatrix.length, 1);
+});
+
 test('leaving a column out moves the later picked columns up', async () => {
   const importer = new Importer('Party', fyo);
   const [first, second, third] = importer.assignedTemplateFields;

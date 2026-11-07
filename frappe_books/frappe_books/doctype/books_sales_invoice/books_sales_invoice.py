@@ -10,13 +10,13 @@ from frappe_books.accounting.invoice import PostingInvoiceController
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.accounting.payment import (
 	map_invoice_payment,
+	mode_payment_account,
 	payment_account_field,
 	validate_payment_details,
 )
 from frappe_books.accounting.returns import map_return
 from frappe_books.commerce import loyalty, pricing
 from frappe_books.commerce.pos import (
-	counter_payment_account,
 	counter_payment_amounts,
 	open_shift_name,
 	validate_partial_payment,
@@ -210,7 +210,7 @@ class BooksSalesInvoice(PostingInvoiceController):
 		payment.update(
 			{
 				"mode_of_payment": row.mode_of_payment,
-				payment_account_field(payment.payment_type): counter_payment_account(row.mode_of_payment),
+				payment_account_field(payment.payment_type): mode_payment_account(row.mode_of_payment, self),
 				"paid_amount": amount,
 				"reference_no": row.reference_no,
 				"clearance_date": row.clearance_date,

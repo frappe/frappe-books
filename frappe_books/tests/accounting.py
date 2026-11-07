@@ -7,6 +7,9 @@ from frappe.utils import flt, get_datetime, nowdate
 
 from frappe_books.accounting.money import company_currency
 from frappe_books.company import company_value, default_company
+from frappe_books.frappe_books.doctype.books_accounting_settings.books_accounting_settings import (
+	DEPENDENT_SWITCHES,
+)
 from frappe_books.inventory.availability import get_stock_quantities
 from frappe_books.settings import FEATURES
 
@@ -15,6 +18,8 @@ def enable_features():
 	"""Turn every feature switch on for the test site; a switch's own tests turn it off."""
 	for fieldname, settings in FEATURES.items():
 		frappe.db.set_single_value(settings, fieldname, 1)
+	# Switches others need, e.g. Pricing Rule for coupons; a save would clear those without them.
+	frappe.db.set_single_value("Books Accounting Settings", dict.fromkeys(DEPENDENT_SWITCHES, 1))
 
 
 def set_default_inventory_accounts():

@@ -124,7 +124,7 @@ import { isMobile } from 'src/utils/viewport';
 import MobileCashCount from './MobileCashCount.vue';
 import MobileDetailList, { type Detail } from 'src/mobile/MobileDetailList.vue';
 import { ModelNameEnum } from 'models/types';
-import type { Field } from 'schemas/types';
+import type { OptionField } from 'schemas/types';
 import { Money } from 'pesa';
 import {
   CashCountRow,
@@ -132,7 +132,9 @@ import {
   OpeningBalance,
 } from 'models/inventory/Point of Sale/POSOpeningEntry';
 import { newFrappeDoc } from 'src/frappe/documents';
+import { getAllDocuments } from 'src/frappe/api';
 import { getField } from 'src/frappe/registry';
+import type { HistoryState } from 'vue-router';
 import { computed, PropType } from 'vue';
 import { defineComponent } from 'vue';
 import { fyo } from 'src/initFyo';
@@ -167,14 +169,25 @@ export default defineComponent({
   data() {
     return {
       posShiftDoc: undefined as POSOpeningEntry | undefined,
+      profiles: [] as string[],
 
       isValuesSeeded: false,
       isDismissed: false,
     };
   },
   computed: {
-    profileDf(): Field | undefined {
-      return getField(ModelNameEnum.POSOpeningEntry, 'pos_profile');
+    /** A Select, not a Link: creating or opening a profile from here would leave the POS without a shift. */
+    profileDf(): OptionField | undefined {
+      const field = getField(ModelNameEnum.POSOpeningEntry, 'pos_profile');
+      if (!field || !this.profiles.length) {
+        return undefined;
+      }
+
+      return {
+        ...field,
+        fieldtype: 'Select',
+        options: this.profiles.map((name) => ({ value: name, label: name })),
+      } as OptionField;
     },
     openingCash(): CashCountRow[] {
       return (this.posShiftDoc?.opening_cash ?? []) as CashCountRow[];
@@ -222,9 +235,16 @@ export default defineComponent({
     async setOpeningAmount(row: OpeningBalance, amount: Money) {
       await row.set('opening_amount', amount);
     },
-    handleDismiss() {
+    /** Leaves the POS: back, unless the page before is the POS too, as after a quick edit. */
+    async handleDismiss() {
       this.isDismissed = true;
-      this.$router.back();
+      const back = (history.state as HistoryState | null)?.back;
+      if (typeof back === 'string' && back.split('?')[0] !== this.$route.path) {
+        this.$router.back();
+        return;
+      }
+
+      await this.$router.push('/');
     },
     async seedDefaultCashDenomiations() {
       if (!this.posShiftDoc) {
@@ -241,6 +261,9 @@ export default defineComponent({
     },
     /** The server's preview lists a row per mode of payment. */
     async seedDefaults() {
+      this.profiles = (
+        await getAllDocuments('Books POS Profile', { fields: ['name'] })
+      ).map(({ name }) => name as string);
       await this.seedDefaultCashDenomiations();
       await this.preview();
     },

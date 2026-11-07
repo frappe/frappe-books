@@ -3,6 +3,7 @@ import frappe
 from frappe_books.accounting.money import as_decimal
 
 INVOICE_DOCTYPES = ("Books Sales Invoice", "Books Purchase Invoice")
+POS_SHIFT_DOCTYPE = "Books Pos Opening Shift"
 
 
 class StatusMixin:
@@ -21,6 +22,8 @@ def get_status(doc) -> str:
 		return "Saved"
 	if doc.docstatus == 2:
 		return "Cancelled"
+	if doc.doctype == POS_SHIFT_DOCTYPE:
+		return _shift_status(doc)
 	if doc.get("return_against"):
 		return "Return"
 	if doc.doctype in INVOICE_DOCTYPES:
@@ -36,6 +39,12 @@ def _invoice_status(invoice) -> str:
 	if invoice.is_fully_returned or (invoice.is_returned and settled):
 		return "Return Issued"
 	return _payment_status(invoice)
+
+
+def _shift_status(shift) -> str:
+	"""A POS shift is open until a submitted closing shift closes it."""
+	closed = frappe.db.exists("Books Pos Closing Shift", {"opening_shift": shift.name, "docstatus": 1})
+	return "Closed" if closed else "Open"
 
 
 def _payment_status(invoice) -> str:

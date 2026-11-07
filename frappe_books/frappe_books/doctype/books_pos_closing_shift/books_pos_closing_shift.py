@@ -19,6 +19,7 @@ from frappe_books.commerce.pos import (
 	validate_cash_rows,
 )
 from frappe_books.permissions import check_preview_permission
+from frappe_books.status import store_status
 
 
 class BooksPosClosingShift(Document):
@@ -38,11 +39,13 @@ class BooksPosClosingShift(Document):
 		)
 
 		amended_from: DF.Link | None
+		cashier: DF.Data | None
 		closing_amounts: DF.Table[BooksClosingAmounts]
 		closing_cash: DF.Table[BooksClosingCash]
 		closing_date: DF.Datetime | None
 		journal_entry: DF.Link | None
 		opening_shift: DF.Link | None
+		pos_profile: DF.Link | None
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pos Closing Shift"
@@ -62,6 +65,7 @@ class BooksPosClosingShift(Document):
 		self.set_closing_amounts()
 
 	def on_submit(self):
+		self.store_shift_status()
 		cash_rows = self.get_cash_rows()
 		if not cash_rows:
 			return
@@ -78,7 +82,12 @@ class BooksPosClosingShift(Document):
 			frappe.throw(_("Close POS shift {0} before reopening another shift.").format(open_shift))
 
 	def on_cancel(self):
+		self.store_shift_status()
 		cancel_cash_journal(self.journal_entry)
+
+	def store_shift_status(self):
+		"""Show the shift as closed, or open again once its closing shift is cancelled."""
+		store_status(frappe.get_doc("Books Pos Opening Shift", self.opening_shift))
 
 	@frappe.whitelist()
 	def preview(self):
@@ -89,11 +98,15 @@ class BooksPosClosingShift(Document):
 		self.split_counted_cash()
 
 	def set_opening_shift(self):
+		"""Close the user's own open shift unless they picked one they can read, and show whose shift it is."""
 		if not self.opening_shift:
 			self.opening_shift = open_shift_name()
 		if not self.opening_shift:
 			frappe.throw(_("There is no open POS shift to close."))
 		frappe.has_permission("Books Pos Opening Shift", "read", doc=self.opening_shift, throw=True)
+		self.cashier, self.pos_profile = frappe.db.get_value(
+			"Books Pos Opening Shift", self.opening_shift, ["owner", "pos_profile"]
+		)
 
 	def shift_owner(self):
 		"""The cashier whose shift this closes."""

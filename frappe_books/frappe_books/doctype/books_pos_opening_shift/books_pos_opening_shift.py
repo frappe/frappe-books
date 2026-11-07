@@ -19,9 +19,10 @@ from frappe_books.commerce.pos import (
 	validate_cash_rows,
 )
 from frappe_books.permissions import check_preview_permission
+from frappe_books.status import StatusMixin
 
 
-class BooksPosOpeningShift(Document):
+class BooksPosOpeningShift(StatusMixin, Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -43,6 +44,7 @@ class BooksPosOpeningShift(Document):
 		opening_cash: DF.Table[BooksOpeningCash]
 		opening_date: DF.Datetime | None
 		pos_profile: DF.Link | None
+		status: DF.Literal["Saved", "Open", "Closed", "Cancelled"]
 	# end: auto-generated types
 
 	_DOCTYPE_NAME = "Books Pos Opening Shift"

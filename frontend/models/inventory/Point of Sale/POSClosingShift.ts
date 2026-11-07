@@ -48,8 +48,18 @@ export class POSClosingShift extends FrappeDoc {
   declare closing_cash?: CashCount[];
   declare closing_amounts?: ClosingAmount[];
   declare opening_shift?: string;
+  declare cashier?: string;
+  declare pos_profile?: string;
 
   static getListViewSettings(): ListViewSettings {
-    return { columns: ['name', getDocStatusListColumn(), 'closing_date'] };
+    return {
+      columns: [
+        'name',
+        getDocStatusListColumn(),
+        'cashier',
+        'pos_profile',
+        'closing_date',
+      ],
+    };
   }
 }

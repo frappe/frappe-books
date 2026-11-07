@@ -8,9 +8,11 @@
  "engine": "InnoDB",
  "field_order": [
   "closing_date",
+  "opening_shift",
+  "cashier",
+  "pos_profile",
   "closing_cash",
   "closing_amounts",
-  "opening_shift",
   "journal_entry",
   "amended_from"
  ],
@@ -20,6 +22,31 @@
    "fieldtype": "Datetime",
    "label": "Closing Date",
    "no_copy": 1
+  },
+  {
+   "fieldname": "opening_shift",
+   "fieldtype": "Link",
+   "label": "Opening Shift",
+   "options": "Books Pos Opening Shift",
+   "search_index": 1
+  },
+  {
+   "fieldname": "cashier",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Cashier",
+   "no_copy": 1,
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pos_profile",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "POS Profile",
+   "no_copy": 1,
+   "options": "Books Pos Profile",
+   "read_only": 1
   },
   {
    "fieldname": "closing_cash",
@@ -32,13 +59,6 @@
    "fieldtype": "Table",
    "label": "Closing Amounts",
    "options": "Books Closing Amounts"
-  },
-  {
-   "fieldname": "opening_shift",
-   "fieldtype": "Link",
-   "label": "Opening Shift",
-   "options": "Books Pos Opening Shift",
-   "search_index": 1
   },
   {
    "fieldname": "journal_entry",
@@ -63,7 +83,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-07 12:00:00.000000",
+ "modified": "2026-11-07 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Pos Closing Shift",

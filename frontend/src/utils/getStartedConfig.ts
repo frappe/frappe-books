@@ -2,6 +2,7 @@ import { t } from 'fyo';
 import { ModelNameEnum } from 'models/types';
 import { openSettings, routeTo } from './ui';
 import { GetStartedConfigItem } from './types';
+import { routeFilters } from './filters';
 
 export function getGetStartedConfig(): GetStartedConfigItem[] {
   return [
@@ -75,12 +76,10 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           icon: 'lucide-box',
           description: t`Add products or services that you sell to your customers`,
           action: () =>
-            routeTo({
-              path: `/list/Item/${t`Sales Items`}`,
-              query: {
-                filters: JSON.stringify({ item_usage: 'Sales' }),
-              },
-            }),
+             routeTo({
+               path: `/list/Item/${t`Sales Items`}`,
+               query: { filters: JSON.stringify(routeFilters.SalesItems) },
+          }),
           fieldname: 'sales_item_created',
           documentation:
             'https://docs.frappe.io/books/create-initial-entries#add-sales-items',
@@ -123,9 +122,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           action: () =>
             routeTo({
               path: `/list/Item/${t`Purchase Items`}`,
-              query: {
-                filters: JSON.stringify({ item_usage: 'Purchases' }),
-              },
+              query: { filters: JSON.stringify(routeFilters.PurchaseItems) },
             }),
           fieldname: 'purchase_item_created',
         },

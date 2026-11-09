@@ -12,7 +12,7 @@ A Frappe app (`frappe_books/`, Python) plus a Vue app (`frontend/`) served at `/
 
 ## Build approach
 
-<TBD, set by /scope>
+Tracer Bullet: each section is built end to end (server query, permission check, Vue card and tests) and works before the next starts. Source: [docs/scope/scope.md](docs/scope/scope.md).
 
 ## Commands
 

@@ -49,6 +49,21 @@
             <Expenses class="h-96 min-w-0 md:h-80" :period="period" />
           </div>
         </template>
+        <template v-if="canRead.ledger || canRead.sales">
+          <div class="border-t border-outline-gray-2 max-md:hidden" />
+          <div class="grid gap-4 md:gap-8 lg:grid-cols-2">
+            <!-- No period: balances are as of today, and a period change must not reload them. -->
+            <AccountBalances
+              v-if="canRead.ledger"
+              class="h-72 min-w-0 md:h-80"
+            />
+            <BestSellers
+              v-if="canRead.sales"
+              class="h-96 min-w-0 md:h-80"
+              :period="period"
+            />
+          </div>
+        </template>
       </div>
     </component>
   </div>
@@ -58,6 +73,8 @@
 import { ScrollArea as FrappeScrollArea } from 'frappe-ui';
 import { ModelNameEnum } from 'models/types';
 import PageHeader from 'src/components/PageHeader.vue';
+import AccountBalances from './AccountBalances.vue';
+import BestSellers from './BestSellers.vue';
 import Cashflow from './Cashflow.vue';
 import Expenses from './Expenses.vue';
 import InvoiceCards from './InvoiceCards.vue';
@@ -73,6 +90,8 @@ export default {
   components: {
     FrappeScrollArea,
     PageHeader,
+    AccountBalances,
+    BestSellers,
     Cashflow,
     ProfitAndLoss,
     Expenses,

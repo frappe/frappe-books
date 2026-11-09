@@ -11,7 +11,7 @@ _Steps derived from spec 0003 acceptance criteria and its Value sourcing table. 
 - [ ] Pick a bank account and a loan (liability), save, accept the reload → the card lists only those two, in chart order; the loan shows a minus sign in red and the Total is bank minus loan → AC-4, AC-6
 - [ ] Save the settings but answer No to the reload and close the dialog → the card still shows the old list (expected); leave the dashboard and come back → the card shows the new list → AC-6
 - [ ] Clear the table and save → the card lists every leaf Cash and Bank account again, subtitle "As of today" → AC-5
-- [ ] With only one picked account, make it stale (turn it into a group in the console) → the card falls back to Cash and Bank, not an empty card → AC-5
+- [ ] With only one picked account, turn it into a group in the bench console (`frappe.db.set_value("Books Account", <account>, "is_group", 1)`), run `frappe.db.commit()`, then reload the dashboard → the card falls back to Cash and Bank, not an empty card → AC-5
 - [ ] As a Books Manager, hover the settings icon in the card header → tooltip "Choose accounts"; click it → the Settings dialog opens on the General tab → AC-7
 - [ ] Throttle the network (and then block `get_cash_balances`) → the icon still shows while the card loads and when it shows its error; on a site with no Cash or Bank account it shows on the empty card too → AC-7
 - [ ] At 390px wide, tap the same icon → the Settings page opens on the General tab → AC-7
@@ -19,7 +19,9 @@ _Steps derived from spec 0003 acceptance criteria and its Value sourcing table. 
 - [ ] Switch to Dark → the icon button follows the theme → AC-7
 - [ ] Try to delete a picked account from the chart of accounts → refused, naming Books Accounting Settings; the card is unchanged → AC-8
 - [ ] As a ledger reader without Accounting Settings read (a custom role), call `get_cash_balances` → the picked accounts come back; as a user without GL read → 403 → AC-9
-- [ ] On an existing site, `bench migrate` → no errors, the table is empty, the card is unchanged → AC-10
+- [ ] On an existing SQLite site, `bench migrate` → no errors, the table is empty, the card is unchanged → AC-10
+- [ ] On an existing MariaDB site, `bench migrate` → no errors, the table is empty, the card is unchanged → AC-10
+- [ ] On an existing PostgreSQL site, `bench migrate` → no errors, the table is empty, the card is unchanged → AC-10
 
 ## Value sourcing
 - [ ] Picked accounts: the rows in `tabBooks Dashboard Account` with parent Books Accounting Settings match the table on screen

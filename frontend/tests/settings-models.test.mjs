@@ -338,6 +338,23 @@ test('only the Print tab offers a terms and conditions switch', () => {
   );
 });
 
+test('the dashboard table picks leaf asset and liability accounts without Create', () => {
+  const table = getSchema('AccountingSettings').fields.find(
+    (field) => field.fieldname === 'dashboard_accounts'
+  );
+  assert.deepEqual(
+    [table.fieldtype, table.target, table.section],
+    ['Table', 'DashboardAccount', 'Dashboard']
+  );
+  assert.match(table.sub_label, /Leave empty/);
+
+  const account = getSchema('DashboardAccount').fields.find(
+    (field) => field.fieldname === 'account'
+  );
+  assert.equal(account.target, 'Account');
+  assert.ok(!account.create);
+});
+
 test('the setup wizard shows the fields, placeholders and sections it showed', () => {
   const layout = getSchema('SetupWizard')
     .fields.filter((field) => !field.meta && !field.hidden)

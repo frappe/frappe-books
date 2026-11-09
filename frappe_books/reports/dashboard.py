@@ -5,6 +5,7 @@ from frappe import _
 from frappe.query_builder.functions import Coalesce, NullIf, Sum
 from frappe.utils import add_days, add_months, get_first_day, getdate, month_diff
 
+from frappe_books.accounting.accounts import DASHBOARD_ROOT_TYPES
 from frappe_books.accounting.money import as_decimal, rounded, sum_decimal
 from frappe_books.reports.filters import datetime_conditions
 from frappe_books.reports.periods import get_fiscal_year
@@ -220,8 +221,23 @@ def _item_labels(codes) -> dict:
 
 
 def _dashboard_accounts():
-	"""The leaf cash and bank accounts, in chart order."""
+	"""The accounts the dashboard lists: the picked ones, else the leaf cash and bank accounts, in chart order."""
 	# A ledger reader already sees these names on its entries, so Account read is not needed.
+	# get_list on the child rows would also need parent_doctype and Accounting Settings read.
+	picked = frappe.get_all(
+		"Books Dashboard Account",
+		filters={"parenttype": "Books Accounting Settings", "parentfield": "dashboard_accounts"},
+		pluck="account",
+	)
+	if picked:
+		accounts = frappe.get_all(
+			"Books Account",
+			filters={"name": ["in", picked], "is_group": 0, "root_type": ["in", DASHBOARD_ROOT_TYPES]},
+			fields=["name", "account_name"],
+			order_by="lft",
+		)
+		if accounts:
+			return accounts
 	return frappe.get_all(
 		"Books Account",
 		filters={"account_type": ["in", ["Cash", "Bank"]], "is_group": 0},

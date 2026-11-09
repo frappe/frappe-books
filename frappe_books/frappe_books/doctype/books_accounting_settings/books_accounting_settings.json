@@ -28,6 +28,8 @@
   "year_start_date",
   "year_end_date",
   "setup_complete",
+  "dashboard_section_break",
+  "dashboard_accounts",
   "default_section_break_30",
   "gstin"
  ],
@@ -178,6 +180,18 @@
    "label": "Setup Complete"
   },
   {
+   "fieldname": "dashboard_section_break",
+   "fieldtype": "Section Break",
+   "label": "Dashboard"
+  },
+  {
+   "description": "The accounts the dashboard's Account balances card lists. Leave empty to list every cash and bank account.",
+   "fieldname": "dashboard_accounts",
+   "fieldtype": "Table",
+   "label": "Dashboard Accounts",
+   "options": "Books Dashboard Account"
+  },
+  {
    "fieldname": "default_section_break_30",
    "fieldtype": "Section Break",
    "label": "Default"
@@ -194,7 +208,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 12:00:00.000000",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe Books",
  "name": "Books Accounting Settings",

@@ -5,6 +5,7 @@ from frappe_books.company import default_company
 
 PARTY_ACCOUNT_TYPES = {"Books Customer": "Receivable", "Books Supplier": "Payable"}
 PAYMENT_ACCOUNT_TYPES = ("Cash", "Bank")
+DASHBOARD_ROOT_TYPES = ("Asset", "Liability")
 
 
 def validate_account(doc, fieldname, account_types=(), root_types=()):

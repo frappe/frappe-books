@@ -1,4 +1,13 @@
 import { FrappeDoc } from 'src/frappe/document';
+import { withoutCreate } from 'src/frappe/schema';
+
+/** An account the dashboard's Account balances card lists; its picker's filters come from the DocField. */
+export class DashboardAccount extends FrappeDoc {
+  static override presentation = {
+    label: 'Dashboard Account',
+    fields: withoutCreate(['account']),
+  };
+}
 
 /**
  * Books Accounting Settings, served by Frappe. Its country is Frappe's
@@ -7,6 +16,7 @@ import { FrappeDoc } from 'src/frappe/document';
 export class AccountingSettings extends FrappeDoc {
   static override doctype = 'Books Accounting Settings';
   static override presentation = { label: 'Accounting Settings' };
+  static override rowModels = { dashboard_accounts: DashboardAccount };
 
   declare fullname?: string;
   declare bank_name?: string;
@@ -28,4 +38,5 @@ export class AccountingSettings extends FrappeDoc {
   declare enable_item_group?: boolean;
   declare enable_point_of_sale_with_out_inventory?: boolean;
   declare enable_partial_payment?: boolean;
+  declare dashboard_accounts?: (FrappeDoc & { account?: string })[];
 }

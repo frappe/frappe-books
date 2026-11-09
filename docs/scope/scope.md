@@ -14,7 +14,7 @@ _These are recommendations to keep your build orderly, not requirements. Skip an
 | A | Dashboard | Existing | existing |
 | 1 | Account balances card | Slice 1 | done |
 | 2 | Best sellers chart | Slice 2 | in-progress |
-| 3 | Choose dashboard accounts | Slice 3 | planned |
+| 3 | Choose dashboard accounts | Slice 3 | in-progress |
 
 ## Existing
 
@@ -54,10 +54,18 @@ spec [0002](../specs/0002-best-sellers-chart/index.md) · code in `frappe_books/
 
 ## Slice 3: Choose accounts
 
-### 3. Choose dashboard accounts · needs a decision
+### 3. Choose dashboard accounts · in-progress
 A setting where you pick which accounts the Account balances card lists, so a business can include or leave out accounts (for example a petty cash or a loan account).
 **Done when:** you can pick accounts in a settings screen, the card lists only those once any are picked, it falls back to Cash and Bank when none are picked, and the rule lives in the Python controller.
-- [ ] Design it (spec): `/architect choose dashboard accounts`
+spec [0003](../specs/0003-choose-dashboard-accounts/index.md) · code in `frappe_books/reports/dashboard.py`, `frappe_books/frappe_books/doctype/books_accounting_settings/`, `frappe_books/frappe_books/doctype/books_dashboard_account/`, `frontend/src/pages/Dashboard/AccountBalances.vue`
+- [x] Design it (spec): `/architect choose dashboard accounts`
+- [x] Build it: `/develop choose dashboard accounts`
+  - [x] Thin thread: Books Dashboard Account table on Accounting Settings, delete block test, `_dashboard_accounts()` reads the picks with the Cash and Bank fallback (AC-4, AC-5, AC-8, AC-10)
+  - [x] Settings screen end to end: `DashboardAccount` row model without Create, help line under the table, a pick shows on the card after reload (AC-1, AC-2, AC-6)
+  - [x] Rules in the controller: `DASHBOARD_ROOT_TYPES`, duplicate and leaf Asset or Liability checks on new or changed rows, stale picks skipped, Python tests (AC-3, AC-4, AC-5, AC-9)
+  - [x] "Choose accounts" button on the card, gated on write to Accounting Settings, plus Playwright tests on desktop and phone (AC-1, AC-2, AC-4, AC-5, AC-6, AC-7)
+- [ ] Verify it: `/check verify choose dashboard accounts`
+- [ ] Test it: `/test choose dashboard accounts`
 
 ## Legend
 

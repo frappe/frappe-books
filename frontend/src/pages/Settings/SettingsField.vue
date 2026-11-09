@@ -1,13 +1,17 @@
 <template>
   <div v-if="isStacked" class="space-y-1 py-3.5">
-    <Table
-      v-if="field.fieldtype === 'Table'"
-      :show-label="true"
-      :border="true"
-      :df="field"
-      :value="tableValue"
-      @change="(value: DocValue) => $emit('change', value)"
-    />
+    <template v-if="field.fieldtype === 'Table'">
+      <Table
+        :show-label="true"
+        :border="true"
+        :df="field"
+        :value="tableValue"
+        @change="(value: DocValue) => $emit('change', value)"
+      />
+      <p v-if="field.sub_label" class="text-p-sm text-ink-gray-5">
+        {{ field.sub_label }}
+      </p>
+    </template>
     <FormControl
       v-else
       class="w-full"

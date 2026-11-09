@@ -2,8 +2,10 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
+from frappe_books.accounting.accounts import DASHBOARD_ROOT_TYPES, validate_account
 from frappe_books.coa import ensure_discount_account
 from frappe_books.company import company_value, default_company
 from frappe_books.regional import validate_gstin
@@ -36,8 +38,13 @@ class BooksAccountingSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		from frappe_books.frappe_books.doctype.books_dashboard_account.books_dashboard_account import (
+			BooksDashboardAccount,
+		)
+
 		bank_name: DF.Data
 		country: DF.Link | None
+		dashboard_accounts: DF.Table[BooksDashboardAccount]
 		enable_coupon_code: DF.Check
 		enable_discounts_and_margin: DF.Check
 		enable_form_customization: DF.Check
@@ -80,6 +87,26 @@ class BooksAccountingSettings(Document):
 		validate_one_way_switches(self, ONE_WAY_SWITCHES)
 		if self.gstin and company_country() == "India":
 			self.gstin = validate_gstin(self.gstin)
+		self.validate_dashboard_accounts()
+
+	def validate_dashboard_accounts(self):
+		"""Each account once; a new or changed row must be a leaf Asset or Liability account.
+
+		A saved row whose account has since stopped qualifying is left alone, so it does not block
+		saving other settings; the dashboard skips it. Rows are matched to the saved ones by name.
+		"""
+		rows = [row for row in self.dashboard_accounts if row.account]
+		seen = set()
+		for row in rows:
+			if row.account in seen:
+				frappe.throw(_("{0} is on the dashboard more than once.").format(row.account))
+			seen.add(row.account)
+
+		before = self.get_doc_before_save()
+		previous = {row.name: row.account for row in before.dashboard_accounts} if before else {}
+		for row in rows:
+			if previous.get(row.name) != row.account:
+				validate_account(row, "account", root_types=DASHBOARD_ROOT_TYPES)
 
 
 def set_discount_account():

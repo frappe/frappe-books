@@ -149,6 +149,21 @@ test('account balances sit full width on a card of their own', async ({
   await expect(card).toHaveCSS('border-top-style', 'solid');
 });
 
+// covers: AC-7
+test('choose accounts opens the General tab of the settings page', async ({
+  page,
+}) => {
+  const balances = page.locator('[data-slot="chart-container"]', {
+    hasText: 'Account balances',
+  });
+  await balances.scrollIntoViewIfNeeded();
+  await balances.getByRole('link', { name: 'Choose accounts' }).click();
+
+  await expect(page).toHaveURL(/\/books\/settings\?tab=AccountingSettings$/);
+  await expect(page.getByRole('dialog', { name: 'Settings' })).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: 'General' })).toBeChecked();
+});
+
 test('best sellers sit full width on a card of their own', async ({ page }) => {
   const sellers = page.locator('[data-slot="chart-container"]', {
     hasText: 'Best sellers',

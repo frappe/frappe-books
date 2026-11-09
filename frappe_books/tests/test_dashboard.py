@@ -1,10 +1,12 @@
 from decimal import Decimal
 
 import frappe
+from frappe.permissions import add_permission
 from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from frappe_books.reports.dashboard import (
+	LEDGER,
 	get_best_sellers,
 	get_cash_balances,
 	get_cashflow,
@@ -216,6 +218,76 @@ class IntegrationTestCashBalances(IntegrationTestCase):
 		self.assertEqual(result["total"], sum(balances.values()))
 
 
+class IntegrationTestDashboardAccounts(IntegrationTestCase):
+	def test_picked_accounts_are_listed_alone_in_chart_order(self):
+		bank = make_account("Picked Bank", account_type="Bank")
+		loan = make_account("Picked Loan", root_type="Liability")
+		make_account("Unpicked Cash", account_type="Cash")
+		_post(bank, 500, 0, "2031-12-01")
+		_post(loan, 0, 300, "2031-12-01")
+		self.pick(loan, bank)
+
+		with self.freeze_time(TODAY):
+			result = get_cash_balances()
+
+		self.assertEqual([row["account"] for row in result["accounts"]], _chart_order(bank, loan))
+		balances = {row["account"]: row["balance"] for row in result["accounts"]}
+		self.assertEqual((balances[bank.name], balances[loan.name]), (Decimal("500.00"), Decimal("-300.00")))
+		self.assertEqual(result["total"], Decimal("200.00"))
+
+	def test_an_empty_table_lists_the_cash_and_bank_leaves(self):
+		cash = make_account("Fallback Cash", account_type="Cash")
+
+		self.assertEqual(_listed(), _cash_and_bank())
+		self.assertIn(cash.name, _listed())
+
+	def test_picks_that_stopped_qualifying_are_skipped(self):
+		stale = make_account("Stale Bank", account_type="Bank")
+		valid = make_account("Still Valid Bank", account_type="Bank")
+		self.pick(stale, valid)
+		frappe.db.set_value("Books Account", stale.name, "is_group", 1)
+
+		self.assertEqual(_listed(), [valid.name])
+
+	def test_the_card_falls_back_when_no_pick_qualifies(self):
+		stale = make_account("Only Stale Bank", account_type="Bank")
+		self.pick(stale)
+		frappe.db.set_value("Books Account", stale.name, "is_group", 1)
+
+		self.assertEqual(_listed(), _cash_and_bank())
+
+	def test_a_picked_account_cannot_be_deleted(self):
+		bank = make_account("Undeletable Bank", account_type="Bank")
+		self.pick(bank)
+
+		with self.assertRaisesRegex(frappe.LinkExistsError, "Books Accounting Settings"):
+			frappe.delete_doc("Books Account", bank.name)
+		self.assertEqual(_listed(), [bank.name])
+
+	def test_a_ledger_reader_sees_the_picks_without_reading_the_settings(self):
+		bank = make_account("Reader Bank", account_type="Bank")
+		self.pick(bank)
+		role = frappe.get_doc({"doctype": "Role", "role_name": unique_name("Books Ledger Reader")}).insert()
+		add_permission(LEDGER, role.name)
+		reader = ensure_user(f"{frappe.generate_hash(length=8)}@example.com", role.name)
+
+		with self.set_user(reader):
+			self.assertFalse(frappe.has_permission("Books Accounting Settings", "read"))
+			self.assertEqual([row["account"] for row in get_cash_balances()["accounts"]], [bank.name])
+		with self.set_user(ensure_user("books-dashboard-outsider@example.com", "Translator")):
+			self.assertRaises(frappe.PermissionError, get_cash_balances)
+
+	def pick(self, *accounts):
+		settings = frappe.get_single("Books Accounting Settings")
+		settings.set("dashboard_accounts", [{"account": account.name} for account in accounts])
+		# A test site skips the setup wizard that fills the company details.
+		settings.flags.ignore_mandatory = True
+		settings.save()
+		self.addCleanup(
+			frappe.db.delete, "Books Dashboard Account", {"parenttype": "Books Accounting Settings"}
+		)
+
+
 class IntegrationTestAccountBalances(IntegrationTestCase):
 	def test_account_balances_are_kept_on_the_root_type_side(self):
 		cash = make_account("Balance Cash", account_type="Cash")
@@ -360,6 +432,20 @@ def _post(account, debit, credit, date="2031-01-10", **values):
 			**values,
 		}
 	).insert()
+
+
+def _listed():
+	return [row["account"] for row in get_cash_balances()["accounts"]]
+
+
+def _cash_and_bank():
+	filters = {"account_type": ["in", ["Cash", "Bank"]], "is_group": 0}
+	return frappe.get_all("Books Account", filters=filters, pluck="name", order_by="lft")
+
+
+def _chart_order(*accounts):
+	names = [account.name for account in accounts]
+	return frappe.get_all("Books Account", filters={"name": ["in", names]}, pluck="name", order_by="lft")
 
 
 def _invoice(date, total, outstanding, items=(), **values):

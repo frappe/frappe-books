@@ -26,7 +26,14 @@ _Steps derived from spec 0003 acceptance criteria and its Value sourcing table. 
 ## Value sourcing
 - [ ] Picked accounts: the rows in `tabBooks Dashboard Account` with parent Books Accounting Settings match the table on screen
 - [ ] Allowed types: changing `DASHBOARD_ROOT_TYPES` (in `frappe_books/accounting/accounts.py`) is the only edit needed to change both the save rule and the card filter (the picker's `link_filters` is a mirror)
-- [ ] Row order: move a picked account in the chart (changes `lft`) → its row moves on the card; reordering table rows changes nothing
+- [ ] Row order: move a picked account under a different parent in the chart of accounts (edit its Parent Account and save, which changes `lft`) → its row moves on the card; reordering table rows changes nothing
 - [ ] Balances, Total, `as_of`: unchanged from spec 0001 for the same accounts
 - [ ] Button visibility follows `fyo.can('AccountingSettings', 'write')` from the boot permissions
 - [ ] Help line comes from the DocField description, shows under the table (the stacked branch of `SettingsField.vue`), and shows translated in another language
+
+## Commands
+- [ ] `bench --site <site> run-tests --app frappe_books --module frappe_books.tests.test_dashboard` → `IntegrationTestDashboardAccounts` passes (picked list, empty and stale fallback, delete block, ledger reader) → AC-4, AC-5, AC-8, AC-9
+- [ ] `bench --site <site> run-tests --app frappe_books --module frappe_books.tests.test_settings_accounts` → `IntegrationTestDashboardAccountRules` passes (duplicate, group, wrong root type, stale row, moved row, `link_filters` mirror) → AC-2, AC-3
+- [ ] `cd frontend && yarn test` → "the dashboard table picks leaf asset and liability accounts without Create" passes → AC-1, AC-2
+- [ ] `cd frontend && yarn test:ui tests/ui/dashboard-accounts.spec.ts` → the settings flow, the button in every state, and the no write case pass → AC-1, AC-2, AC-4, AC-5, AC-6, AC-7
+- [ ] `cd frontend && yarn test:ui tests/ui/mobile-dashboard.spec.ts -g "choose accounts"` → the phone opens the Settings page on General → AC-7

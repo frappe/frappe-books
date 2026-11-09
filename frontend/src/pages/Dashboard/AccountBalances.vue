@@ -7,6 +7,17 @@
       :error="error"
       :empty="!accounts.length"
     >
+      <!-- The header sits outside the state templates, so the button shows in every state. -->
+      <template v-if="canChooseAccounts" #actions>
+        <FrappeButton
+          variant="ghost"
+          :size="isMobile ? 'md' : 'sm'"
+          icon="lucide-settings-2"
+          :label="t`Choose accounts`"
+          :tooltip="t`Choose accounts`"
+          :route="settingsRoute"
+        />
+      </template>
       <!-- Rows stand in for the table, so the card keeps its shape while loading. -->
       <template #loading>
         <div class="space-y-3 pt-7">
@@ -86,7 +97,9 @@
 
 <script lang="ts">
 import { t } from 'fyo';
+import { Button as FrappeButton } from 'frappe-ui';
 import { ChartContainer as FrappeChartContainer } from 'frappe-ui/charts';
+import { ModelNameEnum } from 'models/types';
 import { fyo } from 'src/initFyo';
 import { getCashBalances, type AccountBalance } from 'src/utils/dashboard';
 import { defineComponent } from 'vue';
@@ -99,6 +112,7 @@ export default defineComponent({
   name: 'AccountBalances',
   components: {
     ChartLoadError,
+    FrappeButton,
     FrappeChartContainer,
   },
   extends: DashboardChartBase,
@@ -114,6 +128,17 @@ export default defineComponent({
       return this.asOf
         ? t`As of ${fyo.format(this.asOf, 'Date')}`
         : t`As of today`;
+    },
+    /** Only users who may save Accounting Settings can change the list. */
+    canChooseAccounts(): boolean {
+      return fyo.can(ModelNameEnum.AccountingSettings, 'write');
+    },
+    /** The router opens Settings as a dialog on desktop and as a page on a phone. */
+    settingsRoute(): RouteLocationRaw {
+      return {
+        path: '/settings',
+        query: { tab: ModelNameEnum.AccountingSettings },
+      };
     },
   },
   methods: {

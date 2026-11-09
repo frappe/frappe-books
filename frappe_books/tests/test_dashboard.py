@@ -316,6 +316,24 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 		)
 		self.assertEqual(result["total"], Decimal("150.00"))
 
+	# covers: AC-4, AC-5
+	def test_items_that_round_to_zero_are_left_out_and_the_total_adds_rounded_amounts(self):
+		dust, net_zero, overdrawn = _item("Dust Book"), _item("Net Zero Book"), _item("Overdrawn Book")
+		kept_a, kept_b = _item("Half Cent A"), _item("Half Cent B")
+		_invoice(
+			"2031-12-01",
+			0,
+			0,
+			items=[(dust, 0.004), (net_zero, 25), (overdrawn, 10), (kept_a, 0.006), (kept_b, 0.006)],
+		)
+		_invoice("2031-12-02", 0, 0, is_return=1, items=[(net_zero, -25), (overdrawn, -15)])
+
+		result = self._best_sellers()
+
+		self.assertEqual(_amounts(result), {kept_a: Decimal("0.01"), kept_b: Decimal("0.01")})
+		# The kept rows add to 0.012 raw, so a raw sum would be a cent short of their rounded 0.02.
+		self.assertEqual(result["total"], Decimal("0.02"))
+
 	def test_few_items_all_come_back_and_no_sales_is_empty(self):
 		self.assertEqual(self._best_sellers(), {"items": [], "total": 0})
 

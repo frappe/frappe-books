@@ -41,6 +41,8 @@ bench --site <site> run-tests --app frappe_books --module frappe_books.tests.tes
 - Doc events on `"*"` update the search index on every save and trash, so heavy `on_update` work slows every doctype.
 - The test site must have the setup wizard completed (`books_setup_wizard.complete_setup`) before the Playwright tests run.
 - No ERPNext doctypes exist anymore. Do not add links, checks or fallbacks for them.
+- `frappe.qb` skips row level permissions: in a whitelisted report, pick the readable names with `frappe.get_list` first, then aggregate over them (see `reports/dashboard.py`).
+- `Sum` comes back as a float on SQLite and a Decimal elsewhere, so round before comparing or sorting. On Postgres, an `ORDER BY` on an expression alias gets wrapped in `MAX()`; sort in Python instead.
 
 ## Agent skills
 

@@ -173,14 +173,15 @@ def _monthly_totals(from_date, to_date, filters, fields) -> dict:
 def _item_sales(from_date, to_date) -> list:
 	"""Each item's sold amount in base currency over the period's submitted invoices, returns included."""
 	# get_list applies the reader's row level permissions, which the query below would bypass.
+	# Unrun, it is a subquery, so no name list hits the database parameter limit.
 	names = frappe.get_list(
 		SALES_INVOICE,
 		filters={"docstatus": 1, "posting_date": ["between", [from_date, to_date]]},
 		pluck="name",
 		limit_page_length=0,
+		order_by=None,
+		run=False,
 	)
-	if not names:
-		return []
 	invoice = frappe.qb.DocType(SALES_INVOICE)
 	row = frappe.qb.DocType("Books Sales Invoice Item")
 	# An empty rate is stored as 0; count it as 1, as the invoice code does with `conversion_rate or 1`.

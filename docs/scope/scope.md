@@ -49,7 +49,7 @@ spec [0002](../specs/0002-best-sellers-chart/index.md) · code in `frappe_books/
   - [x] Card complete: empty and error states, phone card, left column fallback, dark mode (AC-8, AC-9, AC-10)
   - [x] Playwright tests, desktop and mobile (AC-5, AC-6, AC-8, AC-9, AC-10)
   - [x] Top five only (spec update): drop the Others slice, "Total sales" over every item, `Top N` centre, tests updated (AC-3, AC-5)
-- [ ] Verify it: `/check verify best sellers chart`
+- [x] Verify it: `/check verify best sellers chart`
 - [ ] Test it: `/test best sellers chart`
 
 ## Slice 3: Choose accounts

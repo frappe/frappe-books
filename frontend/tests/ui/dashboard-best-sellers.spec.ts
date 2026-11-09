@@ -76,6 +76,92 @@ test('changing the period reloads the best sellers', async ({ page }) => {
   await expect(card(page)).not.toContainText('World Atlas');
 });
 
+// covers: AC-6
+test('a slow answer for an earlier period does not replace the current one', async ({
+  page,
+}) => {
+  await page.unroute(BEST_SELLERS);
+  let releaseMonth = () => {};
+  const monthHeld = new Promise<void>((resolve) => (releaseMonth = resolve));
+  await page.route(BEST_SELLERS, async (route) => {
+    if (route.request().postData()?.includes('This Quarter')) {
+      return route.fulfill({
+        json: {
+          message: {
+            items: [
+              { item: 'ESSAYS-06', item_name: 'Collected Essays', amount: 800 },
+            ],
+            total: 800,
+          },
+        },
+      });
+    }
+    await monthHeld;
+    await route.fulfill({ json: { message: sellers } });
+  });
+  await page.reload();
+  await card(page).scrollIntoViewIfNeeded();
+
+  await page.locator('header:visible').getByRole('combobox').click();
+  await page.getByRole('option', { name: 'This quarter' }).click();
+  await expect(card(page)).toContainText('Collected Essays');
+  const staleAnswer = page.waitForResponse(
+    (res) =>
+      BEST_SELLERS.test(res.url()) &&
+      res.request().postData()?.includes('This Month') === true
+  );
+  releaseMonth();
+  await staleAnswer;
+  // Let Vue apply whatever the stale answer would have written.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => resolve(null)))
+  );
+
+  await expect(card(page)).toContainText('Collected Essays');
+  await expect(card(page)).not.toContainText('World Atlas');
+});
+
+// covers: AC-5
+test('hiding legend entries shares the percents among the slices still shown', async ({
+  page,
+}) => {
+  await card(page).scrollIntoViewIfNeeded();
+  await expect(card(page)).toHaveAttribute('data-state', 'ready');
+  const oldMaps = card(page).getByRole('button', { name: 'Hide Old Maps' });
+  // 1 500 of the 11 000 drawn, about 14%.
+  await expect(oldMaps).not.toContainText(/\b50(\.0)?\s?%/);
+
+  await card(page).getByRole('button', { name: 'Hide World Atlas' }).click();
+  await card(page).getByRole('button', { name: 'Hide First Poems' }).click();
+
+  // 1 500 of the 3 000 still drawn.
+  await expect(oldMaps).toContainText(/\b50(\.0)?\s?%/);
+  await expect(
+    card(page).getByRole('button', { name: 'Show World Atlas' })
+  ).toHaveAttribute('aria-pressed', 'false');
+  // The subtitle keeps the total of every item.
+  await expect(card(page)).toContainText(/Total sales: .*12[\s,.'’]?000/);
+});
+
+// covers: AC-5
+test('the last slice shown cannot be hidden', async ({ page }) => {
+  await card(page).scrollIntoViewIfNeeded();
+  await expect(card(page)).toHaveAttribute('data-state', 'ready');
+  const [last, ...others] = [...sellers.items].reverse();
+  for (const { item_name } of others) {
+    await card(page)
+      .getByRole('button', { name: `Hide ${item_name}` })
+      .click();
+  }
+
+  const lastButton = card(page).getByRole('button', {
+    name: `Hide ${last.item_name}`,
+  });
+  await lastButton.click();
+
+  await expect(lastButton).toHaveAttribute('aria-pressed', 'true');
+});
+
 // covers: AC-8
 test('a period without sales says so', async ({ page }) => {
   response = { items: [], total: 0 };

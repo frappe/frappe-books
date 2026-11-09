@@ -172,6 +172,15 @@ def _monthly_totals(from_date, to_date, filters, fields) -> dict:
 
 def _item_sales(from_date, to_date) -> list:
 	"""Each item's sold amount in base currency over the period's submitted invoices, returns included."""
+	# get_list applies the reader's row level permissions, which the query below would bypass.
+	names = frappe.get_list(
+		SALES_INVOICE,
+		filters={"docstatus": 1, "posting_date": ["between", [from_date, to_date]]},
+		pluck="name",
+		limit_page_length=0,
+	)
+	if not names:
+		return []
 	invoice = frappe.qb.DocType(SALES_INVOICE)
 	row = frappe.qb.DocType("Books Sales Invoice Item")
 	# An empty rate is stored as 0; count it as 1, as the invoice code does with `conversion_rate or 1`.
@@ -184,9 +193,7 @@ def _item_sales(from_date, to_date) -> list:
 		.select(row.item_code, Sum(row.amount * rate).as_("amount"))
 		.where(row.parenttype == SALES_INVOICE)
 		.where(row.parentfield == "items")
-		.where(invoice.docstatus == 1)
-		.where(invoice.posting_date >= from_date)
-		.where(invoice.posting_date <= to_date)
+		.where(invoice.name.isin(names))
 		.groupby(row.item_code)
 		.run(as_dict=True)
 	)
@@ -200,8 +207,15 @@ def _item_labels(codes) -> dict:
 	items = frappe.get_all("Books Item", filters={"name": ["in", codes]}, fields=["name", "item_name"])
 	names = {item.name: item.item_name for item in items}
 	labels = {code: names.get(code) or code for code in codes}
-	counts = Counter(labels.values())
-	return {code: f"{label} ({code})" if counts[label] > 1 else label for code, label in labels.items()}
+	# Adding a code can produce another item's name ("Atlas (A)"), so repeat until every label is unique.
+	with_code = set()
+	while True:
+		final = {code: f"{label} ({code})" if code in with_code else label for code, label in labels.items()}
+		counts = Counter(final.values())
+		clashing = {code for code, label in final.items() if counts[label] > 1} - with_code
+		if not clashing:
+			return final
+		with_code |= clashing
 
 
 def _dashboard_accounts():

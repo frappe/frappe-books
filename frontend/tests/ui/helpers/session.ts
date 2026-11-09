@@ -53,20 +53,24 @@ async function signIn(request: APIRequestContext, { usr, pwd }: Login) {
   expect(response.ok(), await response.text()).toBe(true);
 }
 
+/** Creates the user, or resets an existing one to the spec's password and only its roles. */
 async function ensureUser(request: APIRequestContext, login: Login) {
   const path = `/api/v2/document/User/${encodeURIComponent(login.usr)}`;
-  if ((await request.get(path)).ok()) {
-    return;
-  }
+  const values = {
+    enabled: 1,
+    new_password: login.pwd,
+    roles: login.roles!.map((role) => ({ role })),
+  };
 
-  const response = await request.post('/api/v2/document/User', {
-    data: {
-      email: login.usr,
-      first_name: login.usr.split('@')[0],
-      send_welcome_email: 0,
-      new_password: login.pwd,
-      roles: login.roles!.map((role) => ({ role })),
-    },
-  });
+  const response = (await request.get(path)).ok()
+    ? await request.put(path, { data: values })
+    : await request.post('/api/v2/document/User', {
+        data: {
+          ...values,
+          email: login.usr,
+          first_name: login.usr.split('@')[0],
+          send_welcome_email: 0,
+        },
+      });
   expect(response.ok(), await response.text()).toBe(true);
 }

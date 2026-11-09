@@ -35,7 +35,8 @@ test('the card shows the top five and the total sales of every item', async ({
   await card(page).scrollIntoViewIfNeeded();
   await expect(card(page)).toHaveAttribute('data-state', 'ready');
   // Whole amounts, so the checks hold for any site currency and precision.
-  await expect(card(page)).toContainText(/Total sales: .*12,000/);
+  // Allow any locale's grouping separator (comma, dot, apostrophe, NBSP, thin space).
+  await expect(card(page)).toContainText(/Total sales: .*12[\s,.'’]?000/);
   await expect(card(page)).toContainText('Top 5');
   for (const { item_name } of sellers.items) {
     await expect(
@@ -57,14 +58,22 @@ test('the centre counts the items returned', async ({ page }) => {
 
 // covers: AC-6
 test('changing the period reloads the best sellers', async ({ page }) => {
-  const reloaded = page.waitForRequest(
-    (request) =>
-      BEST_SELLERS.test(request.url()) &&
-      request.postData()?.includes('This Quarter') === true
+  await card(page).scrollIntoViewIfNeeded();
+  await expect(card(page)).toContainText('World Atlas');
+  response = {
+    items: [{ item: 'ESSAYS-06', item_name: 'Collected Essays', amount: 800 }],
+    total: 800,
+  };
+  const reloaded = page.waitForResponse(
+    (res) =>
+      BEST_SELLERS.test(res.url()) &&
+      res.request().postData()?.includes('This Quarter') === true
   );
   await page.locator('header:visible').getByRole('combobox').click();
   await page.getByRole('option', { name: 'This quarter' }).click();
   await reloaded;
+  await expect(card(page)).toContainText('Collected Essays');
+  await expect(card(page)).not.toContainText('World Atlas');
 });
 
 // covers: AC-8

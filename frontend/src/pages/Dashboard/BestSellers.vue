@@ -57,6 +57,7 @@ export default defineComponent({
   data: () => ({
     items: [] as BestSeller[],
     total: 0,
+    loadId: 0,
   }),
   computed: {
     totalSales(): string | undefined {
@@ -68,10 +69,27 @@ export default defineComponent({
     },
   },
   methods: {
-    async setData() {
-      const { items, total } = await getBestSellers(this.period);
-      this.items = items;
-      this.total = total;
+    /** A period change or retry can overlap an older load; only the latest may write. */
+    async loadData() {
+      const loadId = ++this.loadId;
+      this.error = null;
+      try {
+        const { items, total } = await getBestSellers(this.period);
+        if (loadId !== this.loadId) {
+          return;
+        }
+
+        this.items = items;
+        this.total = total;
+        this.isLoaded = true;
+      } catch (error) {
+        if (loadId !== this.loadId) {
+          return;
+        }
+
+        this.error = String(error);
+        console.error(error);
+      }
     },
   },
 });

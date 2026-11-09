@@ -2,7 +2,7 @@
   <div :class="cardClass">
     <FrappeChartContainer
       :title="t`Account balances`"
-      :subtitle="t`As of today`"
+      :subtitle="subtitle"
       :loading="!isLoaded"
       :error="error"
       :empty="!accounts.length"
@@ -85,14 +85,16 @@
 </template>
 
 <script lang="ts">
+import { t } from 'fyo';
 import { ChartContainer as FrappeChartContainer } from 'frappe-ui/charts';
+import { fyo } from 'src/initFyo';
 import { getCashBalances, type AccountBalance } from 'src/utils/dashboard';
 import { defineComponent } from 'vue';
 import type { RouteLocationRaw } from 'vue-router';
 import DashboardChartBase from './BaseDashboardChart.vue';
 import ChartLoadError from './ChartLoadError.vue';
 
-/** Balances are as of today, so the card leaves the inherited `period` alone. */
+/** Balances are as of the server's today, so the card leaves the inherited `period` alone. */
 export default defineComponent({
   name: 'AccountBalances',
   components: {
@@ -104,13 +106,39 @@ export default defineComponent({
     accounts: [] as AccountBalance[],
     total: 0,
     asOf: '',
+    loadId: 0,
   }),
+  computed: {
+    /** Names the date the server used, so a card left open past midnight does not claim today. */
+    subtitle(): string {
+      return this.asOf
+        ? t`As of ${fyo.format(this.asOf, 'Date')}`
+        : t`As of today`;
+    },
+  },
   methods: {
-    async setData() {
-      const balances = await getCashBalances();
-      this.accounts = balances.accounts;
-      this.total = balances.total;
-      this.asOf = balances.as_of;
+    /** A reload or retry can overlap an older one; only the latest may write. */
+    async loadData() {
+      const loadId = ++this.loadId;
+      this.error = null;
+      try {
+        const balances = await getCashBalances();
+        if (loadId !== this.loadId) {
+          return;
+        }
+
+        this.accounts = balances.accounts;
+        this.total = balances.total;
+        this.asOf = balances.as_of;
+        this.isLoaded = true;
+      } catch (error) {
+        if (loadId !== this.loadId) {
+          return;
+        }
+
+        this.error = String(error);
+        console.error(error);
+      }
     },
     amountClass(value: number): string {
       if (value > 0) {

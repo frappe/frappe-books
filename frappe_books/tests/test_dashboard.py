@@ -287,6 +287,19 @@ class IntegrationTestBestSellers(IntegrationTestCase):
 
 		self.assertEqual(labels, {first: f"Atlas ({first})", second: f"Atlas ({second})", missing: missing})
 
+	def test_a_name_matching_a_generated_label_gets_its_own_code(self):
+		first, second = _item("Atlas"), _item("Atlas")
+		third = _item(f"Atlas ({first})")
+		_invoice("2031-12-01", 0, 0, items=[(first, 30), (second, 20), (third, 10)])
+
+		labels = {row["item"]: row["item_name"] for row in self._best_sellers()["items"]}
+
+		self.assertEqual(
+			labels,
+			{first: f"Atlas ({first})", second: f"Atlas ({second})", third: f"Atlas ({first}) ({third})"},
+		)
+		self.assertEqual(len(set(labels.values())), len(labels))
+
 	def test_returns_lower_an_item_and_drafts_cancelled_and_other_periods_do_not_count(self):
 		kept, returned, cleared = _item("Kept Book"), _item("Returned Book"), _item("Cleared Book")
 		_invoice("2031-12-01", 0, 0, items=[(kept, 100), (returned, 80), (cleared, 40)])

@@ -144,6 +144,7 @@ test('account balances sit full width on a card of their own', async ({
   const box = (await card.boundingBox())!;
   const viewport = page.viewportSize()!;
   expect(box.width).toBeGreaterThan(viewport.width - 40);
+  expect(box.width).toBeLessThanOrEqual(viewport.width);
   expect(box.height).toBe(288);
   await expect(card).toHaveCSS('border-top-style', 'solid');
 });
@@ -159,6 +160,7 @@ test('best sellers sit full width on a card of their own', async ({ page }) => {
   const box = (await card.boundingBox())!;
   const viewport = page.viewportSize()!;
   expect(box.width).toBeGreaterThan(viewport.width - 40);
+  expect(box.width).toBeLessThanOrEqual(viewport.width);
   expect(box.height).toBe(384);
   await expect(card).toHaveCSS('border-top-style', 'solid');
 });

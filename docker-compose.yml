@@ -1,0 +1,100 @@
+services:
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    image: axllent/mailpit:v1.33.1
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_HTTP_PORT:-8025}:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8025/livez"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  books:
+    build:
+      context: .
+      args:
+        FRAPPE_BRANCH: ${FRAPPE_BRANCH:-develop}
+    image: ghcr.io/frappe/frappe-books:local
+    init: true
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    environment:
+      SITE_NAME: ${SITE_NAME:-books.localhost}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      PORT: 8000
+      REDIS_CACHE_URL: redis://redis:6379/0
+      REDIS_QUEUE_URL: redis://redis:6379/1
+      MAIL_SERVER: mailpit
+      MAIL_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-books@example.com}
+      MAIL_SENDER_NAME: ${MAIL_SENDER_NAME:-Frappe Books}
+    ports:
+      - "${BOOKS_PORT:-8000}:8000"
+    volumes:
+      - books-sites:/home/frappe/frappe-bench/sites
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://localhost:8000/api/method/ping >/dev/null || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 300s
+
+  worker:
+    image: ghcr.io/frappe/frappe-books:local
+    init: true
+    restart: unless-stopped
+    command: ["worker"]
+    depends_on:
+      books:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SITE_NAME: ${SITE_NAME:-books.localhost}
+      REDIS_CACHE_URL: redis://redis:6379/0
+      REDIS_QUEUE_URL: redis://redis:6379/1
+      SKIP_MIGRATE: "1"
+    volumes:
+      - books-sites:/home/frappe/frappe-bench/sites
+
+  scheduler:
+    image: ghcr.io/frappe/frappe-books:local
+    init: true
+    restart: unless-stopped
+    command: ["schedule"]
+    depends_on:
+      books:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SITE_NAME: ${SITE_NAME:-books.localhost}
+      REDIS_CACHE_URL: redis://redis:6379/0
+      REDIS_QUEUE_URL: redis://redis:6379/1
+      SKIP_MIGRATE: "1"
+    volumes:
+      - books-sites:/home/frappe/frappe-bench/sites
+
+volumes:
+  books-sites:
+    name: ${BOOKS_DATA_VOLUME:-frappe-books-sites}

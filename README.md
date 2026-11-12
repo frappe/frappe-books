@@ -64,6 +64,63 @@ Frappe Books started as a desktop app that keeps one company in one file on one 
 
 - [**Frappe UI**](https://github.com/frappe/frappe-ui): A Vue-based UI library for single-page apps on the Frappe Framework. The Books interface at `/books` uses its components on desktop and on phones.
 
+## Run with Docker
+
+The included `Dockerfile` and `docker-compose.yml` run Frappe Books on SQLite, so you can try it without installing the Frappe Framework or a database server.
+
+```sh
+cp env.example .env
+docker compose up --build
+```
+
+Open <http://localhost:8000/books> and sign in as `Administrator` with the `ADMIN_PASSWORD` from `.env` (default `admin`). The first start creates the site, installs `frappe_books`, and runs migrations, so it takes a few minutes. Later starts are faster.
+
+Set `SITE_NAME`, `ADMIN_PASSWORD`, and `BOOKS_PORT` in `.env` before the first start. Changing `SITE_NAME` or `ADMIN_PASSWORD` later does not update the site that already exists.
+
+### Email with Mailpit
+
+The stack includes [Mailpit](https://mailpit.axllent.org/) and points outgoing email at it, so nothing is delivered to real recipients. Open <http://localhost:8025> to read the captured messages. The SMTP port is published on `localhost:1025` for other tools.
+
+Mailpit is the SMTP server for the app (`mail_server=mailpit`, `mail_port=1025`); no `Email Account` record is needed. Set the sender in `.env` and restart the stack after changing it:
+
+```sh
+MAIL_FROM=books@example.com
+MAIL_SENDER_NAME=Frappe Books
+```
+
+Use a complete address. Frappe rejects addresses without a domain, such as `books@localhost`, so those emails are never queued.
+
+Queued email is delivered by the background scheduler, normally within a few minutes. Change the host ports with `MAILPIT_SMTP_PORT` and `MAILPIT_HTTP_PORT` if they are already in use.
+
+### Data and backups
+
+The whole `sites/` directory is kept in the `frappe-books-sites` Docker volume (rename it with `BOOKS_DATA_VOLUME`). The SQLite database lives at `sites/<SITE_NAME>/db/<SITE_NAME>.db`.
+
+Export the database file to the current directory:
+
+```sh
+docker compose cp books:/home/frappe/frappe-bench/sites/books.localhost/db/books.localhost.db ./books.localhost.db
+```
+
+Or take a compressed Frappe backup, including uploaded files, and copy it out:
+
+```sh
+docker compose exec books bench --site books.localhost backup --with-files
+docker compose cp books:/home/frappe/frappe-bench/sites/books.localhost/private/backups ./backups
+```
+
+`docker compose down` stops the containers but keeps the volume. `docker compose down -v` deletes the volume and all Books data.
+
+The stack runs `bench serve` plus a background worker and scheduler, so queued email and scheduled jobs are processed without extra setup. It is still a development-style deployment on SQLite; use a production Frappe deployment for real workloads.
+
+### Published images
+
+CI publishes `ghcr.io/frappe/frappe-books:latest` on every push to `develop`, and an image tagged with the git tag for every tag push:
+
+```sh
+docker pull ghcr.io/frappe/frappe-books:latest
+```
+
 ## Learning and Community
 
 1. [Documentation](https://docs.frappe.io/books): The user guide for Frappe Books.

@@ -190,6 +190,23 @@ class IntegrationTestBooksPosClosingShift(IntegrationTestCase):
 		self.assertEqual(cash_amounts(draft).difference_amount, -10)
 		self.assertEqual(draft.closing_amounts[1].difference_amount, 5)
 
+	def test_without_denominations_a_shift_closes_with_the_typed_cash(self):
+		opening = make_opening_shift(0)
+		opening.opening_amounts[0].amount = 100
+		opening.insert().submit()
+		closing = make_closing_shift(opening, 0)
+		cash_amounts(closing).closing_amount = 90
+
+		closing.preview()
+		closing.insert().submit()
+
+		self.assertEqual(cash_amounts(closing).closing_amount, 90)
+		self.assertEqual(cash_amounts(closing).difference_amount, -10)
+		entries = ledger_entries("Books Journal Entry", closing.journal_entry)
+		self.assertEqual(debits(entries, "Cash"), Decimal("90"))
+		self.assertEqual(debits(entries, self.write_off), Decimal("10"))
+		self.assertEqual(credits(entries, self.counter), Decimal("100"))
+
 	def test_preview_shares_the_counted_cash_among_the_cash_methods(self):
 		petty = frappe.get_doc(
 			{"doctype": "Books Payment Method", "name": unique_name("Petty Cash"), "type": "Cash"}

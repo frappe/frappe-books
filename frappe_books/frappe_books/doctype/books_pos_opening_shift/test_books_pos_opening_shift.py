@@ -30,6 +30,18 @@ class IntegrationTestBooksPosOpeningShift(IntegrationTestCase):
 		self.assertEqual(debits(entries, self.counter), Decimal("100"))
 		self.assertEqual(credits(entries, "Cash"), Decimal("100"))
 
+	def test_without_denominations_a_shift_opens_with_the_typed_cash(self):
+		draft = make_opening_shift(0)
+		draft.opening_amounts[0].amount = 50
+
+		draft.preview()
+		draft.insert().submit()
+
+		self.assertEqual(draft.opening_amounts[0].amount, 50)
+		entries = ledger_entries("Books Journal Entry", draft.journal_entry)
+		self.assertEqual(debits(entries, self.counter), Decimal("50"))
+		self.assertEqual(credits(entries, "Cash"), Decimal("50"))
+
 	def test_shift_is_dated_when_it_opens(self):
 		draft = make_opening_shift(0)
 		draft.opening_date = add_days(now_datetime(), -1)

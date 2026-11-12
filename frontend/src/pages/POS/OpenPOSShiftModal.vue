@@ -222,12 +222,12 @@ export default defineComponent({
     this.isDismissed = true;
   },
   methods: {
-    /** The counted drawer covers cash methods; the others are entered one by one. */
-    isCashMethod(paymentMethod?: string): boolean {
-      return this.shift.cashMethods.includes(paymentMethod ?? '');
-    },
+    /** The counted drawer covers cash methods; without denominations, cash is typed like the others. */
     isCounted(row: OpeningBalance): boolean {
-      return this.isCashMethod(row.mode_of_payment);
+      return (
+        this.openingCash.length > 0 &&
+        this.shift.cashMethods.includes(row.mode_of_payment ?? '')
+      );
     },
     async setProfile(profile: string) {
       await this.posShiftDoc?.set('pos_profile', profile);

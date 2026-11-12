@@ -54,7 +54,11 @@ class BooksPOSClosingEntry(Document):
 		validate_cash_rows(self.closing_cash)
 		self.set_closing_amounts()
 		cash_rows = self.get_cash_rows()
-		if cash_rows and cash_total(self.closing_cash) != _cash_sum(cash_rows, "closing_amount"):
+		if (
+			self.closing_cash
+			and cash_rows
+			and cash_total(self.closing_cash) != _cash_sum(cash_rows, "closing_amount")
+		):
 			frappe.throw(_("Closing Cash amount must equal the denomination total."))
 
 	def before_submit(self):
@@ -90,14 +94,15 @@ class BooksPOSClosingEntry(Document):
 
 	@frappe.whitelist()
 	def preview(self):
-		"""Fill the closing amounts a save would store, with the counted cash as the cash methods' amounts, without saving."""
+		"""Fill the closing amounts a save would store, without saving. Counted cash, if any, sets the cash methods' amounts."""
 		check_preview_permission(self)
 		if not (self.pos_opening_entry or open_shift_name()):
 			# Without a shift of their own, the user picks the one to close.
 			return
 		self.set_pos_opening_entry()
 		self.set_closing_amounts()
-		self.split_counted_cash()
+		if self.closing_cash:
+			self.split_counted_cash()
 
 	def set_pos_opening_entry(self):
 		"""Close the user's own open shift unless they picked one they can read, and show whose shift it is."""

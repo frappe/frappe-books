@@ -58,9 +58,8 @@ class BooksPosOpeningShift(StatusMixin, Document):
 		if cash_total(self.opening_cash) < 0:
 			frappe.throw(_("Opening Cash Amount can not be negative."))
 		validate_cash_rows(self.opening_cash)
-		amounts = self.get_opening_amounts()
-		cash = sum_decimal(amount for method, amount in amounts.items() if is_cash_method(method))
-		if rounded(cash) != cash_total(self.opening_cash):
+		self.validate_opening_amounts()
+		if self.opening_cash and self.get_cash_amount() != cash_total(self.opening_cash):
 			frappe.throw(_("Opening Cash amount must equal the denomination total."))
 
 	@frappe.whitelist()
@@ -76,7 +75,9 @@ class BooksPosOpeningShift(StatusMixin, Document):
 			self.pos_profile = frappe.db.get_single_value("Books Pos Settings", "pos_profile")
 
 	def set_opening_cash_amount(self):
-		"""The counted cash is the first cash method's opening amount."""
+		"""The counted cash, if any, is the first cash method's opening amount."""
+		if not self.opening_cash:
+			return
 		cash_row = next((row for row in self.opening_amounts if is_cash_method(row.payment_method)), None)
 		if cash_row:
 			cash_row.amount = cash_total(self.opening_cash)
@@ -91,7 +92,7 @@ class BooksPosOpeningShift(StatusMixin, Document):
 			frappe.throw(_("{0} already has an open POS shift.").format(get_fullname(self.owner)))
 
 	def on_submit(self):
-		total = cash_total(self.opening_cash)
+		total = self.get_cash_amount()
 		counter = frappe.db.get_single_value("Books Pos Settings", "cash_account")
 		journal = make_cash_journal(
 			self.opening_date,
@@ -103,15 +104,20 @@ class BooksPosOpeningShift(StatusMixin, Document):
 	def on_cancel(self):
 		cancel_cash_journal(self.journal_entry)
 
-	def get_opening_amounts(self):
-		amounts = {}
+	def get_cash_amount(self):
+		"""The cash the shift opens with: counted, or typed when the site sets no denominations."""
+		return rounded(
+			sum_decimal(row.amount for row in self.opening_amounts if is_cash_method(row.payment_method))
+		)
+
+	def validate_opening_amounts(self):
+		methods = set()
 		for row in self.opening_amounts:
-			if row.payment_method in amounts:
+			if row.payment_method in methods:
 				frappe.throw(_("Payment method {0} is listed more than once.").format(row.payment_method))
 			if as_decimal(row.amount) < 0:
 				frappe.throw(_("POS amounts cannot be negative."))
-			amounts[row.payment_method] = as_decimal(row.amount)
-		return amounts
+			methods.add(row.payment_method)
 
 
 @frappe.whitelist()

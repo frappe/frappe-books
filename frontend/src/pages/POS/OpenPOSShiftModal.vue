@@ -68,7 +68,7 @@
                 {{ row.payment_method }}
               </span>
               <span
-                v-if="isCashMethod(row.payment_method)"
+                v-if="isCounted(row)"
                 class="text-base-medium tabular-nums text-ink-gray-8"
                 dir="ltr"
               >
@@ -195,7 +195,7 @@ export default defineComponent({
     otherOpeningAmounts(): ShiftAmount[] {
       return (
         (this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]
-      ).filter((row) => !this.isCashMethod(row.payment_method));
+      ).filter((row) => !this.isCounted(row));
     },
     openingAmountDetails(): Detail[] {
       return ((this.posShiftDoc?.opening_amounts ?? []) as ShiftAmount[]).map(
@@ -226,9 +226,12 @@ export default defineComponent({
     this.isDismissed = true;
   },
   methods: {
-    /** The counted drawer covers cash methods; the others are entered one by one. */
-    isCashMethod(paymentMethod?: string): boolean {
-      return this.shift.cashMethods.includes(paymentMethod ?? '');
+    /** The counted drawer covers cash methods; without denominations, cash is typed like the others. */
+    isCounted(row: { payment_method?: string }): boolean {
+      return (
+        this.openingCash.length > 0 &&
+        this.shift.cashMethods.includes(row.payment_method ?? '')
+      );
     },
     async setProfile(profile: string) {
       await this.posShiftDoc?.set('pos_profile', profile);

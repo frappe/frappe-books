@@ -219,6 +219,30 @@ test('a new cart row needs its item in stock and leaves its price to the server'
   }
 });
 
+test('fast taps add to one cart row, within the stock', async () => {
+  stock = { [tea]: 2 };
+  setUOMConversions(false);
+  const sale = makeSale();
+  const taps = await Promise.allSettled(
+    [1, 2, 3].map(() => posCart.addToCart(sale, { name: tea }, 1))
+  );
+  assert.deepEqual(
+    taps.map(({ status }) => status),
+    ['fulfilled', 'fulfilled', 'rejected']
+  );
+  assert.deepEqual(
+    sale.items.map((row) => row.stock_qty),
+    [2]
+  );
+
+  const [row] = sale.items;
+  await Promise.all([
+    posCart.stepCartQuantity(row, -1),
+    posCart.stepCartQuantity(row, 1),
+  ]);
+  assert.equal(row.stock_qty, 2);
+});
+
 test('the item badge and the cart total count what the cart shows', () => {
   setUOMConversions(true);
   const sale = makeSale([

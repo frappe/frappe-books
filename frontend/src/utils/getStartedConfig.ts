@@ -2,6 +2,7 @@ import { t } from 'fyo';
 import { ModelNameEnum } from 'models/types';
 import { openSettings, routeTo } from './ui';
 import { GetStartedConfigItem } from './types';
+import { routeFilters } from './filters';
 
 export function getGetStartedConfig(): GetStartedConfigItem[] {
   return [
@@ -77,9 +78,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           action: () =>
             routeTo({
               path: `/list/Item/${t`Sales Items`}`,
-              query: {
-                filters: JSON.stringify({ item_usage: 'Sales' }),
-              },
+              query: { filters: JSON.stringify(routeFilters.SalesItems) },
             }),
           fieldname: 'sales_item_created',
           documentation:
@@ -93,9 +92,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           action: () =>
             routeTo({
               path: `/list/Party/${t`Customers`}`,
-              query: {
-                filters: JSON.stringify({ role: 'Customer' }),
-              },
+              query: { filters: JSON.stringify(routeFilters.Customers) },
             }),
           fieldname: 'customer_created',
           documentation:
@@ -123,9 +120,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           action: () =>
             routeTo({
               path: `/list/Item/${t`Purchase Items`}`,
-              query: {
-                filters: JSON.stringify({ item_usage: 'Purchases' }),
-              },
+              query: { filters: JSON.stringify(routeFilters.PurchaseItems) },
             }),
           fieldname: 'purchase_item_created',
         },
@@ -137,7 +132,7 @@ export function getGetStartedConfig(): GetStartedConfigItem[] {
           action: () =>
             routeTo({
               path: `/list/Party/${t`Suppliers`}`,
-              query: { filters: JSON.stringify({ role: 'Supplier' }) },
+              query: { filters: JSON.stringify(routeFilters.Suppliers) },
             }),
           fieldname: 'supplier_created',
         },

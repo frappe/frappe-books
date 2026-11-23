@@ -26,15 +26,59 @@ export type CartAddition = { batch?: string; isStockQuantity?: boolean };
  * location has the stock the item's rows then need. The quantity is in the
  * unit the cart shows, unless `isStockQuantity`.
  */
-export async function addToCart(
+export function addToCart(
   sale: SalesInvoice,
   item: POSItem,
   quantity: number,
-  { batch, isStockQuantity = false }: CartAddition = {}
+  addition: CartAddition = {}
+): Promise<SalesInvoiceItem> {
+  return queueCartChange(sale, () =>
+    addItemQuantity(sale, item, quantity, addition)
+  );
+}
+
+/**
+ * Sets a cart row's quantity as the cart shows it. Restores it when the POS
+ * location cannot supply it, else leaves serial numbers that no longer
+ * match to the server.
+ */
+export function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
+  return queueCartChange(getSale(row), () => writeCartQuantity(row, quantity));
+}
+
+/** Adds `step`, which may be negative, to a cart row's quantity; stepping below one unit does nothing. */
+export function stepCartQuantity(row: SalesInvoiceItem, step: number) {
+  return queueCartChange(getSale(row), () => stepQuantity(row, step));
+}
+
+const cartChanges = new WeakMap<SalesInvoice, Promise<unknown>>();
+
+/** Runs `change` after the sale's earlier cart changes, so fast taps each read the cart the last one left. */
+function queueCartChange<T>(
+  sale: SalesInvoice,
+  change: () => Promise<T>
+): Promise<T> {
+  const result = (cartChanges.get(sale) ?? Promise.resolve()).then(change);
+  cartChanges.set(
+    sale,
+    result.catch(() => undefined)
+  );
+  return result;
+}
+
+function getSale(row: SalesInvoiceItem): SalesInvoice {
+  return row.parentdoc as SalesInvoice;
+}
+
+async function addItemQuantity(
+  sale: SalesInvoice,
+  item: POSItem,
+  quantity: number,
+  { batch, isStockQuantity = false }: CartAddition
 ): Promise<SalesInvoiceItem> {
   const row = getItemRows(sale, item.name, batch)[0];
   if (row) {
-    await stepCartQuantity(
+    await stepQuantity(
       row,
       isStockQuantity ? toCartQuantity(row, quantity) : quantity
     );
@@ -48,12 +92,7 @@ export async function addToCart(
   return await appendRow(sale, item.name, quantity, batch);
 }
 
-/**
- * Sets a cart row's quantity as the cart shows it. Restores it when the POS
- * location cannot supply it, else leaves serial numbers that no longer
- * match to the server.
- */
-export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
+async function writeCartQuantity(row: SalesInvoiceItem, quantity: number) {
   if (!quantity || (quantity < 0 && !row.isReturn)) {
     throw new ValidationError(t`Quantity must be greater than zero.`);
   }
@@ -62,7 +101,7 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   const previous = { stock_qty: row.stock_qty, qty: row.qty };
   try {
     await writeQuantity(row, field, quantity);
-    const sale = row.parentdoc as SalesInvoice;
+    const sale = getSale(row);
     const rows = getItemRows(sale, row.item_code, row.batch_no);
     await validateStock(sale, row.item_code as string, row.batch_no, rows);
   } catch (error) {
@@ -74,11 +113,10 @@ export async function setCartQuantity(row: SalesInvoiceItem, quantity: number) {
   refillSerialNumbers(row);
 }
 
-/** Adds `step`, which may be negative, to a cart row's quantity; stepping below one unit does nothing. */
-export async function stepCartQuantity(row: SalesInvoiceItem, step: number) {
+async function stepQuantity(row: SalesInvoiceItem, step: number) {
   const quantity = getCartRowQuantity(row) + step;
   if (quantity > 0) {
-    await setCartQuantity(row, quantity);
+    await writeCartQuantity(row, quantity);
   }
 }
 

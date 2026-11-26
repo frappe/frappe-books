@@ -74,7 +74,17 @@ test('link options grouped by a record field come from one search', async () => 
     { label: 'Sales', value: 'Sales', group: 'Income' },
   ]);
   assert.equal(requests.length, 1);
-  assert.deepEqual(requests[0].args.filter_fields, ['root_type']);
+  assert.equal(requests[0].args.filter_fields, '["root_type"]');
+});
+
+test('link search encodes supplemental fields for Frappe', async () => {
+  requests.length = 0;
+  records = [{ name: 'Sales' }];
+  const link = makeControl(Link, { df: { target: 'Account' } });
+
+  await link.getOptions('', null);
+
+  assert.equal(requests[0].args.filter_fields, '[]');
 });
 
 test("a multi-label link shows its records' other fields from one search", async () => {
@@ -97,7 +107,7 @@ test("a multi-label link shows its records' other fields from one search", async
     },
   ]);
   assert.equal(requests.length, 1);
-  assert.deepEqual(requests[0].args.filter_fields, ['phone', 'email']);
+  assert.equal(requests[0].args.filter_fields, '["phone","email"]');
 });
 
 test("a link without model filters searches by its DocField's link_filters", async (t) => {

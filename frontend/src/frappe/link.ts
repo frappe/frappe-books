@@ -36,7 +36,7 @@ export async function searchFrappeLink(
     doctype,
     txt: asTyped ? words : [...words].join('%'),
     filters: filters ?? [],
-    filter_fields: fields,
+    filter_fields: JSON.stringify(fields),
     page_length: limit,
     as_dict: true,
   });
